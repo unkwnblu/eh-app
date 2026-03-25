@@ -4,7 +4,7 @@ const navLinks = [
   { label: "Employers", href: "/employers" },
   { label: "Candidates", href: "/candidates" },
   { label: "Sectors", href: "/sectors" },
-  { label: "Compliance", href: "/compliance" },
+  { label: "Legal", href: "/legal" },
 ];
 
 export default function Navbar() {

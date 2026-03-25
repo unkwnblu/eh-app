@@ -4,7 +4,6 @@ import NewsletterForm from "./NewsletterForm";
 const employerLinks = [
   { label: "Post a Job", href: "/employers/post" },
   { label: "Credential Verification", href: "/employers/compliance" },
-  { label: "Pricing Plans", href: "/employers/pricing" },
   { label: "Candidate Portal", href: "/employers/candidates" },
 ];
 
@@ -17,8 +16,8 @@ const candidateLinks = [
 
 const legalLinks = [
   { label: "Legal", href: "/legal" },
-  { label: "Terms of Service", href: "/terms" },
-  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/legal/terms" },
+  { label: "Privacy Policy", href: "/legal/privacy" },
   { label: "Cookie Policy", href: "/cookies" },
 ];
 
