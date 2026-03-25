@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import NewsletterForm from "./NewsletterForm";
 
 const employerLinks = [
@@ -29,12 +30,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand column */}
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-5">
-              <div className="w-7 h-7 bg-brand-blue rounded-md flex items-center justify-center flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 2L10 6H14L11 9L12 13L8 10.5L4 13L5 9L2 6H6L8 2Z" fill="white" />
-                </svg>
-              </div>
+            <Link href="/" className="flex items-center gap-2.5 mb-5">
+              <Image
+                src="/eh-logo.svg"
+                alt="Edge Harbour logo"
+                width={30}
+                height={30}
+              />
               <span className="font-bold text-base tracking-tight text-white">
                 Edge<span className="text-brand-blue">Harbour</span>
               </span>

@@ -1,23 +1,33 @@
+import Image from "next/image";
+
 const industries = [
   {
     name: "Healthcare",
     description: "Nurses, HCAs, Allied Health Professionals",
-    accent: "from-brand/80 to-navy",
+    image:
+      "https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?w=800&auto=format&fit=crop&q=80",
+    alt: "Healthcare professionals in a hospital setting",
   },
   {
     name: "Hospitality",
     description: "Chefs, FOH, Hotel & Events Specialists",
-    accent: "from-navy to-brand/90",
+    image:
+      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&auto=format&fit=crop&q=80",
+    alt: "Fine dining restaurant interior",
   },
   {
     name: "Customer Care",
     description: "Contact Centre, CX & Support Teams",
-    accent: "from-brand-blue/70 to-navy",
+    image:
+      "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&auto=format&fit=crop&q=80",
+    alt: "Customer service representative at work",
   },
   {
     name: "Tech & Data Analysis",
     description: "Engineers, Analysts & Product SMEs",
-    accent: "from-navy to-brand-blue/60",
+    image:
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80",
+    alt: "Technology and data analytics workspace",
   },
 ];
 
@@ -47,12 +57,20 @@ export default function IndustriesSection() {
               data-gsap="stagger-item"
               className="group relative rounded-2xl overflow-hidden cursor-pointer"
             >
-              {/* Gradient background */}
-              <div
-                className={`absolute inset-0 bg-gradient-to-b ${industry.accent} opacity-90 group-hover:opacity-100 transition-opacity`}
+              {/* Background image */}
+              <Image
+                src={industry.image}
+                alt={industry.alt}
+                fill
+                sizes="(max-width: 768px) 50vw, 25vw"
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              {/* Subtle texture overlay */}
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/5 to-transparent" />
+
+              {/* Dark overlay — darkens on hover */}
+              <div className="absolute inset-0 bg-navy/60 group-hover:bg-navy/40 transition-colors duration-500" />
+
+              {/* Bottom gradient for text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-transparent to-transparent" />
 
               {/* Content */}
               <div className="relative h-full flex flex-col justify-end p-6">
@@ -71,7 +89,7 @@ export default function IndustriesSection() {
                   <p className="text-white font-bold text-sm lg:text-base leading-snug mb-1">
                     {industry.name}
                   </p>
-                  <p className="text-white/50 text-xs leading-relaxed group-hover:text-white/70 transition-colors">
+                  <p className="text-white/60 text-xs leading-relaxed group-hover:text-white/80 transition-colors">
                     {industry.description}
                   </p>
                   <div className="mt-3 w-6 h-0.5 bg-brand-blue group-hover:w-10 transition-all" />

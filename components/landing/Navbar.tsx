@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const navLinks = [
   { label: "Employers", href: "/employers" },
@@ -12,21 +13,14 @@ export default function Navbar() {
     <header data-gsap="navbar" className="sticky top-0 z-50 w-full bg-white border-b border-gray-border">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-7 h-7 bg-brand-blue rounded-md flex items-center justify-center flex-shrink-0">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="text-white"
-            >
-              <path
-                d="M8 2L10 6H14L11 9L12 13L8 10.5L4 13L5 9L2 6H6L8 2Z"
-                fill="currentColor"
-              />
-            </svg>
-          </div>
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <Image
+            src="/eh-logo.svg"
+            alt="Edge Harbour logo"
+            width={32}
+            height={32}
+            priority
+          />
           <span className="text-brand font-bold text-lg tracking-tight leading-none">
             Edge<span className="text-brand-blue">Harbour</span>
           </span>
@@ -48,7 +42,7 @@ export default function Navbar() {
         {/* Actions */}
         <div className="flex items-center gap-3">
           <Link
-            href="/login"
+            href="/register"
             className="hidden sm:block text-sm font-medium text-brand border border-brand rounded-full px-5 py-2 hover:bg-brand hover:text-white transition-all"
           >
             Create Account
