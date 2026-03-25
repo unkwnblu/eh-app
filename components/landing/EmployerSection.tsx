@@ -46,7 +46,7 @@ export default function EmployerSection() {
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left copy */}
-          <div>
+          <div data-gsap="slide-left">
             <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
               For Employers
             </span>
@@ -80,7 +80,7 @@ export default function EmployerSection() {
           </div>
 
           {/* Right mockup */}
-          <div className="flex justify-center lg:justify-end">
+          <div data-gsap="slide-right" className="flex justify-center lg:justify-end">
             <BrowserMockup variant="employer" />
           </div>
         </div>

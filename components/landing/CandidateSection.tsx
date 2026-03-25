@@ -38,12 +38,12 @@ export default function CandidateSection() {
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left mockup */}
-          <div className="flex justify-center lg:justify-start">
+          <div data-gsap="slide-left" className="flex justify-center lg:justify-start">
             <BrowserMockup variant="candidate" />
           </div>
 
           {/* Right copy */}
-          <div>
+          <div data-gsap="slide-right">
             <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
               For Job Seekers
             </span>

@@ -87,7 +87,7 @@ export default function WhyEdgeHarbour() {
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left copy */}
-          <div>
+          <div data-gsap="slide-left">
             <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
               The Edge Harbour Advantage
             </span>
@@ -124,6 +124,7 @@ export default function WhyEdgeHarbour() {
             {features.map((f) => (
               <div
                 key={f.title}
+                data-gsap="stagger-item"
                 className="bg-white rounded-2xl p-6 border border-gray-border hover:border-brand-blue/30 hover:shadow-sm transition-all"
               >
                 <div className="w-10 h-10 rounded-xl bg-brand-blue/8 flex items-center justify-center text-brand-blue mb-4">

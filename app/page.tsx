@@ -4,7 +4,10 @@ import WhyEdgeHarbour from "@/components/landing/WhyEdgeHarbour";
 import EmployerSection from "@/components/landing/EmployerSection";
 import IndustriesSection from "@/components/landing/IndustriesSection";
 import CandidateSection from "@/components/landing/CandidateSection";
+import Testimonials from "@/components/landing/Testimonials";
+import JobPostings from "@/components/landing/JobPostings";
 import Footer from "@/components/landing/Footer";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export default function Home() {
   return (
@@ -16,8 +19,11 @@ export default function Home() {
         <EmployerSection />
         <IndustriesSection />
         <CandidateSection />
+        <JobPostings />
+        <Testimonials />
       </main>
       <Footer />
+      <GsapAnimations />
     </>
   );
 }

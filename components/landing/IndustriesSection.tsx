@@ -26,7 +26,7 @@ export default function IndustriesSection() {
     <section className="w-full bg-navy py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Header */}
-        <div className="text-center mb-14">
+        <div data-gsap="fade-up" className="text-center mb-14">
           <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
             Our Specialisms
           </span>
@@ -44,6 +44,7 @@ export default function IndustriesSection() {
           {industries.map((industry) => (
             <div
               key={industry.name}
+              data-gsap="stagger-item"
               className="group relative rounded-2xl overflow-hidden cursor-pointer"
             >
               {/* Gradient background */}
