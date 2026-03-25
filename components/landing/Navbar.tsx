@@ -9,6 +9,7 @@ const navLinks = [
   { label: "Candidates", href: "/candidates" },
   { label: "Sectors", href: "/sectors" },
   { label: "Legal", href: "/legal" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Navbar() {

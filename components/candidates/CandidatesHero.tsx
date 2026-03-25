@@ -6,7 +6,7 @@ export default function CandidatesHero() {
       {/* Left floating card */}
       <div
         data-hero="card"
-        className="absolute left-[3%] top-[28%] bg-white rounded-2xl shadow-lg border border-gray-border px-4 py-3.5 flex items-center gap-3 z-10 w-56"
+        className="hidden md:flex absolute left-[3%] top-[28%] bg-white rounded-2xl shadow-lg border border-gray-border px-4 py-3.5 items-center gap-3 z-10 w-56"
       >
         <div className="w-10 h-10 rounded-full bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
           <svg
@@ -40,7 +40,7 @@ export default function CandidatesHero() {
       {/* Right floating card */}
       <div
         data-hero="card"
-        className="absolute right-[3%] top-[32%] bg-white rounded-2xl shadow-lg border border-gray-border px-4 py-3.5 flex items-center gap-3 z-10 w-60"
+        className="hidden md:flex absolute right-[3%] top-[32%] bg-white rounded-2xl shadow-lg border border-gray-border px-4 py-3.5 items-center gap-3 z-10 w-60"
       >
         <div className="w-10 h-10 rounded-full bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center flex-shrink-0">
           <svg

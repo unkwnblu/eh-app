@@ -14,7 +14,7 @@ function FloatingCard({
   return (
     <div
       data-hero="card"
-      className={`absolute bg-white rounded-xl shadow-lg border border-gray-border px-4 py-3 flex items-center gap-3 w-44 z-10 ${className}`}
+      className={`hidden md:flex absolute bg-white rounded-xl shadow-lg border border-gray-border px-4 py-3 items-center gap-3 w-44 z-10 ${className}`}
     >
       <div className="w-9 h-9 rounded-full bg-gray-soft border border-gray-border flex items-center justify-center flex-shrink-0">
         <svg

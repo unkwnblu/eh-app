@@ -10,7 +10,7 @@ function HeroFloatingCard({
   return (
     <div
       data-hero="card"
-      className={`absolute bg-white rounded-xl shadow-lg border border-gray-border px-4 py-3 z-10 ${className}`}
+      className={`hidden md:block absolute bg-white rounded-xl shadow-lg border border-gray-border px-4 py-3 z-10 ${className}`}
     >
       {children}
     </div>
