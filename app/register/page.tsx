@@ -53,7 +53,7 @@ export default function RegisterPage() {
         <div className="grid sm:grid-cols-2 gap-5 w-full max-w-2xl">
           {/* Employer card */}
           <Link
-            href="/register/employer"
+            href="/auth/employer"
             className="group relative bg-white border border-gray-border rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}
