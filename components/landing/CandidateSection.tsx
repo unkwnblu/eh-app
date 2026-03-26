@@ -1,5 +1,7 @@
-import Link from "next/link";
 import BrowserMockup from "./BrowserMockup";
+import Button from "@/components/ui/Button";
+import SectionHeader from "@/components/ui/SectionHeader";
+import IconBadge from "@/components/ui/IconBadge";
 
 const benefits = [
   {
@@ -44,23 +46,23 @@ export default function CandidateSection() {
 
           {/* Right copy */}
           <div data-gsap="slide-right">
-            <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
-              For Job Seekers
-            </span>
-            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
-              A Better Way to Work.
-            </h2>
-            <p className="mt-5 text-slate-500 text-base leading-relaxed max-w-md">
-              Join thousands of UK professionals who&apos;ve found their next role
-              through Edge Harbour&apos;s compliance-first matching process.
-            </p>
+            <SectionHeader
+              label="For Job Seekers"
+              heading="A Better Way to Work."
+              description={
+                <span className="max-w-md inline-block">
+                  Join thousands of UK professionals who&apos;ve found their next role
+                  through Edge Harbour&apos;s compliance-first matching process.
+                </span>
+              }
+            />
 
             <ul className="mt-10 space-y-7">
               {benefits.map((b) => (
                 <li key={b.title} className="flex gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-brand-blue/8 flex items-center justify-center text-brand-blue flex-shrink-0 mt-0.5">
+                  <IconBadge size="sm" className="mt-0.5">
                     {b.icon}
-                  </div>
+                  </IconBadge>
                   <div>
                     <p className="text-sm font-bold text-brand">{b.title}</p>
                     <p className="text-sm text-slate-500 mt-1 leading-relaxed">{b.body}</p>
@@ -69,15 +71,18 @@ export default function CandidateSection() {
               ))}
             </ul>
 
-            <Link
+            <Button
               href="/candidates/register"
-              className="mt-10 inline-flex items-center gap-2 bg-brand-blue text-white font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-brand-blue-dark transition-colors"
+              variant="secondary"
+              className="mt-10"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              }
             >
               Get Started as a Candidate
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </Link>
+            </Button>
           </div>
         </div>
       </div>

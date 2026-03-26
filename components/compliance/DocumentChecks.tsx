@@ -1,3 +1,5 @@
+import SectionHeader from "@/components/ui/SectionHeader";
+
 type Check = {
   name: string;
   regulation: string;
@@ -86,18 +88,18 @@ export default function DocumentChecks() {
     <section className="w-full bg-gray-soft py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Header */}
-        <div data-gsap="fade-up" className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase mb-4 block">
-            Document Verification
-          </span>
-          <h2 className="text-4xl lg:text-5xl font-black text-brand tracking-tight leading-[1.08] mb-5">
-            What we check, and why.
-          </h2>
-          <p className="text-slate-500 text-base leading-relaxed">
-            Our verification framework is built around UK legal requirements.
-            Here&apos;s every check we run — and the regulation it satisfies.
-          </p>
-        </div>
+        <SectionHeader
+          label="Document Verification"
+          heading="What we check, and why."
+          description={
+            <>
+              Our verification framework is built around UK legal requirements.
+              Here&apos;s every check we run — and the regulation it satisfies.
+            </>
+          }
+          className="text-center max-w-2xl mx-auto mb-16"
+          data-gsap="fade-up"
+        />
 
         {/* Sector grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

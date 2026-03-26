@@ -17,7 +17,7 @@ export default function Navbar() {
 
   return (
     <header data-gsap="navbar" className="sticky top-0 z-50 w-full bg-white border-b border-gray-border">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 lg:px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image
@@ -54,10 +54,10 @@ export default function Navbar() {
             Create Account
           </Link>
           <Link
-            href="/register"
+            href="/login"
             className="text-sm font-semibold text-white bg-brand-blue rounded-full px-5 py-2 hover:bg-brand-blue-dark transition-colors"
           >
-            Register
+            Sign In
           </Link>
         </div>
 
@@ -103,11 +103,11 @@ export default function Navbar() {
               Create Account
             </Link>
             <Link
-              href="/register"
+              href="/login"
               onClick={() => setOpen(false)}
               className="text-sm font-semibold text-center text-white bg-brand-blue rounded-full px-5 py-2.5 hover:bg-brand-blue-dark transition-colors"
             >
-              Register
+              Sign In
             </Link>
           </div>
         </nav>

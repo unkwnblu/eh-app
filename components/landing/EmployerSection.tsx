@@ -1,5 +1,7 @@
-import Link from "next/link";
 import BrowserMockup from "./BrowserMockup";
+import Button from "@/components/ui/Button";
+import SectionHeader from "@/components/ui/SectionHeader";
+import IconBadge from "@/components/ui/IconBadge";
 
 const features = [
   {
@@ -47,19 +49,17 @@ export default function EmployerSection() {
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left copy */}
           <div data-gsap="slide-left">
-            <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
-              For Employers
-            </span>
-            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
-              Recruitment Intelligence for Modern Business.
-            </h2>
+            <SectionHeader
+              label="For Employers"
+              heading="Recruitment Intelligence for Modern Business."
+            />
 
             <ul className="mt-10 space-y-6">
               {features.map((f) => (
                 <li key={f.title} className="flex gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-brand-blue/8 flex items-center justify-center text-brand-blue flex-shrink-0 mt-0.5">
+                  <IconBadge size="sm" className="mt-0.5">
                     {f.icon}
-                  </div>
+                  </IconBadge>
                   <div>
                     <p className="text-sm font-bold text-brand">{f.title}</p>
                     <p className="text-sm text-slate-500 mt-1 leading-relaxed">{f.body}</p>
@@ -68,15 +68,18 @@ export default function EmployerSection() {
               ))}
             </ul>
 
-            <Link
+            <Button
               href="/employers/register"
-              className="mt-10 inline-flex items-center gap-2 bg-brand text-white font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-brand/90 transition-colors"
+              variant="primary"
+              className="mt-10"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              }
             >
               Start Hiring with Intelligence
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </Link>
+            </Button>
           </div>
 
           {/* Right mockup */}

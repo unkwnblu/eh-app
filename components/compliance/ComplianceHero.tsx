@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Button from "@/components/ui/Button";
 
 export default function ComplianceHero() {
   return (
@@ -64,18 +64,12 @@ export default function ComplianceHero() {
             data-hero="ctas"
             className="flex flex-col sm:flex-row items-center gap-3"
           >
-            <Link
-              href="#"
-              className="inline-flex items-center gap-2 bg-brand text-white font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-brand/90 transition-colors"
-            >
+            <Button href="#" variant="primary">
               How We Verify Candidates
-            </Link>
-            <Link
-              href="#"
-              className="inline-flex items-center gap-2 border border-brand text-brand font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-gray-soft transition-colors"
-            >
+            </Button>
+            <Button href="#" variant="outline">
               Download Framework PDF
-            </Link>
+            </Button>
           </div>
 
           {/* Trust strip */}

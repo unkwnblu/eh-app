@@ -4,13 +4,14 @@ import Image from "next/image";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
-  title: "Create Account – Edge Harbour",
+  title: "Sign In – Edge Harbour",
 };
 
-export default function RegisterPage() {
+export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-soft flex flex-col">
       <GsapAnimations />
+
       {/* Minimal header */}
       <header className="w-full border-b border-gray-border bg-white">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -27,9 +28,9 @@ export default function RegisterPage() {
             </span>
           </Link>
           <p className="text-sm text-slate-500">
-            Already have an account?{" "}
-            <Link href="/login" className="text-brand-blue font-medium hover:underline">
-              Sign in
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="text-brand-blue font-medium hover:underline">
+              Register
             </Link>
           </p>
         </div>
@@ -37,25 +38,26 @@ export default function RegisterPage() {
 
       {/* Main */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
+
         {/* Heading */}
         <div data-gsap="fade-up" className="text-center mb-12">
           <p className="text-brand-blue text-xs font-semibold tracking-widest uppercase mb-3">
-            Get Started
+            Welcome Back
           </p>
           <h1 className="text-brand font-black text-4xl lg:text-5xl tracking-tight mb-4">
-            Create your account
+            Sign in to your account
           </h1>
           <p className="text-slate-500 text-base max-w-md mx-auto">
-            Tell us how you&apos;ll be using Edge Harbour so we can set up the
-            right experience for you.
+            Choose how you&apos;re accessing Edge Harbour to continue to your dashboard.
           </p>
         </div>
 
         {/* Cards */}
         <div data-gsap="fade-up" className="grid sm:grid-cols-2 gap-5 w-full max-w-2xl">
+
           {/* Employer card */}
           <Link
-            href="/auth/employer"
+            href="/auth/employer/login"
             className="group relative bg-white border border-gray-border rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}
@@ -81,16 +83,16 @@ export default function RegisterPage() {
               I&apos;m an Employer
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-6">
-              Post roles, manage applicants, and access a pool of pre-vetted,
-              compliance-ready candidates across your sector.
+              Access your hiring dashboard, manage active roles, and review
+              your compliance pipeline.
             </p>
 
             {/* Feature list */}
             <ul className="space-y-2 mb-8">
               {[
-                "Post unlimited job listings",
-                "100% RTW-verified candidates",
-                "Built-in compliance workflow",
+                "View & manage job listings",
+                "Track applicant pipeline",
+                "Monitor compliance status",
               ].map((feat) => (
                 <li key={feat} className="flex items-center gap-2 text-xs text-slate-500">
                   <svg
@@ -111,7 +113,7 @@ export default function RegisterPage() {
 
             {/* CTA */}
             <span className="inline-flex items-center justify-center gap-2 w-full bg-brand text-white text-sm font-semibold rounded-full py-3 group-hover:bg-brand-blue transition-colors">
-              Register as Employer
+              Sign in as Employer
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
               </svg>
@@ -120,7 +122,7 @@ export default function RegisterPage() {
 
           {/* Candidate card */}
           <Link
-            href="/register/candidate"
+            href="/auth/candidate/login"
             className="group relative bg-white border border-gray-border rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}
@@ -146,16 +148,16 @@ export default function RegisterPage() {
               I&apos;m a Candidate
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-6">
-              Upload your documents once, get verified, and let employers come
-              to you — with your credentials already confirmed.
+              View your verification status, check interview requests, and
+              manage your profile and credentials.
             </p>
 
             {/* Feature list */}
             <ul className="space-y-2 mb-8">
               {[
-                "One-time document upload",
-                "Verified badge on your profile",
-                "Direct access to top employers",
+                "Check verification progress",
+                "View interview requests",
+                "Update your credentials",
               ].map((feat) => (
                 <li key={feat} className="flex items-center gap-2 text-xs text-slate-500">
                   <svg
@@ -176,7 +178,7 @@ export default function RegisterPage() {
 
             {/* CTA */}
             <span className="inline-flex items-center justify-center gap-2 w-full bg-brand-blue text-white text-sm font-semibold rounded-full py-3 group-hover:bg-brand-blue-dark transition-colors">
-              Register as Candidate
+              Sign in as Candidate
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
               </svg>
@@ -186,13 +188,9 @@ export default function RegisterPage() {
 
         {/* Footer note */}
         <p className="text-xs text-slate-400 mt-10 text-center max-w-sm">
-          By creating an account you agree to our{" "}
-          <Link href="/legal/terms" className="text-brand-blue hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/legal/privacy" className="text-brand-blue hover:underline">
-            Privacy Policy
+          Having trouble signing in?{" "}
+          <Link href="/contact" className="text-brand-blue hover:underline">
+            Contact support
           </Link>
           .
         </p>

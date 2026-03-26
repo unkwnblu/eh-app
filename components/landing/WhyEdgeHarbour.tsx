@@ -1,3 +1,6 @@
+import SectionHeader from "@/components/ui/SectionHeader";
+import FeatureCard from "@/components/ui/FeatureCard";
+
 const features = [
   {
     icon: (
@@ -88,17 +91,16 @@ export default function WhyEdgeHarbour() {
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left copy */}
           <div data-gsap="slide-left">
-            <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
-              The Edge Harbour Advantage
-            </span>
-            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
-              Why Edge{" "}
-              <span className="text-brand-blue">Harbour?</span>
-            </h2>
-            <p className="mt-5 text-slate-500 text-base leading-relaxed max-w-sm">
-              We don&apos;t just fill seats; we provide a high-performance
-              recruitment engine that transforms how you build your teams.
-            </p>
+            <SectionHeader
+              label="The Edge Harbour Advantage"
+              heading={<>Why Edge{" "}<span className="text-brand-blue">Harbour?</span></>}
+              description={
+                <span className="max-w-sm inline-block">
+                  We don&apos;t just fill seats; we provide a high-performance
+                  recruitment engine that transforms how you build your teams.
+                </span>
+              }
+            />
             <div className="mt-8 inline-flex items-center gap-2 border border-gray-border bg-white rounded-full px-5 py-2.5 text-sm text-slate-600">
               <svg
                 width="16"
@@ -122,17 +124,13 @@ export default function WhyEdgeHarbour() {
           {/* Right: 2x2 feature grid */}
           <div className="grid grid-cols-2 gap-4">
             {features.map((f) => (
-              <div
+              <FeatureCard
                 key={f.title}
+                icon={f.icon}
+                title={f.title}
+                body={f.body}
                 data-gsap="stagger-item"
-                className="bg-white rounded-2xl p-6 border border-gray-border hover:border-brand-blue/30 hover:shadow-sm transition-all"
-              >
-                <div className="w-10 h-10 rounded-xl bg-brand-blue/8 flex items-center justify-center text-brand-blue mb-4">
-                  {f.icon}
-                </div>
-                <h3 className="text-sm font-bold text-brand mb-2">{f.title}</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">{f.body}</p>
-              </div>
+              />
             ))}
           </div>
         </div>

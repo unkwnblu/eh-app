@@ -1,3 +1,5 @@
+import SectionHeader from "@/components/ui/SectionHeader";
+
 const steps = [
   {
     number: "01",
@@ -90,14 +92,12 @@ export default function HowCandidatesWork() {
     <section id="how-it-works" className="w-full bg-gray-soft py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Header */}
-        <div data-gsap="fade-up" className="mb-16 text-center">
-          <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
-            Your Journey
-          </span>
-          <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
-            From registration to role-ready.
-          </h2>
-        </div>
+        <SectionHeader
+          label="Your Journey"
+          heading="From registration to role-ready."
+          className="mb-16 text-center"
+          data-gsap="fade-up"
+        />
 
         {/* Steps grid */}
         <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">

@@ -1,3 +1,5 @@
+import SectionHeader from "@/components/ui/SectionHeader";
+
 const complianceChecks = [
   {
     icon: (
@@ -147,18 +149,17 @@ export default function ComplianceSection() {
         <div className="grid lg:grid-cols-2 gap-16 items-start">
           {/* Left column */}
           <div data-gsap="slide-left">
-            <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
-              Compliance Built-In
-            </span>
-            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
-              Zero risk hiring,{" "}
-              <span className="text-brand-blue">guaranteed.</span>
-            </h2>
-            <p className="mt-5 text-slate-500 text-base leading-relaxed max-w-md">
-              Every candidate in your pipeline has been pre-screened against UK
-              legal requirements. You never interview someone whose documents
-              haven&apos;t cleared.
-            </p>
+            <SectionHeader
+              label="Compliance Built-In"
+              heading={<>Zero risk hiring,{" "}<span className="text-brand-blue">guaranteed.</span></>}
+              description={
+                <span className="max-w-md inline-block">
+                  Every candidate in your pipeline has been pre-screened against UK
+                  legal requirements. You never interview someone whose documents
+                  haven&apos;t cleared.
+                </span>
+              }
+            />
 
             {/* Compliance check list */}
             <ul className="mt-10 space-y-4">

@@ -1,3 +1,5 @@
+import SectionHeader from "@/components/ui/SectionHeader";
+
 const steps = [
   {
     number: "01",
@@ -69,14 +71,12 @@ export default function HowItWorks() {
     <section id="how-it-works" className="w-full bg-white py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Section header */}
-        <div data-gsap="fade-up" className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
-            The Process
-          </span>
-          <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
-            Up and running in minutes.
-          </h2>
-        </div>
+        <SectionHeader
+          label="The Process"
+          heading="Up and running in minutes."
+          className="text-center max-w-2xl mx-auto mb-16"
+          data-gsap="fade-up"
+        />
 
         {/* Steps grid */}
         <div className="relative">

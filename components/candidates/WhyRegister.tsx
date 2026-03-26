@@ -1,3 +1,6 @@
+import SectionHeader from "@/components/ui/SectionHeader";
+import FeatureCard from "@/components/ui/FeatureCard";
+
 const benefits = [
   {
     icon: (
@@ -89,14 +92,11 @@ export default function WhyRegister() {
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
           {/* Left column */}
           <div data-gsap="slide-left">
-            <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
-              Why Edge Harbour
-            </span>
-            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight mb-6">
-              The smarter way
-              <br />
-              to find work in the UK.
-            </h2>
+            <SectionHeader
+              label="Why Edge Harbour"
+              heading={<>The smarter way<br />to find work in the UK.</>}
+              className="mb-6"
+            />
             <p className="text-slate-500 text-base leading-relaxed mb-6">
               Edge Harbour is a compliance-first recruitment platform built for
               UK professionals who are serious about their career. Unlike
@@ -117,17 +117,13 @@ export default function WhyRegister() {
           <div data-gsap="slide-right">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {benefits.map((benefit, i) => (
-                <div
+                <FeatureCard
                   key={i}
+                  icon={benefit.icon}
+                  title={benefit.title}
+                  body={benefit.body}
                   data-gsap="stagger-item"
-                  className="bg-white border border-gray-border rounded-2xl p-6 hover:border-brand-blue/30 hover:shadow-sm transition-all"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-brand-blue/5 border border-brand-blue/10 flex items-center justify-center text-brand-blue mb-4">
-                    {benefit.icon}
-                  </div>
-                  <h3 className="text-sm font-bold text-brand mb-2">{benefit.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{benefit.body}</p>
-                </div>
+                />
               ))}
             </div>
           </div>
