@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { employerStepSchemas, validate, type FieldErrors } from "@/lib/validation";
+import { useFormPersist } from "@/hooks/useFormPersist";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,22 +133,31 @@ function Input({
   value,
   onChange,
   required,
+  error,
 }: {
   type?: string;
   placeholder?: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
+  error?: string;
 }) {
   return (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      required={required}
-      className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
-    />
+    <>
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+          error
+            ? "border-red-400 focus:border-red-400 focus:ring-red-400"
+            : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+        }`}
+      />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </>
   );
 }
 
@@ -155,27 +166,36 @@ function Select({
   onChange,
   options,
   placeholder,
+  error,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
   placeholder: string;
+  error?: string;
 }) {
   return (
-    <select
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white appearance-none"
-    >
-      <option value="" disabled>
-        {placeholder}
-      </option>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
+    <>
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:ring-1 transition-colors bg-white appearance-none ${
+          error
+            ? "border-red-400 focus:border-red-400 focus:ring-red-400"
+            : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+        }`}
+      >
+        <option value="" disabled>
+          {placeholder}
         </option>
-      ))}
-    </select>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </>
   );
 }
 
@@ -190,35 +210,10 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ─── Step Indicator ───────────────────────────────────────────────────────────
 
-export default function EmployerRegisterPage() {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState<FormData>(INITIAL);
-  const [submitted, setSubmitted] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const set = (field: keyof FormData) => (val: string) =>
-    setForm((prev) => ({ ...prev, [field]: val }));
-
-  function next() {
-    setStep((s) => Math.min(s + 1, 6));
-  }
-  function back() {
-    setStep((s) => Math.max(s - 1, 1));
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (step < 6) {
-      next();
-    } else {
-      setSubmitted(true);
-    }
-  }
-
-  // ── Progress bar ──────────────────────────────────────────────────────────────
-  const StepIndicator = () => (
+function StepIndicator({ step }: { step: number }) {
+  return (
     <div className="flex items-center gap-0 mb-8">
       {STEPS.map((s, i) => (
         <div key={s.number} className="flex items-center flex-1 last:flex-none">
@@ -259,6 +254,51 @@ export default function EmployerRegisterPage() {
       ))}
     </div>
   );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
+export default function EmployerRegisterPage() {
+  const { form, setForm, step, setStep, clear } = useFormPersist<FormData>("eh-employer-reg", INITIAL, 1);
+  const [submitted, setSubmitted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  const set = (field: keyof FormData) => (val: string) => {
+    setForm((prev) => ({ ...prev, [field]: val }));
+    if (errors[field]) setErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
+  };
+
+  function validateStep(): boolean {
+    if (step > 5) return true; // review step — no validation
+    const schema = employerStepSchemas[step - 1] as import("zod").ZodType<unknown>;
+    const result = validate(schema, form);
+    if (result.success) {
+      setErrors({});
+      return true;
+    }
+    setErrors(result.errors);
+    return false;
+  }
+
+  function next() {
+    if (!validateStep()) return;
+    setStep((s) => Math.min(s + 1, 6));
+  }
+  function back() {
+    setErrors({});
+    setStep((s) => Math.max(s - 1, 1));
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (step < 6) {
+      next();
+    } else {
+      clear();
+      setSubmitted(true);
+    }
+  }
 
   // ── Success screen ─────────────────────────────────────────────────────────────
   if (submitted) {
@@ -379,7 +419,7 @@ export default function EmployerRegisterPage() {
           </div>
 
           {/* Step indicator */}
-          <StepIndicator />
+          <StepIndicator step={step} />
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -393,7 +433,7 @@ export default function EmployerRegisterPage() {
                     placeholder="name@companyemail.co.uk"
                     value={form.email}
                     onChange={set("email")}
-                    required
+                    error={errors.email}
                   />
                 </div>
                 <div>
@@ -404,9 +444,11 @@ export default function EmployerRegisterPage() {
                       placeholder="Min. 8 characters"
                       value={form.password}
                       onChange={(e) => set("password")(e.target.value)}
-                      required
-                      minLength={8}
-                      className="w-full border border-gray-border rounded-xl px-4 py-3 pr-12 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
+                      className={`w-full border rounded-xl px-4 py-3 pr-12 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+                        errors.password
+                          ? "border-red-400 focus:border-red-400 focus:ring-red-400"
+                          : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+                      }`}
                     />
                     <button
                       type="button"
@@ -425,6 +467,7 @@ export default function EmployerRegisterPage() {
                       )}
                     </button>
                   </div>
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 </div>
                 <div>
                   <Label>Confirm Password</Label>
@@ -433,7 +476,7 @@ export default function EmployerRegisterPage() {
                     placeholder="Repeat your password"
                     value={form.confirmPassword}
                     onChange={set("confirmPassword")}
-                    required
+                    error={errors.confirmPassword}
                   />
                 </div>
               </>
@@ -448,7 +491,7 @@ export default function EmployerRegisterPage() {
                     placeholder="Name of your Company"
                     value={form.companyName}
                     onChange={set("companyName")}
-                    required
+                    error={errors.companyName}
                   />
                 </div>
                 <div>
@@ -457,7 +500,7 @@ export default function EmployerRegisterPage() {
                     placeholder="e.g. 12345678"
                     value={form.crn}
                     onChange={set("crn")}
-                    required
+                    error={errors.crn}
                   />
                 </div>
                 <div>
@@ -466,7 +509,7 @@ export default function EmployerRegisterPage() {
                     placeholder="Address of the Company"
                     value={form.registeredAddress}
                     onChange={set("registeredAddress")}
-                    required
+                    error={errors.registeredAddress}
                   />
                 </div>
                 <div>
@@ -476,7 +519,7 @@ export default function EmployerRegisterPage() {
                     placeholder="Date of incorporation"
                     value={form.incorporationDate}
                     onChange={set("incorporationDate")}
-                    required
+                    error={errors.incorporationDate}
                   />
                 </div>
                 <div>
@@ -486,6 +529,7 @@ export default function EmployerRegisterPage() {
                     onChange={set("companyStatus")}
                     options={COMPANY_STATUSES}
                     placeholder="Select"
+                    error={errors.companyStatus}
                   />
                 </div>
               </>
@@ -501,7 +545,7 @@ export default function EmployerRegisterPage() {
                       placeholder="First Name"
                       value={form.firstName}
                       onChange={set("firstName")}
-                      required
+                      error={errors.firstName}
                     />
                   </div>
                   <div>
@@ -510,7 +554,7 @@ export default function EmployerRegisterPage() {
                       placeholder="Last Name"
                       value={form.lastName}
                       onChange={set("lastName")}
-                      required
+                      error={errors.lastName}
                     />
                   </div>
                 </div>
@@ -520,7 +564,7 @@ export default function EmployerRegisterPage() {
                     placeholder="Position at the company"
                     value={form.jobTitle}
                     onChange={set("jobTitle")}
-                    required
+                    error={errors.jobTitle}
                   />
                 </div>
                 <div>
@@ -538,6 +582,7 @@ export default function EmployerRegisterPage() {
             {step === 4 && (
               <>
                 {/* Industry panels */}
+                {errors.industries && <p className="text-red-500 text-xs">{errors.industries}</p>}
                 <div className="grid grid-cols-2 gap-3" style={{ height: "260px" }}>
                   {INDUSTRIES.map((ind) => {
                     const selected = (form.industries ?? []).includes(ind.id);
@@ -680,7 +725,7 @@ export default function EmployerRegisterPage() {
                       placeholder="John Doe"
                       value={form.billingName}
                       onChange={set("billingName")}
-                      required
+                      error={errors.billingName}
                     />
                   </div>
                   <div>
@@ -690,7 +735,7 @@ export default function EmployerRegisterPage() {
                       placeholder="name@company.co.uk"
                       value={form.billingEmail}
                       onChange={set("billingEmail")}
-                      required
+                      error={errors.billingEmail}
                     />
                   </div>
                   <div>
@@ -699,7 +744,7 @@ export default function EmployerRegisterPage() {
                       placeholder="Company Avenue"
                       value={form.billingAddress}
                       onChange={set("billingAddress")}
-                      required
+                      error={errors.billingAddress}
                     />
                   </div>
                 </div>
@@ -730,6 +775,7 @@ export default function EmployerRegisterPage() {
                       </span>
                     </label>
                   ))}
+                  {errors.checkTerms && <p className="text-red-500 text-xs mt-1">{errors.checkTerms}</p>}
                 </div>
               </>
             )}

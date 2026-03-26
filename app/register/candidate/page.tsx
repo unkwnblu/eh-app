@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { candidateStepSchemas, validate, type FieldErrors } from "@/lib/validation";
+import { useFormPersist } from "@/hooks/useFormPersist";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -114,23 +116,27 @@ function Input({
   placeholder,
   value,
   onChange,
-  required,
+  error,
 }: {
   type?: string;
   placeholder?: string;
   value: string;
   onChange: (v: string) => void;
-  required?: boolean;
+  error?: string;
 }) {
   return (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      required={required}
-      className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
-    />
+    <>
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+          error ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+        }`}
+      />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </>
   );
 }
 
@@ -139,27 +145,34 @@ function Select({
   onChange,
   options,
   placeholder,
+  error,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
   placeholder: string;
+  error?: string;
 }) {
   return (
-    <select
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white appearance-none"
-    >
-      <option value="" disabled>
-        {placeholder}
-      </option>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
+    <>
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:ring-1 transition-colors bg-white appearance-none ${
+          error ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+        }`}
+      >
+        <option value="" disabled>
+          {placeholder}
         </option>
-      ))}
-    </select>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </>
   );
 }
 
@@ -174,41 +187,10 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ─── Step Indicator ───────────────────────────────────────────────────────────
 
-export default function CandidateRegisterPage() {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState<FormData>(INITIAL);
-  const [submitted, setSubmitted] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const set = (field: keyof FormData) => (val: string) =>
-    setForm((prev) => ({ ...prev, [field]: val }));
-
-  function toggleArray(field: "sectors" | "jobTypes" | "locations", val: string) {
-    setForm((prev) => {
-      const arr = prev[field] as string[];
-      return {
-        ...prev,
-        [field]: arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val],
-      };
-    });
-  }
-
-  function next() { setStep((s) => Math.min(s + 1, 6)); }
-  function back() { setStep((s) => Math.max(s - 1, 1)); }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (step < 6) {
-      next();
-    } else {
-      setSubmitted(true);
-    }
-  }
-
-  // ── Progress indicator ─────────────────────────────────────────────────────────
-  const StepIndicator = () => (
+function StepIndicator({ step }: { step: number }) {
+  return (
     <div className="flex items-center gap-0 mb-8">
       {STEPS.map((s, i) => (
         <div key={s.number} className="flex items-center flex-1 last:flex-none">
@@ -249,6 +231,59 @@ export default function CandidateRegisterPage() {
       ))}
     </div>
   );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
+export default function CandidateRegisterPage() {
+  const { form, setForm, step, setStep, clear } = useFormPersist<FormData>("eh-candidate-reg", INITIAL, 1);
+  const [submitted, setSubmitted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  const set = (field: keyof FormData) => (val: string) => {
+    setForm((prev) => ({ ...prev, [field]: val }));
+    if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  };
+
+  function toggleArray(field: "jobTypes" | "locations", val: string) {
+    setForm((prev) => {
+      const arr = prev[field] as string[];
+      return {
+        ...prev,
+        [field]: arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val],
+      };
+    });
+    if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  }
+
+  function validateStep(): boolean {
+    if (step > 5) return true; // step 6 is review, no validation
+    const schema = candidateStepSchemas[step - 1] as import("zod").ZodType<unknown>;
+    const result = validate(schema, form);
+    if (!result.success) {
+      setErrors(result.errors);
+      return false;
+    }
+    setErrors({});
+    return true;
+  }
+
+  function next() {
+    if (!validateStep()) return;
+    setStep((s) => Math.min(s + 1, 6));
+  }
+  function back() { setErrors({}); setStep((s) => Math.max(s - 1, 1)); }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (step < 6) {
+      next();
+    } else {
+      clear();
+      setSubmitted(true);
+    }
+  }
 
   // ── Success screen ──────────────────────────────────────────────────────────────
   if (submitted) {
@@ -323,7 +358,7 @@ export default function CandidateRegisterPage() {
                     placeholder="you@email.com"
                     value={form.email}
                     onChange={set("email")}
-                    required
+                    error={errors.email}
                   />
                 </div>
                 <div>
@@ -334,8 +369,9 @@ export default function CandidateRegisterPage() {
                       placeholder="Min. 8 characters"
                       value={form.password}
                       onChange={(e) => set("password")(e.target.value)}
-                      required
-                      className="w-full border border-gray-border rounded-xl px-4 py-3 pr-11 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
+                      className={`w-full border rounded-xl px-4 py-3 pr-11 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+                        errors.password ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+                      }`}
                     />
                     <button
                       type="button"
@@ -354,6 +390,7 @@ export default function CandidateRegisterPage() {
                       )}
                     </button>
                   </div>
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 </div>
                 <div>
                   <Label>Confirm Password</Label>
@@ -362,7 +399,7 @@ export default function CandidateRegisterPage() {
                     placeholder="Repeat your password"
                     value={form.confirmPassword}
                     onChange={set("confirmPassword")}
-                    required
+                    error={errors.confirmPassword}
                   />
                 </div>
               </>
@@ -374,20 +411,20 @@ export default function CandidateRegisterPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>First Name</Label>
-                    <Input placeholder="Jane" value={form.firstName} onChange={set("firstName")} required />
+                    <Input placeholder="Jane" value={form.firstName} onChange={set("firstName")} error={errors.firstName} />
                   </div>
                   <div>
                     <Label>Last Name</Label>
-                    <Input placeholder="Smith" value={form.lastName} onChange={set("lastName")} required />
+                    <Input placeholder="Smith" value={form.lastName} onChange={set("lastName")} error={errors.lastName} />
                   </div>
                 </div>
                 <div>
                   <Label>Phone Number</Label>
-                  <Input type="tel" placeholder="+44 7700 900000" value={form.phone} onChange={set("phone")} required />
+                  <Input type="tel" placeholder="+44 7700 900000" value={form.phone} onChange={set("phone")} error={errors.phone} />
                 </div>
                 <div>
                   <Label>Date of Birth</Label>
-                  <Input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} required />
+                  <Input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} error={errors.dateOfBirth} />
                 </div>
                 <div>
                   <Label>Nationality</Label>
@@ -396,6 +433,7 @@ export default function CandidateRegisterPage() {
                     onChange={set("nationality")}
                     options={NATIONALITIES}
                     placeholder="Select nationality"
+                    error={errors.nationality}
                   />
                 </div>
               </>
@@ -418,15 +456,16 @@ export default function CandidateRegisterPage() {
                     onChange={set("documentType")}
                     options={DOCUMENT_TYPES}
                     placeholder="Select document type"
+                    error={errors.documentType}
                   />
                 </div>
                 <div>
                   <Label>Document Number</Label>
-                  <Input placeholder="e.g. 123456789" value={form.documentNumber} onChange={set("documentNumber")} required />
+                  <Input placeholder="e.g. 123456789" value={form.documentNumber} onChange={set("documentNumber")} error={errors.documentNumber} />
                 </div>
                 <div>
                   <Label>Expiry Date</Label>
-                  <Input type="date" value={form.documentExpiry} onChange={set("documentExpiry")} required />
+                  <Input type="date" value={form.documentExpiry} onChange={set("documentExpiry")} error={errors.documentExpiry} />
                 </div>
                 <p className="text-[10px] text-slate-400 leading-relaxed">
                   You&apos;ll be prompted to upload a scan or photo of this document after registration.
@@ -446,7 +485,7 @@ export default function CandidateRegisterPage() {
                         <button
                           key={s.id}
                           type="button"
-                          onClick={() => setForm((p) => ({ ...p, sector: s.id }))}
+                          onClick={() => { setForm((p) => ({ ...p, sector: s.id })); if (errors.sector) setErrors((p) => { const n = { ...p }; delete n.sector; return n; }); }}
                           className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-left transition-all ${
                             active
                               ? "border-brand-blue bg-brand-blue/5 text-brand-blue"
@@ -466,6 +505,7 @@ export default function CandidateRegisterPage() {
                       );
                     })}
                   </div>
+                  {errors.sector && <p className="text-red-500 text-xs mt-1">{errors.sector}</p>}
                 </div>
                 <div>
                   <Label>Preferred Job Types</Label>
@@ -488,6 +528,7 @@ export default function CandidateRegisterPage() {
                       );
                     })}
                   </div>
+                  {errors.jobTypes && <p className="text-red-500 text-xs mt-1">{errors.jobTypes}</p>}
                 </div>
                 <div>
                   <Label>Preferred Locations</Label>
@@ -510,6 +551,7 @@ export default function CandidateRegisterPage() {
                       );
                     })}
                   </div>
+                  {errors.locations && <p className="text-red-500 text-xs mt-1">{errors.locations}</p>}
                 </div>
               </>
             )}
@@ -550,6 +592,7 @@ export default function CandidateRegisterPage() {
                       </>
                     )}
                   </label>
+                  {errors.cvFileName && <p className="text-red-500 text-xs mt-1">{errors.cvFileName}</p>}
                 </div>
 
                 {/* DBS */}
@@ -603,15 +646,18 @@ export default function CandidateRegisterPage() {
                     { field: "checkPrivacy" as const, text: "I consent to Edge Harbour storing and processing my personal data in line with the Privacy Policy." },
                     { field: "checkTerms" as const, text: "I agree to the Terms of Service and confirm the information I've provided is accurate." },
                   ].map(({ field, text }) => (
-                    <label key={field} className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form[field]}
-                        onChange={(e) => setForm((p) => ({ ...p, [field]: e.target.checked }))}
-                        className="mt-0.5 w-4 h-4 accent-brand-blue shrink-0"
-                      />
-                      <span className="text-xs text-slate-500 leading-relaxed">{text}</span>
-                    </label>
+                    <div key={field}>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form[field]}
+                          onChange={(e) => { setForm((p) => ({ ...p, [field]: e.target.checked })); if (errors[field]) setErrors((p) => { const n = { ...p }; delete n[field]; return n; }); }}
+                          className="mt-0.5 w-4 h-4 accent-brand-blue shrink-0"
+                        />
+                        <span className="text-xs text-slate-500 leading-relaxed">{text}</span>
+                      </label>
+                      {errors[field] && <p className="text-red-500 text-xs mt-1 ml-7">{errors[field]}</p>}
+                    </div>
                   ))}
                 </div>
               </>
@@ -668,8 +714,7 @@ export default function CandidateRegisterPage() {
               )}
               <button
                 type="submit"
-                disabled={step === 5 && (!form.checkPrivacy || !form.checkTerms || !form.cvFileName)}
-                className="flex-1 bg-brand-blue text-white text-sm font-semibold rounded-full py-3 hover:bg-brand-blue-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 bg-brand-blue text-white text-sm font-semibold rounded-full py-3 hover:bg-brand-blue-dark transition-colors"
               >
                 {step === 6 ? "Submit Application" : "Continue"}
               </button>

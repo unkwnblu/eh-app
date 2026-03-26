@@ -3,13 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { candidateLoginSchema, validate, type FieldErrors } from "@/lib/validation";
 
 export default function CandidateLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const result = validate(candidateLoginSchema, form);
+    if (!result.success) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
     // auth logic goes here
   }
 
@@ -48,10 +56,12 @@ export default function CandidateLoginPage() {
                 type="email"
                 placeholder="you@email.com"
                 value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                required
-                className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
+                onChange={(e) => { setForm((p) => ({ ...p, email: e.target.value })); if (errors.email) setErrors((p) => { const n = { ...p }; delete n.email; return n; }); }}
+                className={`w-full border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+                  errors.email ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+                }`}
               />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
 
             {/* Password */}
@@ -72,9 +82,10 @@ export default function CandidateLoginPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••••"
                   value={form.password}
-                  onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                  required
-                  className="w-full border border-gray-border rounded-xl px-4 py-3 pr-11 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
+                  onChange={(e) => { setForm((p) => ({ ...p, password: e.target.value })); if (errors.password) setErrors((p) => { const n = { ...p }; delete n.password; return n; }); }}
+                  className={`w-full border rounded-xl px-4 py-3 pr-11 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+                    errors.password ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+                  }`}
                 />
                 <button
                   type="button"
@@ -93,6 +104,7 @@ export default function CandidateLoginPage() {
                   )}
                 </button>
               </div>
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
 
             {/* Submit */}
