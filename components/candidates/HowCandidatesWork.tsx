@@ -100,7 +100,7 @@ export default function HowCandidatesWork() {
         />
 
         {/* Steps grid */}
-        <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+        <div className="relative grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
           {/* Dashed connector line — desktop only */}
           <div
             aria-hidden="true"
