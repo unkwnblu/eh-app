@@ -6,6 +6,8 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
   title: "Privacy Policy – Edge Harbour",
+  description:
+    "Learn how Edge Harbour collects, uses, and protects your personal data. ICO-registered and fully GDPR compliant.",
 };
 
 const tocSections = [
@@ -29,7 +31,7 @@ export default function PrivacyPage() {
   return (
     <>
       <Navbar />
-      <main className="flex flex-col flex-1">
+      <main id="main-content" className="flex flex-col flex-1">
         {/* Page header */}
         <div className="bg-gray-soft py-14 border-b border-gray-border">
           <div data-gsap="fade-up" className="max-w-4xl mx-auto px-6">
@@ -42,7 +44,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-slate-400 text-sm mt-3">
-              Last updated: 25 March 2026 &middot; ICO Registration: ZB123456
+              Last updated: 25 March 2026 &middot; ICO Registration: [PENDING — insert real ICO number]
             </p>
           </div>
         </div>
@@ -79,11 +81,11 @@ export default function PrivacyPage() {
                   1. Introduction
                 </h2>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  Edge Harbour Recruitment Company Ltd ("we", "us", "our") is committed to
+                  Edge Harbour Recruitment Company Ltd (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is committed to
                   protecting your personal data. This Privacy Policy explains how we collect, use,
                   store, and protect your information when you use the Edge Harbour platform. We are
-                  registered with the Information Commissioner's Office (ICO), registration number
-                  ZB123456.
+                  registered with the Information Commissioner&apos;s Office (ICO), registration number
+                  [PENDING — insert real ICO number].
                 </p>
               </section>
 
@@ -227,7 +229,7 @@ export default function PrivacyPage() {
                   <li>access your personal data (Subject Access Request);</li>
                   <li>rectify inaccurate data;</li>
                   <li>
-                    erasure ("right to be forgotten") where no legal basis for retention exists;
+                    erasure (&ldquo;right to be forgotten&rdquo;) where no legal basis for retention exists;
                   </li>
                   <li>restrict or object to processing;</li>
                   <li>data portability;</li>

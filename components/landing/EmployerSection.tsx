@@ -44,7 +44,7 @@ const features = [
 
 export default function EmployerSection() {
   return (
-    <section className="w-full bg-white py-24">
+    <section className="w-full bg-white dark:bg-[#111827] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left copy */}
@@ -61,8 +61,8 @@ export default function EmployerSection() {
                     {f.icon}
                   </IconBadge>
                   <div>
-                    <p className="text-sm font-bold text-brand">{f.title}</p>
-                    <p className="text-sm text-slate-500 mt-1 leading-relaxed">{f.body}</p>
+                    <p className="text-sm font-bold text-brand dark:text-white">{f.title}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{f.body}</p>
                   </div>
                 </li>
               ))}

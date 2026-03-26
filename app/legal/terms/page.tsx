@@ -6,6 +6,8 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
   title: "Terms of Service – Edge Harbour",
+  description:
+    "Read Edge Harbour's Terms of Service. Understand your rights and obligations when using our compliance-first recruitment platform.",
 };
 
 const tocSections = [
@@ -28,7 +30,7 @@ export default function TermsPage() {
   return (
     <>
       <Navbar />
-      <main className="flex flex-col flex-1">
+      <main id="main-content" className="flex flex-col flex-1">
         {/* Page header */}
         <div className="bg-gray-soft py-14 border-b border-gray-border">
           <div data-gsap="fade-up" className="max-w-4xl mx-auto px-6">
@@ -78,8 +80,8 @@ export default function TermsPage() {
                   1. Acceptance of Terms
                 </h2>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  By accessing or using the Edge Harbour platform (the "Platform"), you agree to be
-                  bound by these Terms of Service ("Terms"). If you do not agree, you must not use
+                  By accessing or using the Edge Harbour platform (the &ldquo;Platform&rdquo;), you agree to be
+                  bound by these Terms of Service (&ldquo;Terms&rdquo;). If you do not agree, you must not use
                   the Platform. These Terms apply to all users including Employers and Candidates.
                 </p>
               </section>
@@ -216,7 +218,7 @@ export default function TermsPage() {
                   10. Limitation of Liability
                 </h2>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  Edge Harbour provides the Platform on an "as is" basis. To the fullest extent
+                  Edge Harbour provides the Platform on an &ldquo;as is&rdquo; basis. To the fullest extent
                   permitted by law, we exclude all liability for indirect, consequential, or special
                   damages arising from your use of the Platform. Our total liability to you shall
                   not exceed the fees paid by you in the 12 months preceding the claim.

@@ -5,6 +5,8 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
   title: "Contact Us – Edge Harbour",
+  description:
+    "Get in touch with the Edge Harbour team. Questions about recruitment, compliance, or your account — we're here to help.",
 };
 
 const contactDetails = [
@@ -75,19 +77,19 @@ export default function ContactPage() {
       <GsapAnimations />
       <Navbar />
 
-      <main className="w-full bg-white">
+      <main id="main-content" className="w-full bg-white dark:bg-[#111827]">
         {/* Hero */}
-        <section className="w-full border-b border-gray-border">
+        <section className="w-full border-b border-gray-border dark:border-white/10">
           <div className="max-w-7xl mx-auto px-6 lg:px-10 py-20 lg:py-28">
             <div data-gsap="fade-up" className="max-w-2xl">
               <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
                 Get in Touch
               </span>
-              <h1 className="mt-4 text-5xl lg:text-6xl font-black tracking-tight text-brand leading-tight">
+              <h1 className="mt-4 text-5xl lg:text-6xl font-black tracking-tight text-brand dark:text-white leading-tight">
                 We&apos;d love to{" "}
                 <span className="text-brand-blue">hear</span> from you.
               </h1>
-              <p className="mt-5 text-slate-500 text-base leading-relaxed max-w-lg">
+              <p className="mt-5 text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-lg">
                 Whether you&apos;re an employer looking to hire or a candidate exploring
                 opportunities, our team is here to help.
               </p>
@@ -102,28 +104,28 @@ export default function ContactPage() {
 
               {/* Left — contact details */}
               <div data-gsap="fade-up">
-                <h2 className="text-brand font-black text-2xl tracking-tight mb-8">
+                <h2 className="text-brand dark:text-white font-black text-2xl tracking-tight mb-8">
                   Company Information
                 </h2>
                 <div className="space-y-6">
                   {contactDetails.map((item) => (
                     <div key={item.label} className="flex gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gray-soft border border-gray-border flex items-center justify-center flex-shrink-0 text-brand-blue">
+                      <div className="w-10 h-10 rounded-xl bg-gray-soft dark:bg-[#0B1222] border border-gray-border dark:border-white/10 flex items-center justify-center flex-shrink-0 text-brand-blue">
                         {item.icon}
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                           {item.label}
                         </p>
                         {item.href ? (
                           <a
                             href={item.href}
-                            className="text-sm text-brand font-medium hover:text-brand-blue transition-colors"
+                            className="text-sm text-brand dark:text-white font-medium hover:text-brand-blue transition-colors"
                           >
                             {item.value}
                           </a>
                         ) : (
-                          <p className="text-sm text-brand font-medium whitespace-pre-line">
+                          <p className="text-sm text-brand dark:text-white font-medium whitespace-pre-line">
                             {item.value}
                           </p>
                         )}
@@ -133,22 +135,22 @@ export default function ContactPage() {
                 </div>
 
                 {/* Office hours */}
-                <div className="mt-10 p-6 rounded-2xl bg-gray-soft border border-gray-border">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+                <div className="mt-10 p-6 rounded-2xl bg-gray-soft dark:bg-[#0B1222] border border-gray-border dark:border-white/10">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
                     Office Hours
                   </p>
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Monday – Friday</span>
-                      <span className="text-brand font-medium">09:00 – 18:00 GMT</span>
+                      <span className="text-slate-500 dark:text-slate-400">Monday – Friday</span>
+                      <span className="text-brand dark:text-white font-medium">09:00 – 18:00 GMT</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Saturday</span>
-                      <span className="text-brand font-medium">10:00 – 14:00 GMT</span>
+                      <span className="text-slate-500 dark:text-slate-400">Saturday</span>
+                      <span className="text-brand dark:text-white font-medium">10:00 – 14:00 GMT</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Sunday</span>
-                      <span className="text-slate-400">Closed</span>
+                      <span className="text-slate-500 dark:text-slate-400">Sunday</span>
+                      <span className="text-slate-400 dark:text-slate-500">Closed</span>
                     </div>
                   </div>
                 </div>
@@ -156,49 +158,52 @@ export default function ContactPage() {
 
               {/* Right — enquiry form */}
               <div data-gsap="fade-up">
-                <h2 className="text-brand font-black text-2xl tracking-tight mb-8">
+                <h2 className="text-brand dark:text-white font-black text-2xl tracking-tight mb-8">
                   Send an Enquiry
                 </h2>
                 <form className="space-y-5">
                   <div className="grid sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+                      <label htmlFor="firstName" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
                         First Name
                       </label>
                       <input
+                        id="firstName"
                         type="text"
                         placeholder="Jane"
-                        className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
+                        className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+                      <label htmlFor="lastName" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
                         Last Name
                       </label>
                       <input
+                        id="lastName"
                         type="text"
                         placeholder="Smith"
-                        className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
+                        className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+                    <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
                       Email Address
                     </label>
                     <input
+                      id="email"
                       type="email"
                       placeholder="jane@company.co.uk"
-                      className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white"
+                      className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+                    <label htmlFor="role" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
                       I am a
                     </label>
-                    <select defaultValue="" className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white appearance-none">
+                    <select id="role" defaultValue="" className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white appearance-none">
                       <option value="" disabled>Select one…</option>
                       <option value="employer">Employer / Hiring Manager</option>
                       <option value="candidate">Candidate / Job Seeker</option>
@@ -207,13 +212,14 @@ export default function ContactPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+                    <label htmlFor="message" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
                       Message
                     </label>
                     <textarea
+                      id="message"
                       rows={5}
                       placeholder="Tell us how we can help…"
-                      className="w-full border border-gray-border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white resize-none"
+                      className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500 resize-none"
                     />
                   </div>
 

@@ -19,7 +19,7 @@ export default function EmployersPage() {
   return (
     <>
       <Navbar />
-      <main className="flex flex-col flex-1">
+      <main id="main-content" className="flex flex-col flex-1">
         <EmployersHero />
         <HowItWorks />
         <ComplianceSection />

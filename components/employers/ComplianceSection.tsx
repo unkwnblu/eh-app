@@ -144,7 +144,7 @@ const comparisonRows = [
 
 export default function ComplianceSection() {
   return (
-    <section className="w-full bg-gray-soft py-24">
+    <section className="w-full bg-gray-soft dark:bg-[#0B1222] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-start">
           {/* Left column */}
@@ -166,7 +166,7 @@ export default function ComplianceSection() {
               {complianceChecks.map((check) => (
                 <li
                   key={check.title}
-                  className="flex items-start gap-4 bg-white rounded-xl border border-gray-border p-4"
+                  className="flex items-start gap-4 bg-white dark:bg-[#111827] rounded-xl border border-gray-border dark:border-white/10 p-4"
                 >
                   {/* Green check */}
                   <div className="w-8 h-8 rounded-full bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -192,8 +192,8 @@ export default function ComplianceSection() {
                       {check.icon}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-brand">{check.title}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{check.description}</p>
+                      <p className="text-sm font-bold text-brand dark:text-white">{check.title}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{check.description}</p>
                     </div>
                   </div>
                 </li>
@@ -203,7 +203,7 @@ export default function ComplianceSection() {
 
           {/* Right column — comparison card */}
           <div data-gsap="slide-right">
-            <div className="bg-white border border-gray-border rounded-2xl p-6 shadow-sm">
+            <div className="bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-6 shadow-sm">
               {/* Card header */}
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-brand-blue/8 flex items-center justify-center">
@@ -223,7 +223,7 @@ export default function ComplianceSection() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-sm font-bold text-brand">
+                <h3 className="text-sm font-bold text-brand dark:text-white">
                   Edge Harbour vs Traditional Agencies
                 </h3>
               </div>
@@ -237,14 +237,14 @@ export default function ComplianceSection() {
                   </span>
                 </div>
                 <div className="text-center">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                  <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                     Traditional
                   </span>
                 </div>
               </div>
 
               {/* Divider */}
-              <div className="border-t border-gray-border mb-3" />
+              <div className="border-t border-gray-border dark:border-white/10 mb-3" />
 
               {/* Table rows */}
               <div className="space-y-0">
@@ -253,12 +253,12 @@ export default function ComplianceSection() {
                     key={row.feature}
                     className={`grid grid-cols-3 gap-3 py-3 items-center ${
                       index < comparisonRows.length - 1
-                        ? "border-b border-gray-border/60"
+                        ? "border-b border-gray-border/60 dark:border-white/10"
                         : ""
                     }`}
                   >
                     {/* Feature label */}
-                    <p className="text-xs font-semibold text-slate-600 col-span-1 leading-snug">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 col-span-1 leading-snug">
                       {row.feature}
                     </p>
 
@@ -314,7 +314,7 @@ export default function ComplianceSection() {
               </div>
 
               {/* Card footer */}
-              <div className="mt-5 pt-4 border-t border-gray-border flex items-center gap-2">
+              <div className="mt-5 pt-4 border-t border-gray-border dark:border-white/10 flex items-center gap-2">
                 <svg
                   width="14"
                   height="14"
@@ -330,7 +330,7 @@ export default function ComplianceSection() {
                     d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
                   />
                 </svg>
-                <p className="text-[11px] text-slate-400 leading-snug">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-snug">
                   Based on 2024 UK recruitment industry benchmarks and Edge Harbour
                   platform data.
                 </p>

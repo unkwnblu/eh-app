@@ -105,7 +105,7 @@ type CandidateCardProps = {
 
 function CandidateCard({ name, role, status, statusLabel }: CandidateCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-border p-2.5 shadow-sm">
+    <div className="bg-white dark:bg-[#111827] rounded-lg border border-gray-border dark:border-white/10 p-2.5 shadow-sm">
       <div className="flex items-center gap-2 mb-1.5">
         <div className="w-6 h-6 rounded-full bg-gray-soft border border-gray-border flex items-center justify-center flex-shrink-0">
           <svg
@@ -191,18 +191,18 @@ const columns: Column[] = [
 
 export default function AtsPreview() {
   return (
-    <section className="w-full bg-white py-24">
+    <section className="w-full bg-white dark:bg-[#111827] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Section header */}
         <div data-gsap="fade-up" className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
             The ATS
           </span>
-          <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
+          <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand dark:text-white leading-tight">
             Your hiring pipeline,{" "}
             <span className="text-brand-blue">visualised.</span>
           </h2>
-          <p className="mt-5 text-slate-500 text-base leading-relaxed">
+          <p className="mt-5 text-slate-500 dark:text-slate-400 text-base leading-relaxed">
             A drag-and-drop Kanban board purpose-built for compliant UK hiring. The
             Compliance Review gate is mandatory — candidates cannot progress to
             interview without it.
@@ -219,7 +219,7 @@ export default function AtsPreview() {
                   <div className="w-9 h-9 rounded-xl bg-brand-blue/8 border border-brand-blue/12 flex items-center justify-center text-brand-blue flex-shrink-0 mt-0.5">
                     {feature.icon}
                   </div>
-                  <p className="text-sm text-slate-600 leading-relaxed pt-2">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed pt-2">
                     {feature.label}
                   </p>
                 </li>
@@ -227,11 +227,11 @@ export default function AtsPreview() {
             </ul>
 
             <div className="mt-10 flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                 <span className="w-2 h-2 rounded-full bg-green-400" />
                 Verified candidate
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                 <span className="w-2 h-2 rounded-full bg-amber-400" />
                 Pending review
               </div>

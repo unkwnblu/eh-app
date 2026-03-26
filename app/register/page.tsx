@@ -5,14 +5,16 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
   title: "Create Account – Edge Harbour",
+  description:
+    "Join Edge Harbour as an employer or candidate. Create your free account and access the UK's compliance-first recruitment platform.",
 };
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen bg-gray-soft flex flex-col">
+    <div className="min-h-screen bg-gray-soft dark:bg-[#0B1222] flex flex-col">
       <GsapAnimations />
       {/* Minimal header */}
-      <header className="w-full border-b border-gray-border bg-white">
+      <header className="w-full border-b border-gray-border dark:border-white/10 bg-white dark:bg-[#111827]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <Image
@@ -22,11 +24,11 @@ export default function RegisterPage() {
               height={30}
               priority
             />
-            <span className="text-brand font-bold text-base tracking-tight leading-none">
+            <span className="text-brand dark:text-white font-bold text-base tracking-tight leading-none">
               Edge<span className="text-brand-blue">Harbour</span>
             </span>
           </Link>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Already have an account?{" "}
             <Link href="/login" className="text-brand-blue font-medium hover:underline">
               Sign in
@@ -36,16 +38,16 @@ export default function RegisterPage() {
       </header>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
+      <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-6 py-16">
         {/* Heading */}
         <div data-gsap="fade-up" className="text-center mb-12">
           <p className="text-brand-blue text-xs font-semibold tracking-widest uppercase mb-3">
             Get Started
           </p>
-          <h1 className="text-brand font-black text-4xl lg:text-5xl tracking-tight mb-4">
+          <h1 className="text-brand dark:text-white font-black text-4xl lg:text-5xl tracking-tight mb-4">
             Create your account
           </h1>
-          <p className="text-slate-500 text-base max-w-md mx-auto">
+          <p className="text-slate-500 dark:text-slate-400 text-base max-w-md mx-auto">
             Tell us how you&apos;ll be using Edge Harbour so we can set up the
             right experience for you.
           </p>
@@ -56,7 +58,7 @@ export default function RegisterPage() {
           {/* Employer card */}
           <Link
             href="/auth/employer"
-            className="group relative bg-white border border-gray-border rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
+            className="group relative bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}
             <div className="w-12 h-12 rounded-xl bg-brand/8 flex items-center justify-center mb-6 group-hover:bg-brand-blue/10 transition-colors">
@@ -67,7 +69,7 @@ export default function RegisterPage() {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.75"
-                className="text-brand group-hover:text-brand-blue transition-colors"
+                className="text-brand dark:text-white group-hover:text-brand-blue transition-colors"
               >
                 <path
                   strokeLinecap="round"
@@ -77,10 +79,10 @@ export default function RegisterPage() {
               </svg>
             </div>
 
-            <h2 className="text-brand font-bold text-xl mb-2">
+            <h2 className="text-brand dark:text-white font-bold text-xl mb-2">
               I&apos;m an Employer
             </h2>
-            <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-6">
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed flex-1 mb-6">
               Post roles, manage applicants, and access a pool of pre-vetted,
               compliance-ready candidates across your sector.
             </p>
@@ -92,7 +94,7 @@ export default function RegisterPage() {
                 "100% RTW-verified candidates",
                 "Built-in compliance workflow",
               ].map((feat) => (
-                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500">
+                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <svg
                     width="14"
                     height="14"
@@ -121,10 +123,10 @@ export default function RegisterPage() {
           {/* Candidate card */}
           <Link
             href="/register/candidate"
-            className="group relative bg-white border border-gray-border rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
+            className="group relative bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}
-            <div className="w-12 h-12 rounded-xl bg-brand-blue/8 flex items-center justify-center mb-6 group-hover:bg-brand-blue/15 transition-colors">
+            <div className="w-12 h-12 rounded-xl bg-brand-blue/8 dark:bg-brand-blue/15 flex items-center justify-center mb-6 group-hover:bg-brand-blue/15 transition-colors">
               <svg
                 width="24"
                 height="24"
@@ -142,10 +144,10 @@ export default function RegisterPage() {
               </svg>
             </div>
 
-            <h2 className="text-brand font-bold text-xl mb-2">
+            <h2 className="text-brand dark:text-white font-bold text-xl mb-2">
               I&apos;m a Candidate
             </h2>
-            <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-6">
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed flex-1 mb-6">
               Upload your documents once, get verified, and let employers come
               to you — with your credentials already confirmed.
             </p>
@@ -157,7 +159,7 @@ export default function RegisterPage() {
                 "Verified badge on your profile",
                 "Direct access to top employers",
               ].map((feat) => (
-                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500">
+                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <svg
                     width="14"
                     height="14"
@@ -185,7 +187,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Footer note */}
-        <p className="text-xs text-slate-400 mt-10 text-center max-w-sm">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-10 text-center max-w-sm">
           By creating an account you agree to our{" "}
           <Link href="/legal/terms" className="text-brand-blue hover:underline">
             Terms of Service

@@ -3,6 +3,10 @@
 import { useState } from "react";
 import Image from "next/image";
 
+/** Tiny 4×4 navy blur placeholder for remote images (avoids layout shift). */
+const BLUR_DATA_URL =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMwRDFCM0UiLz48L3N2Zz4=";
+
 const industries = [
   {
     id: "healthcare",
@@ -92,6 +96,8 @@ export default function IndustriesSection() {
                 alt={ind.alt}
                 fill
                 sizes="(max-width: 1280px) 50vw, 33vw"
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
                 className="object-cover transition-transform duration-700"
                 style={{ transform: active === i ? "scale(1.06)" : "scale(1)" }}
               />
@@ -185,6 +191,8 @@ export default function IndustriesSection() {
                 alt={ind.alt}
                 fill
                 sizes="100vw"
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
                 className="object-cover"
               />
               <div className="absolute inset-0 bg-navy/60" />

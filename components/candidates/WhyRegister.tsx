@@ -87,7 +87,7 @@ const benefits = [
 
 export default function WhyRegister() {
   return (
-    <section className="w-full bg-white py-24">
+    <section className="w-full bg-white dark:bg-[#111827] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
           {/* Left column */}
@@ -97,14 +97,14 @@ export default function WhyRegister() {
               heading={<>The smarter way<br />to find work in the UK.</>}
               className="mb-6"
             />
-            <p className="text-slate-500 text-base leading-relaxed mb-6">
+            <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed mb-6">
               Edge Harbour is a compliance-first recruitment platform built for
               UK professionals who are serious about their career. Unlike
               traditional job boards, we verify your credentials before
               connecting you with employers — so when you show up in their
               search results, you&apos;re already trusted.
             </p>
-            <p className="text-slate-500 text-base leading-relaxed">
+            <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed">
               Our sector-specialised approach means we don&apos;t send generic
               applications into the void. We match your verified profile with
               employers in your exact niche — Healthcare, Hospitality, Customer

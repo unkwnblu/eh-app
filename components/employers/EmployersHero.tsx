@@ -10,7 +10,7 @@ function HeroFloatingCard({
   return (
     <div
       data-hero="card"
-      className={`hidden md:block absolute bg-white rounded-xl shadow-lg border border-gray-border px-4 py-3 z-10 ${className}`}
+      className={`hidden md:block absolute bg-white dark:bg-[#111827] rounded-xl shadow-lg border border-gray-border dark:border-white/10 px-4 py-3 z-10 ${className}`}
     >
       {children}
     </div>
@@ -19,7 +19,7 @@ function HeroFloatingCard({
 
 export default function EmployersHero() {
   return (
-    <section className="relative w-full bg-white overflow-hidden min-h-[90vh] flex items-center">
+    <section className="relative w-full bg-white dark:bg-[#111827] overflow-hidden min-h-[90vh] flex items-center">
       {/* Floating card — left */}
       <HeroFloatingCard className="left-[4%] top-[28%] w-48">
         <div className="flex items-center gap-2.5">
@@ -41,10 +41,10 @@ export default function EmployersHero() {
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-800">3 hires this week</p>
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">3 hires this week</p>
             <div className="flex items-center gap-1 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              <span className="text-[10px] text-slate-400">City Health Trust</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">City Health Trust</span>
             </div>
           </div>
         </div>
@@ -71,11 +71,11 @@ export default function EmployersHero() {
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-800">RTW Verified</p>
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">RTW Verified</p>
             <p className="text-[10px] text-slate-400 truncate">12 candidates ready</p>
             <div className="flex items-center gap-1 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              <span className="text-[10px] text-slate-400">All docs cleared</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">All docs cleared</span>
             </div>
           </div>
         </div>
@@ -95,7 +95,7 @@ export default function EmployersHero() {
           {/* Heading */}
           <h1
             data-hero="heading"
-            className="text-5xl lg:text-7xl font-black tracking-tight text-brand leading-[1.06] mb-6"
+            className="text-5xl lg:text-7xl font-black tracking-tight text-brand dark:text-white leading-[1.06] mb-6"
           >
             Hire Smarter.
             <br />
@@ -105,7 +105,7 @@ export default function EmployersHero() {
           {/* Subtitle */}
           <p
             data-hero="subtitle"
-            className="text-slate-500 text-lg leading-relaxed max-w-xl mb-10"
+            className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-xl mb-10"
           >
             Post a vacancy, get matched with pre-vetted candidates — RTW verified,
             sector-credentialed, and interview-ready.
@@ -140,7 +140,7 @@ export default function EmployersHero() {
           {/* Trust strip */}
           <div
             data-hero="trust"
-            className="mt-12 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-slate-400 text-xs"
+            className="mt-12 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-slate-400 dark:text-slate-500 text-xs"
           >
             <div className="flex items-center gap-1.5">
               <svg
@@ -159,7 +159,7 @@ export default function EmployersHero() {
               </svg>
               200+ UK Employers
             </div>
-            <span className="w-1 h-1 rounded-full bg-gray-border hidden sm:block" />
+            <span className="w-1 h-1 rounded-full bg-gray-border dark:bg-white/10 hidden sm:block" />
             <div className="flex items-center gap-1.5">
               <svg
                 width="14"
@@ -177,7 +177,7 @@ export default function EmployersHero() {
               </svg>
               Avg. 4-day hire
             </div>
-            <span className="w-1 h-1 rounded-full bg-gray-border hidden sm:block" />
+            <span className="w-1 h-1 rounded-full bg-gray-border dark:bg-white/10 hidden sm:block" />
             <div className="flex items-center gap-1.5">
               <svg
                 width="14"
@@ -195,7 +195,7 @@ export default function EmployersHero() {
               </svg>
               100% RTW Verified
             </div>
-            <span className="w-1 h-1 rounded-full bg-gray-border hidden sm:block" />
+            <span className="w-1 h-1 rounded-full bg-gray-border dark:bg-white/10 hidden sm:block" />
             <div className="flex items-center gap-1.5">
               <svg
                 width="14"

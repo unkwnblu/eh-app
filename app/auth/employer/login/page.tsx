@@ -24,23 +24,23 @@ export default function EmployerLoginPage() {
   return (
     <div className="h-screen flex overflow-hidden">
       {/* ── Left: Form panel ── */}
-      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-12 bg-white lg:max-w-[55%]">
+      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-12 bg-white dark:bg-[#111827] lg:max-w-[55%]">
         <div className="w-full max-w-md mx-auto">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 mb-10">
             <Image src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} priority />
-            <span className="text-brand font-bold text-base tracking-tight leading-none">
+            <span className="text-brand dark:text-slate-100 font-bold text-base tracking-tight leading-none">
               Edge<span className="text-brand-blue">Harbour</span>
             </span>
           </Link>
 
           {/* Heading */}
           <div className="mb-8">
-            <h1 className="text-brand font-black text-4xl leading-tight tracking-tight mb-2">
+            <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
               WELCOME <span className="text-brand-blue">BACK.</span>
             </h1>
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
               Sign in to your employer dashboard to manage your hiring pipeline.
             </p>
           </div>
@@ -49,25 +49,26 @@ export default function EmployerLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+              <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
                 Email Address
               </label>
               <input
+                id="email"
                 type="email"
                 placeholder="you@company.co.uk"
                 value={form.email}
                 onChange={(e) => { setForm((p) => ({ ...p, email: e.target.value })); if (errors.email) setErrors((p) => { const n = { ...p }; delete n.email; return n; }); }}
-                className={`w-full border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+                className={`w-full border rounded-xl px-4 py-3 text-sm text-brand dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] ${
                   errors.email ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
                 }`}
               />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+              {errors.email && <p role="alert" className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
 
             {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <label htmlFor="password" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
                   Password
                 </label>
                 <Link
@@ -79,18 +80,19 @@ export default function EmployerLoginPage() {
               </div>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••••"
                   value={form.password}
                   onChange={(e) => { setForm((p) => ({ ...p, password: e.target.value })); if (errors.password) setErrors((p) => { const n = { ...p }; delete n.password; return n; }); }}
-                  className={`w-full border rounded-xl px-4 py-3 pr-11 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+                  className={`w-full border rounded-xl px-4 py-3 pr-11 text-sm text-brand dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] ${
                     errors.password ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand dark:hover:text-white transition-colors"
                 >
                   {showPassword ? (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -104,7 +106,7 @@ export default function EmployerLoginPage() {
                   )}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+              {errors.password && <p role="alert" className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
 
             {/* Submit */}
@@ -125,13 +127,13 @@ export default function EmployerLoginPage() {
 
           {/* Footer links */}
           <div className="space-y-3 text-center">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Don&apos;t have an account?{" "}
               <Link href="/auth/employer" className="text-brand-blue font-medium hover:underline">
                 Register as Employer
               </Link>
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               <Link href="/login" className="hover:text-brand-blue transition-colors">
                 ← Back to sign in options
               </Link>

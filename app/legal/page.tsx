@@ -6,6 +6,8 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
   title: "Legal – Edge Harbour",
+  description:
+    "Review Edge Harbour's legal documents including our Terms of Service, Privacy Policy, and compliance framework.",
 };
 
 const legalCards = [
@@ -84,7 +86,7 @@ export default function LegalHubPage() {
   return (
     <>
       <Navbar />
-      <main className="flex flex-col flex-1">
+      <main id="main-content" className="flex flex-col flex-1">
         {/* Hero */}
         <section className="bg-gray-soft py-16">
           <div data-gsap="fade-up" className="max-w-4xl mx-auto px-6 text-center">

@@ -68,7 +68,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="w-full bg-white py-24">
+    <section id="how-it-works" className="w-full bg-white dark:bg-[#111827] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Section header */}
         <SectionHeader
@@ -83,7 +83,7 @@ export default function HowItWorks() {
           {/* Connecting line — desktop only */}
           <div
             aria-hidden="true"
-            className="hidden lg:block absolute top-12 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gray-border"
+            className="hidden lg:block absolute top-12 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gray-border dark:bg-white/10"
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-8">
@@ -107,8 +107,8 @@ export default function HowItWorks() {
                 </div>
 
                 <div className="lg:px-4">
-                  <h3 className="text-lg font-bold text-brand mb-2">{step.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{step.body}</p>
+                  <h3 className="text-lg font-bold text-brand dark:text-white mb-2">{step.title}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.body}</p>
                 </div>
 
                 {/* Mobile arrow connector */}
@@ -124,7 +124,7 @@ export default function HowItWorks() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.75"
-                      className="text-gray-border rotate-90"
+                      className="text-gray-border dark:text-white/10 rotate-90"
                     >
                       <path
                         strokeLinecap="round"
@@ -141,7 +141,7 @@ export default function HowItWorks() {
 
         {/* Bottom note */}
         <div data-gsap="fade-up" className="mt-16 text-center">
-          <div className="inline-flex items-center gap-2 bg-gray-soft border border-gray-border rounded-full px-5 py-2.5 text-xs text-slate-500">
+          <div className="inline-flex items-center gap-2 bg-gray-soft dark:bg-[#0B1222] border border-gray-border dark:border-white/10 rounded-full px-5 py-2.5 text-xs text-slate-500 dark:text-slate-400">
             <svg
               width="14"
               height="14"

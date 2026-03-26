@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const sectorColors: Record<string, string> = {
-  Healthcare: "bg-blue-50 text-blue-700 border-blue-200",
-  Hospitality: "bg-orange-50 text-orange-700 border-orange-200",
-  "Customer Care": "bg-purple-50 text-purple-700 border-purple-200",
-  "Tech & Data": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Healthcare: "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  Hospitality: "bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
+  "Customer Care": "bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+  "Tech & Data": "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
 };
 
 const jobs = [
@@ -78,7 +78,7 @@ const jobs = [
 
 function VerifiedBadge() {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-full px-2 py-0.5">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
       </svg>
@@ -89,7 +89,7 @@ function VerifiedBadge() {
 
 export default function JobPostings() {
   return (
-    <section className="w-full bg-gray-soft py-24">
+    <section className="w-full bg-gray-soft dark:bg-[#0B1222] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Header */}
         <div data-gsap="fade-up" className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
@@ -97,7 +97,7 @@ export default function JobPostings() {
             <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
               Live Opportunities
             </span>
-            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight">
+            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand dark:text-white leading-tight">
               Latest job postings.
             </h2>
           </div>
@@ -119,7 +119,7 @@ export default function JobPostings() {
               key={i}
               href="/jobs"
               data-gsap="stagger-item"
-              className="group bg-white border border-gray-border rounded-2xl p-6 hover:border-brand-blue/40 hover:shadow-md transition-all flex flex-col justify-between"
+              className="group bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-6 hover:border-brand-blue/40 hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div>
                 {/* Top row */}
@@ -132,7 +132,7 @@ export default function JobPostings() {
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {job.urgent && (
-                      <span className="text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                      <span className="text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-full px-2 py-0.5">
                         Urgent
                       </span>
                     )}
@@ -141,10 +141,10 @@ export default function JobPostings() {
                 </div>
 
                 {/* Title & company */}
-                <h3 className="text-sm font-bold text-brand group-hover:text-brand-blue transition-colors leading-snug mb-1">
+                <h3 className="text-sm font-bold text-brand dark:text-white group-hover:text-brand-blue transition-colors leading-snug mb-1">
                   {job.title}
                 </h3>
-                <p className="text-xs text-slate-500 mb-4">{job.company}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{job.company}</p>
 
                 {/* Meta */}
                 <div className="flex flex-wrap gap-2 mb-4">

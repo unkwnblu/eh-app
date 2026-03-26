@@ -36,7 +36,7 @@ const benefits = [
 
 export default function CandidateSection() {
   return (
-    <section className="w-full bg-gray-soft py-24">
+    <section className="w-full bg-gray-soft dark:bg-[#0B1222] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left mockup */}
@@ -64,8 +64,8 @@ export default function CandidateSection() {
                     {b.icon}
                   </IconBadge>
                   <div>
-                    <p className="text-sm font-bold text-brand">{b.title}</p>
-                    <p className="text-sm text-slate-500 mt-1 leading-relaxed">{b.body}</p>
+                    <p className="text-sm font-bold text-brand dark:text-white">{b.title}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{b.body}</p>
                   </div>
                 </li>
               ))}

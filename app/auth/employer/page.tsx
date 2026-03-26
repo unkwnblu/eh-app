@@ -119,15 +119,16 @@ const STEPS = [
 
 // ─── Field helpers ─────────────────────────────────────────────────────────────
 
-function Label({ children }: { children: React.ReactNode }) {
+function Label({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
   return (
-    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+    <label htmlFor={htmlFor} className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
       {children}
     </label>
   );
 }
 
 function Input({
+  id,
   type = "text",
   placeholder,
   value,
@@ -135,6 +136,7 @@ function Input({
   required,
   error,
 }: {
+  id?: string;
   type?: string;
   placeholder?: string;
   value: string;
@@ -145,29 +147,32 @@ function Input({
   return (
     <>
       <input
+        id={id}
         type={type}
         placeholder={placeholder}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] ${
           error
             ? "border-red-400 focus:border-red-400 focus:ring-red-400"
             : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
         }`}
       />
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+      {error && <p className="text-red-500 text-xs mt-1" role="alert">{error}</p>}
     </>
   );
 }
 
 function Select({
+  id,
   value,
   onChange,
   options,
   placeholder,
   error,
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   options: string[];
@@ -177,9 +182,10 @@ function Select({
   return (
     <>
       <select
+        id={id}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:ring-1 transition-colors bg-white appearance-none ${
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand dark:text-slate-100 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] appearance-none ${
           error
             ? "border-red-400 focus:border-red-400 focus:ring-red-400"
             : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
@@ -194,7 +200,7 @@ function Select({
           </option>
         ))}
       </select>
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+      {error && <p className="text-red-500 text-xs mt-1" role="alert">{error}</p>}
     </>
   );
 }
@@ -203,7 +209,7 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between py-2.5 border-b border-gray-border last:border-0">
       <span className="text-xs text-slate-400">{label}</span>
-      <span className="text-xs text-brand font-medium text-right max-w-[60%]">
+      <span className="text-xs text-brand dark:text-slate-200 font-medium text-right max-w-[60%]">
         {value || <span className="text-slate-300 italic">—</span>}
       </span>
     </div>
@@ -237,7 +243,7 @@ function StepIndicator({ step }: { step: number }) {
             </div>
             <span
               className={`text-[9px] font-semibold uppercase tracking-wider ${
-                step >= s.number ? "text-brand" : "text-slate-300"
+                step >= s.number ? "text-brand dark:text-slate-300" : "text-slate-300 dark:text-slate-600"
               }`}
             >
               {s.label}
@@ -303,15 +309,15 @@ export default function EmployerRegisterPage() {
   // ── Success screen ─────────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-soft px-6">
+      <div className="min-h-screen flex items-center justify-center bg-gray-soft dark:bg-[#0B1222] px-6">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 rounded-2xl bg-brand-blue flex items-center justify-center mx-auto mb-6">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h1 className="text-brand font-black text-3xl mb-3">Application received</h1>
-          <p className="text-slate-500 text-sm leading-relaxed mb-8">
+          <h1 className="text-brand dark:text-slate-100 font-black text-3xl mb-3">Application received</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
             We&apos;re verifying <strong>{form.companyName}</strong>. You&apos;ll hear
             from us at <strong>{form.email}</strong> within 1–2 business days once
             your account is approved.
@@ -331,12 +337,12 @@ export default function EmployerRegisterPage() {
   return (
     <div className="h-screen flex overflow-hidden">
       {/* ── Left: Form panel ── */}
-      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-12 bg-white lg:max-w-[55%]">
+      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-12 bg-white dark:bg-[#111827] lg:max-w-[55%]">
         <div className="w-full max-w-md mx-auto">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 mb-10">
             <Image src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} priority />
-            <span className="text-brand font-bold text-base tracking-tight leading-none">
+            <span className="text-brand dark:text-slate-100 font-bold text-base tracking-tight leading-none">
               Edge<span className="text-brand-blue">Harbour</span>
             </span>
           </Link>
@@ -345,7 +351,7 @@ export default function EmployerRegisterPage() {
           <div className="mb-8">
             {step === 1 && (
               <>
-                <h1 className="text-brand font-black text-4xl leading-tight tracking-tight mb-2">
+                <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
                   ELEVATE YOUR{" "}
                   <span className="text-brand-blue">HIRING</span> GAME.
                 </h1>
@@ -357,10 +363,10 @@ export default function EmployerRegisterPage() {
             )}
             {step === 2 && (
               <>
-                <span className="inline-flex items-center bg-blue-50 border border-blue-100 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
+                <span className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
                   Step 02 — Business Creation
                 </span>
-                <h1 className="text-brand font-black text-4xl leading-tight tracking-tight mb-2">
+                <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
                   LET&apos;S BUILD YOUR{" "}
                   <span className="text-brand-blue">PROFILE</span>
                   <br />AND YOUR{" "}
@@ -370,10 +376,10 @@ export default function EmployerRegisterPage() {
             )}
             {step === 3 && (
               <>
-                <span className="inline-flex items-center bg-blue-50 border border-blue-100 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
+                <span className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
                   Step 03 — Profile Creation
                 </span>
-                <h1 className="text-brand font-black text-4xl leading-tight tracking-tight mb-2">
+                <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
                   LET&apos;S BUILD YOUR{" "}
                   <span className="text-brand-blue">PROFILE</span>
                   <br />AND YOUR{" "}
@@ -383,10 +389,10 @@ export default function EmployerRegisterPage() {
             )}
             {step === 4 && (
               <>
-                <span className="inline-flex items-center bg-blue-50 border border-blue-100 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
+                <span className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
                   Step 04 — Choose an Industry
                 </span>
-                <h1 className="text-brand font-black text-4xl leading-tight tracking-tight mb-2">
+                <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
                   SELECT YOUR{" "}
                   <span className="text-brand-blue">INDUSTRY</span>
                 </h1>
@@ -397,10 +403,10 @@ export default function EmployerRegisterPage() {
             )}
             {step === 5 && (
               <>
-                <span className="inline-flex items-center bg-blue-50 border border-blue-100 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
+                <span className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
                   Step 05 — Legal &amp; Agreements
                 </span>
-                <h1 className="text-brand font-black text-4xl leading-tight tracking-tight mb-2">
+                <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
                   BILLING INFORMATION &amp;{" "}
                   <span className="text-brand-blue">TERMS OF ENGAGEMENT</span>
                 </h1>
@@ -427,8 +433,9 @@ export default function EmployerRegisterPage() {
             {step === 1 && (
               <>
                 <div>
-                  <Label>Work Email Address</Label>
+                  <Label htmlFor="email">Work Email Address</Label>
                   <Input
+                    id="email"
                     type="email"
                     placeholder="name@companyemail.co.uk"
                     value={form.email}
@@ -437,9 +444,10 @@ export default function EmployerRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Password</Label>
+                  <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <input
+                      id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Min. 8 characters"
                       value={form.password}
@@ -470,8 +478,9 @@ export default function EmployerRegisterPage() {
                   {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 </div>
                 <div>
-                  <Label>Confirm Password</Label>
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input
+                    id="confirmPassword"
                     type="password"
                     placeholder="Repeat your password"
                     value={form.confirmPassword}
@@ -486,8 +495,9 @@ export default function EmployerRegisterPage() {
             {step === 2 && (
               <>
                 <div>
-                  <Label>Company Name</Label>
+                  <Label htmlFor="companyName">Company Name</Label>
                   <Input
+                    id="companyName"
                     placeholder="Name of your Company"
                     value={form.companyName}
                     onChange={set("companyName")}
@@ -495,8 +505,9 @@ export default function EmployerRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Company Registration Number</Label>
+                  <Label htmlFor="crn">Company Registration Number</Label>
                   <Input
+                    id="crn"
                     placeholder="e.g. 12345678"
                     value={form.crn}
                     onChange={set("crn")}
@@ -504,8 +515,9 @@ export default function EmployerRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Registered Address</Label>
+                  <Label htmlFor="registeredAddress">Registered Address</Label>
                   <Input
+                    id="registeredAddress"
                     placeholder="Address of the Company"
                     value={form.registeredAddress}
                     onChange={set("registeredAddress")}
@@ -513,8 +525,9 @@ export default function EmployerRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Incorporation Date</Label>
+                  <Label htmlFor="incorporationDate">Incorporation Date</Label>
                   <Input
+                    id="incorporationDate"
                     type="date"
                     placeholder="Date of incorporation"
                     value={form.incorporationDate}
@@ -523,8 +536,9 @@ export default function EmployerRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Company Status</Label>
+                  <Label htmlFor="companyStatus">Company Status</Label>
                   <Select
+                    id="companyStatus"
                     value={form.companyStatus}
                     onChange={set("companyStatus")}
                     options={COMPANY_STATUSES}
@@ -540,8 +554,9 @@ export default function EmployerRegisterPage() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>First Name</Label>
+                    <Label htmlFor="firstName">First Name</Label>
                     <Input
+                      id="firstName"
                       placeholder="First Name"
                       value={form.firstName}
                       onChange={set("firstName")}
@@ -549,8 +564,9 @@ export default function EmployerRegisterPage() {
                     />
                   </div>
                   <div>
-                    <Label>Last Name</Label>
+                    <Label htmlFor="lastName">Last Name</Label>
                     <Input
+                      id="lastName"
                       placeholder="Last Name"
                       value={form.lastName}
                       onChange={set("lastName")}
@@ -559,8 +575,9 @@ export default function EmployerRegisterPage() {
                   </div>
                 </div>
                 <div>
-                  <Label>Job Title</Label>
+                  <Label htmlFor="jobTitle">Job Title</Label>
                   <Input
+                    id="jobTitle"
                     placeholder="Position at the company"
                     value={form.jobTitle}
                     onChange={set("jobTitle")}
@@ -568,8 +585,9 @@ export default function EmployerRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Company VAT Number</Label>
+                  <Label htmlFor="vatNumber">Company VAT Number</Label>
                   <Input
+                    id="vatNumber"
                     placeholder="e.g. GB123456789"
                     value={form.vatNumber}
                     onChange={set("vatNumber")}
@@ -610,6 +628,8 @@ export default function EmployerRegisterPage() {
                           alt={ind.id}
                           fill
                           sizes="25vw"
+                          placeholder="blur"
+                          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMwRDFCM0UiLz48L3N2Zz4="
                           className={`object-cover transition-transform duration-700 ${selected ? "scale-105" : "group-hover:scale-105"}`}
                         />
                         {/* Dark overlay — lighter when selected */}
@@ -649,8 +669,9 @@ export default function EmployerRegisterPage() {
                       Healthcare Compliance
                     </p>
                     <div>
-                      <Label>CQC Provider ID</Label>
+                      <Label htmlFor="cqcProviderId">CQC Provider ID</Label>
                       <Input
+                        id="cqcProviderId"
                         placeholder="e.g. 1-123456789"
                         value={form.cqcProviderId}
                         onChange={set("cqcProviderId")}
@@ -660,8 +681,9 @@ export default function EmployerRegisterPage() {
                       </p>
                     </div>
                     <div>
-                      <Label>Minimum DBS Level Required</Label>
+                      <Label htmlFor="dbsLevel">Minimum DBS Level Required</Label>
                       <Select
+                        id="dbsLevel"
                         value={form.dbsLevel}
                         onChange={set("dbsLevel")}
                         options={DBS_LEVELS}
@@ -720,8 +742,9 @@ export default function EmployerRegisterPage() {
               <>
                 <div className="space-y-4">
                   <div>
-                    <Label>Full Name</Label>
+                    <Label htmlFor="billingName">Full Name</Label>
                     <Input
+                      id="billingName"
                       placeholder="John Doe"
                       value={form.billingName}
                       onChange={set("billingName")}
@@ -729,8 +752,9 @@ export default function EmployerRegisterPage() {
                     />
                   </div>
                   <div>
-                    <Label>Billing Email</Label>
+                    <Label htmlFor="billingEmail">Billing Email</Label>
                     <Input
+                      id="billingEmail"
                       type="email"
                       placeholder="name@company.co.uk"
                       value={form.billingEmail}
@@ -739,8 +763,9 @@ export default function EmployerRegisterPage() {
                     />
                   </div>
                   <div>
-                    <Label>Billing Address</Label>
+                    <Label htmlFor="billingAddress">Billing Address</Label>
                     <Input
+                      id="billingAddress"
                       placeholder="Company Avenue"
                       value={form.billingAddress}
                       onChange={set("billingAddress")}

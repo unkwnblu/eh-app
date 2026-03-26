@@ -20,7 +20,7 @@ export default function CandidatesPage() {
   return (
     <>
       <Navbar />
-      <main className="flex flex-col flex-1">
+      <main id="main-content" className="flex flex-col flex-1">
         <CandidatesHero />
         <HowCandidatesWork />
         <WhyRegister />

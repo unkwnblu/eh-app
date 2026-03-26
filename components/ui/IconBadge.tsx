@@ -16,7 +16,7 @@ export default function IconBadge({
 }: IconBadgeProps) {
   return (
     <div
-      className={`${sizeClasses[size]} rounded-xl bg-brand-blue/8 flex items-center justify-center text-brand-blue flex-shrink-0 ${className}`}
+      className={`${sizeClasses[size]} rounded-xl bg-brand-blue/8 dark:bg-brand-blue/15 flex items-center justify-center text-brand-blue flex-shrink-0 ${className}`}
     >
       {children}
     </div>

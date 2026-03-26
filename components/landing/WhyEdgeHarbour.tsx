@@ -86,7 +86,7 @@ const features = [
 
 export default function WhyEdgeHarbour() {
   return (
-    <section className="w-full bg-gray-soft py-24">
+    <section className="w-full bg-gray-soft dark:bg-[#0B1222] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left copy */}
@@ -101,7 +101,7 @@ export default function WhyEdgeHarbour() {
                 </span>
               }
             />
-            <div className="mt-8 inline-flex items-center gap-2 border border-gray-border bg-white rounded-full px-5 py-2.5 text-sm text-slate-600">
+            <div className="mt-8 inline-flex items-center gap-2 border border-gray-border dark:border-white/10 bg-white dark:bg-[#111827] rounded-full px-5 py-2.5 text-sm text-slate-600 dark:text-slate-300">
               <svg
                 width="16"
                 height="16"
@@ -122,7 +122,7 @@ export default function WhyEdgeHarbour() {
           </div>
 
           {/* Right: 2x2 feature grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-lg-cols-2 grid-cols-1 gap-4">
             {features.map((f) => (
               <FeatureCard
                 key={f.title}

@@ -33,7 +33,7 @@ const testimonials = [
 
 export default function CandidateTestimonials() {
   return (
-    <section className="w-full bg-white py-24">
+    <section className="w-full bg-white dark:bg-[#111827] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Header */}
         <SectionHeader
@@ -49,12 +49,12 @@ export default function CandidateTestimonials() {
             <div
               key={i}
               data-gsap="stagger-item"
-              className="group relative bg-white border border-gray-border rounded-2xl p-7 hover:border-brand-blue/30 hover:shadow-md transition-all flex flex-col justify-between"
+              className="group relative bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-7 hover:border-brand-blue/30 hover:shadow-md transition-all flex flex-col justify-between"
             >
               {/* Stars */}
               <div className="flex items-center justify-between mb-5">
                 <StarRating />
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider border border-gray-border rounded-full px-2.5 py-1">
+                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider border border-gray-border dark:border-white/10 rounded-full px-2.5 py-1">
                   Candidate
                 </span>
               </div>

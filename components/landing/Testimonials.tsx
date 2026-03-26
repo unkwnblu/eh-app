@@ -66,7 +66,7 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section className="w-full bg-white py-24 overflow-hidden">
+    <section className="w-full bg-white dark:bg-[#111827] py-24 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Header */}
         <div data-gsap="fade-up" className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-14">
@@ -74,7 +74,7 @@ export default function Testimonials() {
             label="What People Say"
             heading={<>Trusted by employers<br />and candidates alike.</>}
           />
-          <p className="text-slate-500 text-sm max-w-xs sm:text-right leading-relaxed">
+          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs sm:text-right leading-relaxed">
             Rated 4.9/5 across 200+ verified reviews from UK employers and professionals.
           </p>
         </div>
@@ -85,29 +85,29 @@ export default function Testimonials() {
             <div
               key={i}
               data-gsap="stagger-item"
-              className="group relative bg-white border border-gray-border rounded-2xl p-7 hover:border-brand-blue/30 hover:shadow-md transition-all flex flex-col justify-between"
+              className="group relative bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-7 hover:border-brand-blue/30 hover:shadow-md transition-all flex flex-col justify-between"
             >
               {/* Sector badge */}
               <div className="flex items-center justify-between mb-5">
                 <StarRating />
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider border border-gray-border rounded-full px-2.5 py-1">
+                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider border border-gray-border dark:border-white/10 rounded-full px-2.5 py-1">
                   {t.sector}
                 </span>
               </div>
 
               {/* Quote */}
-              <blockquote className="text-sm text-slate-600 leading-relaxed flex-1 mb-6">
+              <blockquote className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed flex-1 mb-6">
                 &ldquo;{t.quote}&rdquo;
               </blockquote>
 
               {/* Author */}
-              <div className="flex items-center gap-3 pt-5 border-t border-gray-border">
+              <div className="flex items-center gap-3 pt-5 border-t border-gray-border dark:border-white/10">
                 <div className={`w-9 h-9 rounded-full ${t.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
                   {t.initials}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-brand">{t.name}</p>
-                  <p className="text-xs text-slate-400">{t.title} · {t.company}</p>
+                  <p className="text-sm font-bold text-brand dark:text-white">{t.name}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">{t.title} · {t.company}</p>
                 </div>
               </div>
             </div>

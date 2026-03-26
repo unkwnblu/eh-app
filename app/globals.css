@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand: #1B2F5E;
   --color-brand-blue: #2563EB;
@@ -10,6 +12,14 @@
   --color-gray-soft: #F7F8FC;
   --color-gray-border: #E8ECF4;
   --font-sans: 'Inter', 'Calibri', 'Tahoma', system-ui, sans-serif;
+
+  /* ─── Dark mode surface & border tokens ─────────────────────────────── */
+  --color-surface: #ffffff;
+  --color-surface-raised: #F7F8FC;
+  --color-surface-border: #E8ECF4;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
 }
 
 :root {
@@ -17,9 +27,39 @@
   --foreground: #0f172a;
 }
 
+.dark {
+  --background: #0B1222;
+  --foreground: #e2e8f0;
+  --color-surface: #111827;
+  --color-surface-raised: #1a2332;
+  --color-surface-border: #1e293b;
+  --color-gray-soft: #111827;
+  --color-gray-border: #1e293b;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Page transitions (View Transition API) ─────────────────────────────── */
+::view-transition-old(*) {
+  animation: page-fade-out 0.2s ease-in forwards;
+}
+::view-transition-new(*) {
+  animation: page-fade-in 0.25s ease-out both;
+}
+
+@keyframes page-fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

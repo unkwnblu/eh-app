@@ -5,15 +5,17 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
   title: "Sign In – Edge Harbour",
+  description:
+    "Sign in to your Edge Harbour account. Employers and candidates — access your dashboard, manage applications, and track compliance.",
 };
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gray-soft flex flex-col">
+    <div className="min-h-screen bg-gray-soft dark:bg-[#0B1222] flex flex-col">
       <GsapAnimations />
 
       {/* Minimal header */}
-      <header className="w-full border-b border-gray-border bg-white">
+      <header className="w-full border-b border-gray-border dark:border-white/10 bg-white dark:bg-[#111827]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <Image
@@ -23,11 +25,11 @@ export default function LoginPage() {
               height={30}
               priority
             />
-            <span className="text-brand font-bold text-base tracking-tight leading-none">
+            <span className="text-brand dark:text-white font-bold text-base tracking-tight leading-none">
               Edge<span className="text-brand-blue">Harbour</span>
             </span>
           </Link>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="text-brand-blue font-medium hover:underline">
               Register
@@ -37,17 +39,17 @@ export default function LoginPage() {
       </header>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
+      <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-6 py-16">
 
         {/* Heading */}
         <div data-gsap="fade-up" className="text-center mb-12">
           <p className="text-brand-blue text-xs font-semibold tracking-widest uppercase mb-3">
             Welcome Back
           </p>
-          <h1 className="text-brand font-black text-4xl lg:text-5xl tracking-tight mb-4">
+          <h1 className="text-brand dark:text-white font-black text-4xl lg:text-5xl tracking-tight mb-4">
             Sign in to your account
           </h1>
-          <p className="text-slate-500 text-base max-w-md mx-auto">
+          <p className="text-slate-500 dark:text-slate-400 text-base max-w-md mx-auto">
             Choose how you&apos;re accessing Edge Harbour to continue to your dashboard.
           </p>
         </div>
@@ -58,7 +60,7 @@ export default function LoginPage() {
           {/* Employer card */}
           <Link
             href="/auth/employer/login"
-            className="group relative bg-white border border-gray-border rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
+            className="group relative bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}
             <div className="w-12 h-12 rounded-xl bg-brand/8 flex items-center justify-center mb-6 group-hover:bg-brand-blue/10 transition-colors">
@@ -69,7 +71,7 @@ export default function LoginPage() {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.75"
-                className="text-brand group-hover:text-brand-blue transition-colors"
+                className="text-brand dark:text-white group-hover:text-brand-blue transition-colors"
               >
                 <path
                   strokeLinecap="round"
@@ -79,10 +81,10 @@ export default function LoginPage() {
               </svg>
             </div>
 
-            <h2 className="text-brand font-bold text-xl mb-2">
+            <h2 className="text-brand dark:text-white font-bold text-xl mb-2">
               I&apos;m an Employer
             </h2>
-            <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-6">
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed flex-1 mb-6">
               Access your hiring dashboard, manage active roles, and review
               your compliance pipeline.
             </p>
@@ -94,7 +96,7 @@ export default function LoginPage() {
                 "Track applicant pipeline",
                 "Monitor compliance status",
               ].map((feat) => (
-                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500">
+                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <svg
                     width="14"
                     height="14"
@@ -123,10 +125,10 @@ export default function LoginPage() {
           {/* Candidate card */}
           <Link
             href="/auth/candidate/login"
-            className="group relative bg-white border border-gray-border rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
+            className="group relative bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}
-            <div className="w-12 h-12 rounded-xl bg-brand-blue/8 flex items-center justify-center mb-6 group-hover:bg-brand-blue/15 transition-colors">
+            <div className="w-12 h-12 rounded-xl bg-brand-blue/8 dark:bg-brand-blue/15 flex items-center justify-center mb-6 group-hover:bg-brand-blue/15 transition-colors">
               <svg
                 width="24"
                 height="24"
@@ -144,10 +146,10 @@ export default function LoginPage() {
               </svg>
             </div>
 
-            <h2 className="text-brand font-bold text-xl mb-2">
+            <h2 className="text-brand dark:text-white font-bold text-xl mb-2">
               I&apos;m a Candidate
             </h2>
-            <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-6">
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed flex-1 mb-6">
               View your verification status, check interview requests, and
               manage your profile and credentials.
             </p>
@@ -159,7 +161,7 @@ export default function LoginPage() {
                 "View interview requests",
                 "Update your credentials",
               ].map((feat) => (
-                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500">
+                <li key={feat} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <svg
                     width="14"
                     height="14"
@@ -187,7 +189,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer note */}
-        <p className="text-xs text-slate-400 mt-10 text-center max-w-sm">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-10 text-center max-w-sm">
           Having trouble signing in?{" "}
           <Link href="/contact" className="text-brand-blue hover:underline">
             Contact support

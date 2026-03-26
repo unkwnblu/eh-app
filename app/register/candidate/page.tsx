@@ -103,9 +103,9 @@ const STEPS = [
 
 // ─── Field helpers ─────────────────────────────────────────────────────────────
 
-function Label({ children }: { children: React.ReactNode }) {
+function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
   return (
-    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+    <label htmlFor={htmlFor} className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
       {children}
     </label>
   );
@@ -117,25 +117,28 @@ function Input({
   value,
   onChange,
   error,
+  id,
 }: {
   type?: string;
   placeholder?: string;
   value: string;
   onChange: (v: string) => void;
   error?: string;
+  id?: string;
 }) {
   return (
     <>
       <input
+        id={id}
         type={type}
         placeholder={placeholder}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] ${
           error ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
         }`}
       />
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+      {error && <p role="alert" className="text-red-500 text-xs mt-1">{error}</p>}
     </>
   );
 }
@@ -146,19 +149,22 @@ function Select({
   options,
   placeholder,
   error,
+  id,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
   placeholder: string;
   error?: string;
+  id?: string;
 }) {
   return (
     <>
       <select
+        id={id}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:ring-1 transition-colors bg-white appearance-none ${
+        className={`w-full border rounded-xl px-4 py-3 text-sm text-brand dark:text-slate-100 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] appearance-none ${
           error ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
         }`}
       >
@@ -171,7 +177,7 @@ function Select({
           </option>
         ))}
       </select>
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+      {error && <p role="alert" className="text-red-500 text-xs mt-1">{error}</p>}
     </>
   );
 }
@@ -180,7 +186,7 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between py-2.5 border-b border-gray-border last:border-0">
       <span className="text-xs text-slate-400">{label}</span>
-      <span className="text-xs text-brand font-medium text-right max-w-[60%]">
+      <span className="text-xs text-brand dark:text-slate-200 font-medium text-right max-w-[60%]">
         {value || <span className="text-slate-300 italic">—</span>}
       </span>
     </div>
@@ -214,7 +220,7 @@ function StepIndicator({ step }: { step: number }) {
             </div>
             <span
               className={`text-[9px] font-semibold uppercase tracking-wider ${
-                step >= s.number ? "text-brand" : "text-slate-300"
+                step >= s.number ? "text-brand dark:text-slate-300" : "text-slate-300 dark:text-slate-600"
               }`}
             >
               {s.label}
@@ -288,15 +294,15 @@ export default function CandidateRegisterPage() {
   // ── Success screen ──────────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-soft px-6">
+      <div className="min-h-screen flex items-center justify-center bg-gray-soft dark:bg-[#0B1222] px-6">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 rounded-2xl bg-brand-blue flex items-center justify-center mx-auto mb-6">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h1 className="text-brand font-black text-3xl mb-3">Application submitted!</h1>
-          <p className="text-slate-500 text-sm leading-relaxed mb-8">
+          <h1 className="text-brand dark:text-slate-100 font-black text-3xl mb-3">Application submitted!</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
             Welcome, <strong>{form.firstName}</strong>! We&apos;re reviewing your documents.
             You&apos;ll receive a confirmation at <strong>{form.email}</strong> once your
             profile is verified — usually within 24 hours.
@@ -316,23 +322,23 @@ export default function CandidateRegisterPage() {
   return (
     <div className="h-screen flex overflow-hidden">
       {/* ── Left: Form panel ── */}
-      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-12 bg-white lg:max-w-[55%]">
+      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-12 bg-white dark:bg-[#111827] lg:max-w-[55%]">
         <div className="w-full max-w-md mx-auto">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 mb-10">
             <Image src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} priority />
-            <span className="text-brand font-bold text-base tracking-tight leading-none">
+            <span className="text-brand dark:text-slate-100 font-bold text-base tracking-tight leading-none">
               Edge<span className="text-brand-blue">Harbour</span>
             </span>
           </Link>
 
           {/* Heading */}
           <div className="mb-6">
-            <h1 className="text-brand font-black text-3xl leading-tight tracking-tight mb-1.5">
+            <h1 className="text-brand dark:text-slate-100 font-black text-3xl leading-tight tracking-tight mb-1.5">
               CREATE YOUR <span className="text-brand-blue">PROFILE.</span>
             </h1>
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
               {step === 1 && "Set up your login credentials."}
               {step === 2 && "Tell us a little about yourself."}
               {step === 3 && "Provide your right to work documentation."}
@@ -343,7 +349,7 @@ export default function CandidateRegisterPage() {
           </div>
 
           {/* Step indicator */}
-          <StepIndicator />
+          <StepIndicator step={step} />
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -352,8 +358,9 @@ export default function CandidateRegisterPage() {
             {step === 1 && (
               <>
                 <div>
-                  <Label>Email Address</Label>
+                  <Label htmlFor="email">Email Address</Label>
                   <Input
+                    id="email"
                     type="email"
                     placeholder="you@email.com"
                     value={form.email}
@@ -362,21 +369,22 @@ export default function CandidateRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Password</Label>
+                  <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <input
+                      id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Min. 8 characters"
                       value={form.password}
                       onChange={(e) => set("password")(e.target.value)}
-                      className={`w-full border rounded-xl px-4 py-3 pr-11 text-sm text-brand placeholder-slate-300 focus:outline-none focus:ring-1 transition-colors bg-white ${
+                      className={`w-full border rounded-xl px-4 py-3 pr-11 text-sm text-brand dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] ${
                         errors.password ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
                       }`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand dark:hover:text-white transition-colors"
                     >
                       {showPassword ? (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -393,8 +401,9 @@ export default function CandidateRegisterPage() {
                   {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 </div>
                 <div>
-                  <Label>Confirm Password</Label>
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input
+                    id="confirmPassword"
                     type="password"
                     placeholder="Repeat your password"
                     value={form.confirmPassword}
@@ -410,25 +419,26 @@ export default function CandidateRegisterPage() {
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>First Name</Label>
-                    <Input placeholder="Jane" value={form.firstName} onChange={set("firstName")} error={errors.firstName} />
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" placeholder="Jane" value={form.firstName} onChange={set("firstName")} error={errors.firstName} />
                   </div>
                   <div>
-                    <Label>Last Name</Label>
-                    <Input placeholder="Smith" value={form.lastName} onChange={set("lastName")} error={errors.lastName} />
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" placeholder="Smith" value={form.lastName} onChange={set("lastName")} error={errors.lastName} />
                   </div>
                 </div>
                 <div>
-                  <Label>Phone Number</Label>
-                  <Input type="tel" placeholder="+44 7700 900000" value={form.phone} onChange={set("phone")} error={errors.phone} />
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input id="phone" type="tel" placeholder="+44 7700 900000" value={form.phone} onChange={set("phone")} error={errors.phone} />
                 </div>
                 <div>
-                  <Label>Date of Birth</Label>
-                  <Input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} error={errors.dateOfBirth} />
+                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Input id="dateOfBirth" type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} error={errors.dateOfBirth} />
                 </div>
                 <div>
-                  <Label>Nationality</Label>
+                  <Label htmlFor="nationality">Nationality</Label>
                   <Select
+                    id="nationality"
                     value={form.nationality}
                     onChange={set("nationality")}
                     options={NATIONALITIES}
@@ -450,8 +460,9 @@ export default function CandidateRegisterPage() {
                   </p>
                 </div>
                 <div>
-                  <Label>Document Type</Label>
+                  <Label htmlFor="documentType">Document Type</Label>
                   <Select
+                    id="documentType"
                     value={form.documentType}
                     onChange={set("documentType")}
                     options={DOCUMENT_TYPES}
@@ -460,12 +471,12 @@ export default function CandidateRegisterPage() {
                   />
                 </div>
                 <div>
-                  <Label>Document Number</Label>
-                  <Input placeholder="e.g. 123456789" value={form.documentNumber} onChange={set("documentNumber")} error={errors.documentNumber} />
+                  <Label htmlFor="documentNumber">Document Number</Label>
+                  <Input id="documentNumber" placeholder="e.g. 123456789" value={form.documentNumber} onChange={set("documentNumber")} error={errors.documentNumber} />
                 </div>
                 <div>
-                  <Label>Expiry Date</Label>
-                  <Input type="date" value={form.documentExpiry} onChange={set("documentExpiry")} error={errors.documentExpiry} />
+                  <Label htmlFor="documentExpiry">Expiry Date</Label>
+                  <Input id="documentExpiry" type="date" value={form.documentExpiry} onChange={set("documentExpiry")} error={errors.documentExpiry} />
                 </div>
                 <p className="text-[10px] text-slate-400 leading-relaxed">
                   You&apos;ll be prompted to upload a scan or photo of this document after registration.
@@ -561,7 +572,7 @@ export default function CandidateRegisterPage() {
               <>
                 {/* CV Upload */}
                 <div>
-                  <Label>CV / Résumé <span className="normal-case font-normal text-slate-300">(required)</span></Label>
+                  <Label htmlFor="cvFileName">CV / Résumé <span className="normal-case font-normal text-slate-300">(required)</span></Label>
                   <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl px-4 py-8 cursor-pointer transition-colors ${
                     form.cvFileName ? "border-brand-blue bg-brand-blue/5" : "border-gray-border hover:border-brand-blue"
                   }`}>
@@ -597,9 +608,10 @@ export default function CandidateRegisterPage() {
 
                 {/* DBS */}
                 <div>
-                  <Label>DBS Certificate <span className="normal-case font-normal text-slate-300">(optional)</span></Label>
+                  <Label htmlFor="dbsLevel">DBS Certificate <span className="normal-case font-normal text-slate-300">(optional)</span></Label>
                   <div className="space-y-3">
                     <Select
+                      id="dbsLevel"
                       value={form.dbsLevel}
                       onChange={set("dbsLevel")}
                       options={DBS_LEVELS}
@@ -704,7 +716,7 @@ export default function CandidateRegisterPage() {
                 <button
                   type="button"
                   onClick={back}
-                  className="flex items-center gap-1.5 border border-gray-border text-brand text-sm font-semibold rounded-full px-6 py-3 hover:border-brand-blue hover:text-brand-blue transition-colors"
+                  className="flex items-center gap-1.5 border border-gray-border text-brand dark:text-slate-300 text-sm font-semibold rounded-full px-6 py-3 hover:border-brand-blue hover:text-brand-blue transition-colors"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -724,13 +736,13 @@ export default function CandidateRegisterPage() {
 
           {/* Footer links */}
           <div className="mt-8 text-center space-y-2">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Already have an account?{" "}
               <Link href="/auth/candidate/login" className="text-brand-blue font-medium hover:underline">
                 Sign in
               </Link>
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               <Link href="/register" className="hover:text-brand-blue transition-colors">
                 ← Back to registration options
               </Link>

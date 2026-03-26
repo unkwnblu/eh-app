@@ -119,15 +119,15 @@ const progressPct = Math.round((verifiedCount / totalCount) * 100);
 
 export default function CredentialsSection() {
   return (
-    <section className="w-full bg-gray-soft py-24">
+    <section className="w-full bg-gray-soft dark:bg-[#0B1222] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
           {/* Left — credential card */}
           <div data-gsap="slide-left" className="flex justify-center lg:justify-start">
-            <div className="bg-white rounded-2xl shadow-md border border-gray-border p-5 w-full max-w-sm">
+            <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-md border border-gray-border dark:border-white/10 p-5 w-full max-w-sm">
               {/* Card header */}
-              <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-gray-border">
-                <div className="w-8 h-8 rounded-lg bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center text-brand-blue flex-shrink-0">
+              <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-gray-border dark:border-white/10">
+                <div className="w-8 h-8 rounded-lg bg-brand-blue/10 dark:bg-brand-blue/15 border border-brand-blue/20 flex items-center justify-center text-brand-blue flex-shrink-0">
                   <svg
                     width="16"
                     height="16"
@@ -144,8 +144,8 @@ export default function CredentialsSection() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-brand">My Credentials</p>
-                  <p className="text-[10px] text-slate-400">Compliance profile</p>
+                  <p className="text-sm font-bold text-brand dark:text-white">My Credentials</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">Compliance profile</p>
                 </div>
               </div>
 
@@ -157,8 +157,8 @@ export default function CredentialsSection() {
                     className="flex items-center justify-between gap-3 py-1"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-slate-400 flex-shrink-0">{cred.icon}</span>
-                      <span className="text-xs font-medium text-slate-700 truncate">
+                      <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">{cred.icon}</span>
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
                         {cred.name}
                       </span>
                     </div>
@@ -173,14 +173,14 @@ export default function CredentialsSection() {
               </ul>
 
               {/* Progress summary */}
-              <div className="pt-4 border-t border-gray-border">
+              <div className="pt-4 border-t border-gray-border dark:border-white/10">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-slate-600">
+                  <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                     {verifiedCount} of {totalCount} credentials verified
                   </span>
                   <span className="text-[11px] font-bold text-brand-blue">{progressPct}%</span>
                 </div>
-                <div className="w-full bg-gray-border rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-gray-border dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-brand-blue h-full rounded-full transition-all"
                     style={{ width: `${progressPct}%` }}
@@ -195,19 +195,19 @@ export default function CredentialsSection() {
             <span className="text-brand-blue text-xs font-semibold tracking-widest uppercase">
               Credentials &amp; Compliance
             </span>
-            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand leading-tight mb-6">
+            <h2 className="mt-4 text-4xl lg:text-5xl font-black tracking-tight text-brand dark:text-white leading-tight mb-6">
               Upload once.
               <br />
               Verified for life.
             </h2>
-            <p className="text-slate-500 text-base leading-relaxed mb-6">
+            <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed mb-6">
               We handle the compliance side so employers don&apos;t have to ask.
               Your verified profile becomes your passport to faster hiring
               across every role you apply for. Whether it&apos;s an NMC PIN, an
               enhanced DBS, or a Right to Work check — you do it once with us,
               and it travels with you.
             </p>
-            <p className="text-slate-500 text-base leading-relaxed mb-8">
+            <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed mb-8">
               When your credentials are up to date, you appear in employer
               searches immediately. Renewals are flagged automatically — so
               nothing slips through the cracks and you&apos;re never caught off

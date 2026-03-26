@@ -12,13 +12,15 @@ import SectorsCta from "@/components/sectors/SectorsCta";
 
 export const metadata: Metadata = {
   title: "Sectors – Edge Harbour",
+  description:
+    "Explore the sectors Edge Harbour serves: Healthcare, Hospitality, Customer Service, and Technology. Pre-vetted, compliance-verified talent for every industry.",
 };
 
 export default function SectorsPage() {
   return (
     <>
       <Navbar />
-      <main className="flex flex-col flex-1">
+      <main id="main-content" className="flex flex-col flex-1">
         <SectorsHero />
         <SectorsOverview />
         <HealthcareSection />

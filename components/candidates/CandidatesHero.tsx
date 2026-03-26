@@ -2,11 +2,11 @@ import Button from "@/components/ui/Button";
 
 export default function CandidatesHero() {
   return (
-    <section className="relative w-full bg-white overflow-hidden min-h-[90vh] flex items-center">
+    <section className="relative w-full bg-white dark:bg-[#111827] overflow-hidden min-h-[90vh] flex items-center">
       {/* Left floating card */}
       <div
         data-hero="card"
-        className="hidden md:flex absolute left-[3%] top-[28%] bg-white rounded-2xl shadow-lg border border-gray-border px-4 py-3.5 items-center gap-3 z-10 w-56"
+        className="hidden md:flex absolute left-[3%] top-[28%] bg-white dark:bg-[#111827] rounded-2xl shadow-lg border border-gray-border dark:border-white/10 px-4 py-3.5 items-center gap-3 z-10 w-56"
       >
         <div className="w-10 h-10 rounded-full bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
           <svg
@@ -26,8 +26,8 @@ export default function CandidatesHero() {
           </svg>
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-800 truncate">Adeola M.</p>
-          <p className="text-[10px] text-slate-500 truncate">Band 6 Nurse</p>
+          <p className="text-xs font-semibold text-slate-800 dark:text-white truncate">Adeola M.</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Band 6 Nurse</p>
           <div className="flex items-center gap-1 mt-0.5">
             <span className="inline-flex items-center gap-0.5 bg-green-50 text-green-700 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border border-green-100">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
@@ -40,9 +40,9 @@ export default function CandidatesHero() {
       {/* Right floating card */}
       <div
         data-hero="card"
-        className="hidden md:flex absolute right-[3%] top-[32%] bg-white rounded-2xl shadow-lg border border-gray-border px-4 py-3.5 items-center gap-3 z-10 w-60"
+        className="hidden md:flex absolute right-[3%] top-[32%] bg-white dark:bg-[#111827] rounded-2xl shadow-lg border border-gray-border dark:border-white/10 px-4 py-3.5 items-center gap-3 z-10 w-60"
       >
-        <div className="w-10 h-10 rounded-full bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-brand-blue/10 dark:bg-brand-blue/15 border border-brand-blue/20 flex items-center justify-center flex-shrink-0">
           <svg
             width="18"
             height="18"
@@ -60,8 +60,8 @@ export default function CandidatesHero() {
           </svg>
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Interview Request</p>
-          <p className="text-xs font-semibold text-slate-800 truncate">Northgate Health</p>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wide font-semibold">Interview Request</p>
+          <p className="text-xs font-semibold text-slate-800 dark:text-white truncate">Northgate Health</p>
           <p className="text-[10px] text-brand-blue font-medium mt-0.5">Today · 2:30pm</p>
         </div>
       </div>
@@ -80,7 +80,7 @@ export default function CandidatesHero() {
           {/* Heading */}
           <h1
             data-hero="heading"
-            className="text-5xl lg:text-7xl font-black tracking-tight text-brand leading-[1.06] mb-6"
+            className="text-5xl lg:text-7xl font-black tracking-tight text-brand dark:text-white leading-[1.06] mb-6"
           >
             Your skills. Verified.
             <br />
@@ -91,7 +91,7 @@ export default function CandidatesHero() {
           {/* Subtitle */}
           <p
             data-hero="subtitle"
-            className="text-slate-500 text-lg leading-relaxed max-w-xl mb-10"
+            className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-xl mb-10"
           >
             Register once, upload your credentials, and get matched directly
             with UK employers — no agencies, no black holes, no ghosting.
@@ -126,7 +126,7 @@ export default function CandidatesHero() {
           {/* Trust strip */}
           <div
             data-hero="trust"
-            className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-slate-400 text-xs"
+            className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-slate-400 dark:text-slate-500 text-xs"
           >
             {[
               {
@@ -161,7 +161,7 @@ export default function CandidatesHero() {
                   {item.label}
                 </span>
                 {i < arr.length - 1 && (
-                  <span className="w-1 h-1 rounded-full bg-gray-border" />
+                  <span className="w-1 h-1 rounded-full bg-gray-border dark:bg-white/10" />
                 )}
               </span>
             ))}

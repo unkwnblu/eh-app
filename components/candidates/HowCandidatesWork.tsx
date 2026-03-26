@@ -89,7 +89,7 @@ const steps = [
 
 export default function HowCandidatesWork() {
   return (
-    <section id="how-it-works" className="w-full bg-gray-soft py-24">
+    <section id="how-it-works" className="w-full bg-gray-soft dark:bg-[#0B1222] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* Header */}
         <SectionHeader
@@ -104,31 +104,31 @@ export default function HowCandidatesWork() {
           {/* Dashed connector line — desktop only */}
           <div
             aria-hidden="true"
-            className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-px border-t-2 border-dashed border-gray-border z-0"
+            className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-px border-t-2 border-dashed border-gray-border dark:border-white/10 z-0"
           />
 
           {steps.map((step, i) => (
             <div
               key={i}
               data-gsap="stagger-item"
-              className="relative z-10 flex flex-col bg-white rounded-2xl border border-gray-border p-6 hover:border-brand-blue/30 hover:shadow-sm transition-all"
+              className="relative z-10 flex flex-col bg-white dark:bg-[#111827] rounded-2xl border border-gray-border dark:border-white/10 p-6 hover:border-brand-blue/30 hover:shadow-sm transition-all"
             >
               {/* Large background number */}
               <span
                 aria-hidden="true"
-                className="absolute top-3 right-4 text-6xl font-black text-gray-border/70 leading-none select-none pointer-events-none"
+                className="absolute top-3 right-4 text-6xl font-black text-gray-border/70 dark:text-white/5 leading-none select-none pointer-events-none"
               >
                 {step.number}
               </span>
 
               {/* Icon */}
-              <div className="w-11 h-11 rounded-xl bg-brand/5 border border-brand/10 flex items-center justify-center text-brand mb-5 flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-brand/5 dark:bg-white/5 border border-brand/10 dark:border-white/10 flex items-center justify-center text-brand dark:text-white mb-5 flex-shrink-0">
                 {step.icon}
               </div>
 
               {/* Content */}
-              <h3 className="text-sm font-bold text-brand mb-2">{step.title}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">{step.body}</p>
+              <h3 className="text-sm font-bold text-brand dark:text-white mb-2">{step.title}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.body}</p>
             </div>
           ))}
         </div>
