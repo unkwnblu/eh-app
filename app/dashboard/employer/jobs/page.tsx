@@ -254,9 +254,12 @@ function JobCard({ job }: { job: Job }) {
       {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">
         {job.status !== "closed" && (
-          <button className="bg-brand-blue text-white text-xs font-semibold rounded-xl px-4 py-2 hover:bg-brand-blue-dark transition-colors">
+          <Link
+            href={`/dashboard/employer/jobs/${job.id}`}
+            className="bg-brand-blue text-white text-xs font-semibold rounded-xl px-4 py-2 hover:bg-brand-blue-dark transition-colors"
+          >
             View Pipeline
-          </button>
+          </Link>
         )}
         <button className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:bg-gray-100 hover:text-slate-500 transition-colors">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -328,12 +331,12 @@ export default function JobManagementPage() {
               <h1 className="text-[22px] font-bold text-brand tracking-tight">Job Management</h1>
               <p className="text-sm text-slate-400 mt-1">Manage and monitor your active career opportunities.</p>
             </div>
-            <button className="flex items-center gap-2 bg-brand-blue text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-brand-blue-dark transition-colors">
+            <Link href="/dashboard/employer/jobs/new" className="flex items-center gap-2 bg-brand-blue text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-brand-blue-dark transition-colors">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               Post New Job
-            </button>
+            </Link>
           </div>
 
           {/* Tabs */}
