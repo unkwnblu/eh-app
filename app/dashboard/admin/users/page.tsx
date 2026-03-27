@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { TableRowSkeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,11 +58,20 @@ export default function UserManagementPage() {
 
   const filtered = tab === "all" ? users : users.filter((u) => u.role === tab);
 
-  function suspend(id: number) { setUsers((p) => p.map((u) => u.id === id ? { ...u, status: "suspended" } : u)); }
-  function restore(id: number) { setUsers((p) => p.map((u) => u.id === id ? { ...u, status: "active"    } : u)); }
-  function deleteUser(id: number) {
-    setUsers((p) => p.filter((u) => u.id !== id));
-    if (panel?.id === id) setPanel(null);
+  function suspend(id: number) {
+    setUsers((p) => p.map((u) => u.id === id ? { ...u, status: "suspended" } : u));
+    toast("User suspended", "info");
+  }
+  function restore(id: number) {
+    setUsers((p) => p.map((u) => u.id === id ? { ...u, status: "active" } : u));
+    toast("User access restored", "success");
+  }
+  function deleteUser(id: number) { setConfirmDeleteId(id); }
+  function confirmDelete() {
+    setUsers((p) => p.filter((u) => u.id !== confirmDeleteId));
+    if (panel?.id === confirmDeleteId) setPanel(null);
+    setConfirmDeleteId(null);
+    toast("User deleted", "success");
   }
 
   function addUser() {
@@ -71,6 +85,11 @@ export default function UserManagementPage() {
     setShowForm(false);
     setNewName(""); setNewEmail(""); setNewRole("Candidate");
   }
+
+  const [usersLoading] = useState(false);
+  const [usersError, setUsersError] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const totalActive    = users.filter((u) => u.status === "active").length;
   const totalSuspended = users.filter((u) => u.status === "suspended").length;
@@ -236,7 +255,34 @@ export default function UserManagementPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filtered.map((user) => (
+            {usersLoading ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-5">
+                  <TableRowSkeleton count={6} />
+                </td>
+              </tr>
+            ) : usersError ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-5">
+                  <ErrorState message="Unable to load users." onRetry={() => setUsersError(false)} />
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-5">
+                  <EmptyState
+                    icon={
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                      </svg>
+                    }
+                    title="No users found"
+                    description="No users match this filter. Try switching to another tab or create a new user profile."
+                  />
+                </td>
+              </tr>
+            ) : null}
+            {!usersLoading && !usersError && filtered.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
                 {/* Name + email */}
                 <td className="px-6 py-4">
@@ -443,6 +489,15 @@ export default function UserManagementPage() {
           </>
         );
       })()}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete this user?"
+        description="This user's account and all associated data will be permanently removed. This action cannot be undone."
+        confirmLabel="Delete User"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </main>
   );
 }

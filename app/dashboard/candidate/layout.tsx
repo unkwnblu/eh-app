@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ui/ThemeToggle";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Nav ───────────────────────────────────────────────────────────────────────
 
@@ -32,15 +34,6 @@ const NAV_ITEMS = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-      </svg>
-    ),
-  },
-  {
-    label: "Messaging",
-    href: "/dashboard/candidate/messages",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
       </svg>
     ),
   },
@@ -94,16 +87,18 @@ function notifIcon(type: NotifItem["type"]) {
 }
 
 function notifColor(type: NotifItem["type"]) {
-  if (type === "match")       return "bg-purple-50 text-purple-500";
-  if (type === "application") return "bg-brand-blue/10 text-brand-blue";
-  if (type === "compliance")  return "bg-amber-50 text-amber-600";
-  return "bg-green-50 text-green-600";
+  if (type === "match")       return "bg-purple-500/15 text-purple-500 dark:text-purple-400";
+  if (type === "application") return "bg-brand-blue/15 text-brand-blue";
+  if (type === "compliance")  return "bg-amber-500/15 text-amber-500 dark:text-amber-400";
+  return "bg-green-500/15 text-green-500 dark:text-green-400";
 }
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
 
-function Sidebar() {
+function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
 
   function isActive(href: string) {
     if (href === "/dashboard/candidate") return pathname === href;
@@ -113,17 +108,22 @@ function Sidebar() {
   const isSupport = pathname.startsWith("/dashboard/candidate/support");
 
   return (
-    <aside className="fixed left-0 top-0 w-[260px] h-screen flex flex-col bg-white border-r border-gray-100 z-40">
-      <div className="h-[72px] flex items-center px-6 border-b border-gray-100">
+    <aside className={`fixed left-0 top-0 w-[260px] h-screen flex flex-col bg-white dark:bg-[#111827] border-r border-gray-100 dark:border-[#1e293b] z-40 transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
+      <div className="h-[72px] flex items-center px-6 border-b border-gray-100 dark:border-[#1e293b]">
         <Link href="/" className="flex items-center gap-2.5">
           <Image src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} priority />
           <span className="text-brand font-bold text-base tracking-tight leading-none">
             Edge<span className="text-brand-blue">Harbour</span>
           </span>
         </Link>
+        <button onClick={onClose} className="ml-auto md:hidden p-2 text-slate-400 hover:text-brand transition-colors">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
-      <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
+      <nav className="px-3 py-5 space-y-0.5">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
           return (
@@ -143,7 +143,7 @@ function Sidebar() {
         })}
       </nav>
 
-      <div className="px-3 pb-5 space-y-0.5 border-t border-gray-100 pt-4">
+      <div className="mt-auto px-3 pb-5 space-y-0.5 border-t border-gray-100 dark:border-[#1e293b] pt-4">
         <Link
           href="/dashboard/candidate/support"
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -157,11 +157,14 @@ function Sidebar() {
           </svg>
           Support
         </Link>
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-400 bg-red-50 hover:bg-red-100 transition-all">
+        <button
+          onClick={() => { toast("Logged out successfully", "success"); router.push("/"); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-400 bg-red-50 hover:bg-red-100 transition-all"
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
           </svg>
-          LogOut
+          Log Out
         </button>
       </div>
     </aside>
@@ -170,74 +173,116 @@ function Sidebar() {
 
 // ─── Topbar ────────────────────────────────────────────────────────────────────
 
-function Topbar() {
+function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const [open, setOpen]     = useState(false);
   const [notifs, setNotifs] = useState(NOTIF_DATA);
+  const { toast } = useToast();
   const unreadCount = notifs.filter((n) => !n.read).length;
 
-  function markAllRead() { setNotifs((p) => p.map((n) => ({ ...n, read: true }))); }
+  function markAllRead() {
+    setNotifs((p) => p.map((n) => ({ ...n, read: true })));
+    toast("All notifications marked as read", "info");
+  }
   function markRead(id: number) { setNotifs((p) => p.map((n) => n.id === id ? { ...n, read: true } : n)); }
 
   return (
-    <div className="sticky top-0 z-30 h-[72px] flex items-center gap-4 px-8 bg-white border-b border-gray-100 shrink-0">
-      <div className="flex-1 flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2.5 border border-gray-100">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-        </svg>
-        <input type="text" placeholder="Search jobs, applications..." className="bg-transparent text-sm text-slate-600 placeholder:text-slate-400 outline-none w-full" />
-      </div>
+    <>
+      <div className="sticky top-0 z-30 h-[72px] flex items-center gap-4 px-4 md:px-8 bg-white dark:bg-[#111827] border-b border-gray-100 dark:border-[#1e293b] shrink-0">
+        {/* Hamburger — mobile only */}
+        <button onClick={onMenuToggle} className="md:hidden p-2 text-slate-400 hover:text-brand transition-colors shrink-0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+        <div className="hidden md:flex flex-1 items-center gap-3 bg-gray-50 dark:bg-[#1a2332] rounded-xl px-4 py-2.5 border border-gray-100 dark:border-[#1e293b]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search jobs, applications..."
+            className="bg-transparent text-sm text-slate-600 placeholder:text-slate-400 outline-none w-full"
+            onKeyDown={(e) => { if (e.key === "Enter") toast("Search coming soon", "info"); }}
+          />
+        </div>
 
-      {/* Bell */}
-      <div className="relative">
-        <button onClick={() => setOpen((v) => !v)} className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors">
+        {/* Bell */}
+        <button onClick={() => setOpen((v) => !v)} className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors ml-auto md:ml-0">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
             <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
           </svg>
-          {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />}
+          {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#111827]" />}
         </button>
 
-        {open && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-            <div className="absolute right-0 top-full mt-2 w-[380px] bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-brand">Notifications</h3>
-                  {unreadCount > 0 && <span className="px-2 py-0.5 bg-brand-blue text-white text-[10px] font-bold rounded-full">{unreadCount}</span>}
-                </div>
-                {unreadCount > 0 && <button onClick={markAllRead} className="text-xs font-semibold text-brand-blue hover:underline">Mark all read</button>}
-              </div>
-              <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-50">
-                {notifs.map((n) => (
-                  <div key={n.id} onClick={() => markRead(n.id)} className={`flex items-start gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-gray-50/80 ${!n.read ? "bg-blue-50/30" : ""}`}>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${notifColor(n.type)}`}>{notifIcon(n.type)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className={`text-sm leading-snug ${!n.read ? "font-bold text-brand" : "font-semibold text-slate-600"}`}>{n.title}</p>
-                        {!n.read && <span className="w-2 h-2 bg-brand-blue rounded-full shrink-0 mt-1.5" />}
-                      </div>
-                      <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{n.body}</p>
-                      <p className="text-[11px] text-slate-300 font-medium mt-1.5">{n.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
-                <button className="w-full text-center text-xs font-semibold text-brand-blue hover:underline">View all notifications</button>
-              </div>
-            </div>
-          </>
-        )}
+        <ThemeToggle />
+        <Link href="/dashboard/candidate/profile" className="flex items-center gap-3 pl-2 border-l border-gray-100 dark:border-[#1e293b] hover:opacity-80 transition-opacity">
+          <div className="hidden md:block text-right">
+            <p className="text-sm font-semibold text-brand leading-none">Candidate Name</p>
+            <p className="text-xs text-slate-400 mt-0.5">jeddy123@gmail.com</p>
+          </div>
+          <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-slate-500 text-sm font-semibold shrink-0">CN</div>
+        </Link>
       </div>
 
-      <div className="flex items-center gap-3 pl-2 border-l border-gray-100">
-        <div className="text-right">
-          <p className="text-sm font-semibold text-brand leading-none">Candidate Name</p>
-          <p className="text-xs text-slate-400 mt-0.5">jeddy123@gmail.com</p>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/20 z-40 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setOpen(false)}
+      />
+
+      {/* Slide-out notification panel */}
+      <div className={`fixed inset-y-0 right-0 w-[380px] bg-white dark:bg-[#111827] shadow-xl border-l border-gray-100 dark:border-[#1e293b] z-50 flex flex-col transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "translate-x-full"}`}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 h-[72px] border-b border-gray-100 dark:border-[#1e293b] shrink-0">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-brand">Notifications</h3>
+            {unreadCount > 0 && <span className="px-2 py-0.5 bg-brand-blue text-white text-[10px] font-bold rounded-full">{unreadCount}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button onClick={markAllRead} className="text-xs font-semibold text-brand-blue hover:underline">
+                Mark all read
+              </button>
+            )}
+            <button
+              onClick={() => setOpen(false)}
+              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
-        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-slate-500 text-sm font-semibold shrink-0">CN</div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+          {notifs.map((n) => (
+            <div key={n.id} onClick={() => markRead(n.id)} className={`flex items-start gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-gray-50/80 dark:hover:bg-white/5 ${!n.read ? "bg-brand-blue/[0.06] dark:bg-brand-blue/[0.10]" : ""}`}>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${notifColor(n.type)}`}>{notifIcon(n.type)}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <p className={`text-sm leading-snug ${!n.read ? "font-bold text-brand" : "font-semibold text-slate-600"}`}>{n.title}</p>
+                  {!n.read && <span className="w-2 h-2 bg-brand-blue rounded-full shrink-0 mt-1.5" />}
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{n.body}</p>
+                <p className="text-[11px] text-slate-300 font-medium mt-1.5">{n.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-gray-100 dark:border-[#1e293b] bg-gray-50/50 dark:bg-[#1a2332]/50 shrink-0">
+          <button
+            onClick={() => toast("Full notifications page coming soon", "info")}
+            className="w-full text-center text-xs font-semibold text-brand-blue hover:underline py-1"
+          >
+            View all notifications
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -248,11 +293,17 @@ export default function CandidateDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <div className="flex min-h-screen bg-[#F7F8FA]">
-      <Sidebar />
-      <div className="ml-[260px] flex flex-col min-h-screen flex-1">
-        <Topbar />
+    <div className="flex min-h-screen bg-[#F7F8FA] dark:bg-[#0B1222]">
+      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+      {/* Mobile backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/40 z-30 md:hidden transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setMenuOpen(false)}
+      />
+      <div className="md:ml-[260px] flex flex-col min-h-screen flex-1 min-w-0">
+        <Topbar onMenuToggle={() => setMenuOpen((v) => !v)} />
         {children}
       </div>
     </div>

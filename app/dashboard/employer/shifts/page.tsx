@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { RoleCardSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -91,8 +95,11 @@ function RoleCard({ role }: { role: ShiftRole }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ShiftManagementPage() {
-  const totalRoles = SHIFT_ROLES.length;
-  const activeShifts = SHIFT_ROLES.reduce((sum, r) => sum + r.totalShifts, 0);
+  const [loading] = useState(false);
+  const [error, setError] = useState(false);
+  const roles = SHIFT_ROLES;
+  const totalRoles = roles.length;
+  const activeShifts = roles.reduce((sum, r) => sum + r.totalShifts, 0);
 
   return (
         <main className="flex-1 px-8 py-8">
@@ -120,11 +127,27 @@ export default function ShiftManagementPage() {
           </div>
 
           {/* Role grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {SHIFT_ROLES.map((role) => (
-              <RoleCard key={role.id} role={role} />
-            ))}
-          </div>
+          {loading ? (
+            <RoleCardSkeleton count={8} />
+          ) : error ? (
+            <ErrorState message="Unable to load shift roles." onRetry={() => setError(false)} />
+          ) : roles.length === 0 ? (
+            <EmptyState
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+              }
+              title="No shift roles yet"
+              description="Create a job posting and enable shift scheduling to manage your team's roster here."
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {roles.map((role) => (
+                <RoleCard key={role.id} role={role} />
+              ))}
+            </div>
+          )}
         </main>
   );
 }

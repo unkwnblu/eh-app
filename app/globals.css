@@ -47,6 +47,79 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ─── Dashboard dark mode global overrides ──────────────────────────────── */
+/*
+ * The dashboard pages use hardcoded Tailwind utilities (bg-white, border-gray-100
+ * etc.) without dark: variants. These rules flip the most common ones globally
+ * whenever the .dark class is on <html>, so every dashboard page gets dark mode
+ * without touching individual page files.
+ */
+
+.dark .bg-white                    { background-color: #111827 !important; }
+.dark .bg-\[\#F7F8FA\]             { background-color: #1a2332 !important; }
+.dark .bg-gray-50                  { background-color: #1a2332 !important; }
+.dark .bg-gray-50\/50              { background-color: rgb(26 35 50 / 0.5) !important; }
+.dark .bg-gray-50\/60              { background-color: rgb(26 35 50 / 0.6) !important; }
+.dark .bg-gray-100                 { background-color: #1e293b !important; }
+.dark .bg-gray-200                 { background-color: #243044 !important; }
+
+/* ─── Colored light backgrounds → translucent for dark ───────────────────── */
+.dark .bg-blue-50                  { background-color: rgba(59,  130, 246, 0.12) !important; }
+.dark .bg-blue-50\/30              { background-color: rgba(59,  130, 246, 0.08) !important; }
+.dark .bg-blue-100                 { background-color: rgba(59,  130, 246, 0.20) !important; }
+.dark .bg-amber-50                 { background-color: rgba(217, 119,   6, 0.15) !important; }
+.dark .bg-amber-100                { background-color: rgba(217, 119,   6, 0.22) !important; }
+.dark .bg-orange-50                { background-color: rgba(249, 115,  22, 0.12) !important; }
+.dark .bg-purple-50                { background-color: rgba(168,  85, 247, 0.14) !important; }
+.dark .bg-purple-100               { background-color: rgba(168,  85, 247, 0.22) !important; }
+.dark .bg-green-50                 { background-color: rgba(34,  197,  94, 0.12) !important; }
+.dark .bg-green-100                { background-color: rgba(34,  197,  94, 0.20) !important; }
+.dark .bg-red-50                   { background-color: rgba(239,  68,  68, 0.12) !important; }
+.dark .bg-red-100                  { background-color: rgba(239,  68,  68, 0.20) !important; }
+
+/* ─── Colored text → lighter shades for dark ─────────────────────────────── */
+.dark .text-amber-600              { color: #fbbf24 !important; }
+.dark .text-amber-500              { color: #fbbf24 !important; }
+.dark .text-green-600              { color: #4ade80 !important; }
+.dark .text-green-500              { color: #4ade80 !important; }
+.dark .text-red-500                { color: #f87171 !important; }
+.dark .text-red-400                { color: #f87171 !important; }
+.dark .text-purple-500             { color: #c084fc !important; }
+.dark .text-orange-500             { color: #fb923c !important; }
+.dark .text-blue-500               { color: #60a5fa !important; }
+.dark .text-blue-600               { color: #60a5fa !important; }
+
+/* ─── Ring / shadow overrides ─────────────────────────────────────────────── */
+.dark .shadow-sm                   { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3) !important; }
+.dark .shadow-md                   { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4) !important; }
+
+.dark .border-gray-100             { border-color: #1e293b !important; }
+.dark .border-gray-200             { border-color: #243044 !important; }
+.dark .border-gray-50              { border-color: #1e293b !important; }
+
+.dark .text-brand                  { color: #f1f5f9 !important; }
+.dark .text-slate-700              { color: #e2e8f0 !important; }
+.dark .text-slate-600              { color: #cbd5e1 !important; }
+.dark .text-slate-500              { color: #94a3b8 !important; }
+.dark .text-slate-400              { color: #64748b !important; }
+.dark .text-slate-300              { color: #475569 !important; }
+.dark .text-gray-700               { color: #e2e8f0 !important; }
+.dark .text-gray-600               { color: #cbd5e1 !important; }
+.dark .text-gray-500               { color: #94a3b8 !important; }
+.dark .text-gray-400               { color: #64748b !important; }
+
+.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b !important; }
+.dark .divide-y > :not([hidden]) ~ :not([hidden])       { border-color: #1e293b !important; }
+
+.dark .hover\:text-brand:hover     { color: #f1f5f9 !important; }
+.dark .hover\:text-slate-600:hover { color: #e2e8f0 !important; }
+.dark .hover\:bg-gray-50:hover     { background-color: #1a2332 !important; }
+.dark .hover\:bg-gray-50\/80:hover { background-color: rgb(26 35 50 / 0.8) !important; }
+.dark .hover\:bg-gray-100:hover    { background-color: #243044 !important; }
+.dark .hover\:bg-white:hover       { background-color: #111827 !important; }
+
+.dark .placeholder\:text-slate-400::placeholder { color: #475569 !important; }
+
 /* ─── Page transitions (View Transition API) ─────────────────────────────── */
 ::view-transition-old(*) {
   animation: page-fade-out 0.2s ease-in forwards;

@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { JobCardSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -209,6 +212,9 @@ export default function JobListingsPage() {
   const [showSort, setShowSort] = useState(false);
   const [empTypes, setEmpTypes] = useState({ "Full-time": true, "Part-time": false, "Contract": false });
   const [currentPage, setCurrentPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
+  const [loading] = useState(false);
+  const [error, setError] = useState(false);
 
   function toggleEmp(key: keyof typeof empTypes) {
     setEmpTypes((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -227,10 +233,10 @@ export default function JobListingsPage() {
   const totalPages = 12;
 
   return (
-    <main className="flex-1 px-8 py-8 space-y-5">
+    <main className="flex-1 px-4 py-6 md:px-8 md:py-8 space-y-5">
       {/* Search bar */}
-      <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center gap-3" data-gsap="fade-down">
-        <div className="flex-1 flex items-center gap-3 border-r border-gray-100 pr-4">
+      <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3" data-gsap="fade-down">
+        <div className="flex-1 flex items-center gap-3 sm:border-r sm:border-gray-100 sm:pr-4">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
             <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
           </svg>
@@ -242,7 +248,7 @@ export default function JobListingsPage() {
             className="text-sm text-slate-600 placeholder:text-slate-400 outline-none w-full bg-transparent"
           />
         </div>
-        <div className="flex items-center gap-3 pl-1">
+        <div className="flex items-center gap-3 sm:pl-1">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
@@ -252,19 +258,30 @@ export default function JobListingsPage() {
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             placeholder="Location"
-            className="text-sm text-slate-600 placeholder:text-slate-400 outline-none bg-transparent w-36"
+            className="text-sm text-slate-600 placeholder:text-slate-400 outline-none bg-transparent w-full sm:w-36"
           />
         </div>
-        <button className="px-6 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors shrink-0">
+        <button className="w-full sm:w-auto px-6 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors shrink-0">
           Find Jobs
         </button>
       </div>
 
       {/* Body: filters + results */}
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col md:flex-row gap-5 items-start">
+
+        {/* Mobile filter toggle */}
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className="md:hidden flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-slate-600 self-start"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+          </svg>
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </button>
 
         {/* Filters panel */}
-        <div className="w-[220px] shrink-0 bg-white border border-gray-100 rounded-2xl p-5 space-y-6" data-gsap="fade-up">
+        <div className={`w-full md:w-[220px] md:shrink-0 bg-white border border-gray-100 rounded-2xl p-5 space-y-6 ${showFilters ? "block" : "hidden"} md:block`} data-gsap="fade-up">
           {/* Employment type */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Employment Type</p>
@@ -347,9 +364,25 @@ export default function JobListingsPage() {
           </div>
 
           {/* Job cards */}
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} onToggleSave={toggleSave} />
-          ))}
+          {loading ? (
+            <JobCardSkeleton count={4} />
+          ) : error ? (
+            <ErrorState message="Unable to load job listings." onRetry={() => setError(false)} />
+          ) : jobs.length === 0 ? (
+            <EmptyState
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              }
+              title="No jobs match your filters"
+              description="Try adjusting your search or clearing your filters to see more results."
+            />
+          ) : (
+            jobs.map((job) => (
+              <JobCard key={job.id} job={job} onToggleSave={toggleSave} />
+            ))
+          )}
 
           {/* Pagination */}
           <div className="flex items-center justify-center gap-1 pt-4">

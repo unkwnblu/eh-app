@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { NotificationRowSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -98,6 +101,8 @@ export default function NotificationsPage() {
   const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
   const [success, setSuccess]         = useState(false);
   const [historyFilter, setHistoryFilter] = useState<"all" | NotifStatus>("all");
+  const [historyLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
 
   const totalSent      = sent.filter((n) => n.status === "delivered").length;
   const totalScheduled = sent.filter((n) => n.status === "scheduled").length;
@@ -364,60 +369,76 @@ export default function NotificationsPage() {
           </div>
 
           <div className="divide-y divide-gray-50">
-            {filtered.map((n) => {
-              const sc = STATUS_CONFIG[n.status];
-              return (
-                <div key={n.id} className="px-5 py-4 hover:bg-gray-50/60 transition-colors">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${TYPE_STYLES[n.type]}`}>
-                        {TYPE_ICONS[n.type]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-brand truncate">{n.title}</p>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${TYPE_STYLES[n.type]}`}>{n.type}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${PRIORITY_STYLES[n.priority]}`}>{n.priority}</span>
-                          <span className="text-[11px] text-slate-400">{n.audience}</span>
-                          <span className="text-slate-300 text-[11px]">·</span>
-                          <span className="text-[11px] text-slate-400">{n.delivery}</span>
+            {historyLoading ? (
+              <div className="p-5">
+                <NotificationRowSkeleton count={5} />
+              </div>
+            ) : historyError ? (
+              <div className="p-5">
+                <ErrorState message="Unable to load notification history." onRetry={() => setHistoryError(false)} />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="p-5">
+                <EmptyState
+                  icon={
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                  }
+                  title="No notifications sent yet"
+                  description="Compose and send your first notification using the panel on the left."
+                />
+              </div>
+            ) : (
+              filtered.map((n) => {
+                const sc = STATUS_CONFIG[n.status];
+                return (
+                  <div key={n.id} className="px-5 py-4 hover:bg-gray-50/60 transition-colors">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${TYPE_STYLES[n.type]}`}>
+                          {TYPE_ICONS[n.type]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-brand truncate">{n.title}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${TYPE_STYLES[n.type]}`}>{n.type}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${PRIORITY_STYLES[n.priority]}`}>{n.priority}</span>
+                            <span className="text-[11px] text-slate-400">{n.audience}</span>
+                            <span className="text-slate-300 text-[11px]">·</span>
+                            <span className="text-[11px] text-slate-400">{n.delivery}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${sc.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-                        {sc.label}
-                      </span>
-                      <p className="text-[11px] text-slate-400">{n.sent}</p>
-                    </div>
-                  </div>
-
-                  {/* Read rate bar */}
-                  {n.readRate !== null && (
-                    <div className="mt-3 flex items-center gap-3">
-                      <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-1 bg-brand-blue rounded-full" style={{ width: `${n.readRate}%` }} />
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${sc.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                          {sc.label}
+                        </span>
+                        <p className="text-[11px] text-slate-400">{n.sent}</p>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-500 shrink-0">{n.readRate}% read</span>
-                      <span className="text-[11px] text-slate-400 shrink-0">{n.recipients.toLocaleString()} recipients</span>
                     </div>
-                  )}
-                  {n.readRate === null && n.status === "scheduled" && (
-                    <p className="mt-2 text-[11px] text-blue-500 font-medium">Queued for {n.sent}</p>
-                  )}
-                  {n.readRate === null && n.status === "failed" && (
-                    <p className="mt-2 text-[11px] text-red-500 font-medium">Delivery failed · {n.recipients.toLocaleString()} recipients affected</p>
-                  )}
-                </div>
-              );
-            })}
 
-            {filtered.length === 0 && (
-              <div className="px-5 py-12 text-center">
-                <p className="text-sm text-slate-400">No notifications found.</p>
-              </div>
+                    {/* Read rate bar */}
+                    {n.readRate !== null && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-1 bg-brand-blue rounded-full" style={{ width: `${n.readRate}%` }} />
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-500 shrink-0">{n.readRate}% read</span>
+                        <span className="text-[11px] text-slate-400 shrink-0">{n.recipients.toLocaleString()} recipients</span>
+                      </div>
+                    )}
+                    {n.readRate === null && n.status === "scheduled" && (
+                      <p className="mt-2 text-[11px] text-blue-500 font-medium">Queued for {n.sent}</p>
+                    )}
+                    {n.readRate === null && n.status === "failed" && (
+                      <p className="mt-2 text-[11px] text-red-500 font-medium">Delivery failed · {n.recipients.toLocaleString()} recipients affected</p>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

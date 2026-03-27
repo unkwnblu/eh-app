@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -295,9 +296,10 @@ export default function CandidateSettingsPage() {
   }
 
   return (
-    <main className="flex-1 px-8 py-8">
+    <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+      <GsapAnimations />
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200 mb-8" data-gsap="fade-down">
+      <div className="flex items-center gap-6 border-b border-gray-200 mb-8 overflow-x-auto" data-gsap="fade-down">
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -317,19 +319,19 @@ export default function CandidateSettingsPage() {
       {/* ── Profile tab ── */}
       {activeTab === "Profile" && (
         <>
-          <div className="flex items-start justify-between mb-6" data-gsap="fade-down">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6" data-gsap="fade-down">
             <div>
               <h1 className="text-[28px] font-black text-brand tracking-tight">Profile &amp; Settings</h1>
               <p className="text-sm text-slate-500 mt-1">Manage your professional identity and account preferences.</p>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full self-start">
               <span className="w-2 h-2 rounded-full bg-green-500" />
               <span className="text-xs font-bold text-green-700">RTW Verified</span>
             </div>
           </div>
 
-          <div className="flex gap-6 items-start">
-            <div className="flex-1 space-y-5" data-gsap="fade-up">
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            <div className="w-full lg:flex-1 lg:min-w-0 space-y-5" data-gsap="fade-up">
               {/* Personal Information */}
               <div className="bg-white border border-gray-100 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-5">
@@ -338,7 +340,7 @@ export default function CandidateSettingsPage() {
                   </svg>
                   <h2 className="text-sm font-bold text-brand">Personal Information</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Full Name</label>
                     <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
@@ -365,7 +367,7 @@ export default function CandidateSettingsPage() {
                   </svg>
                   <h2 className="text-sm font-bold text-brand">Professional Details</h2>
                 </div>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Current Role</p>
                     <p className="text-sm font-bold text-brand">Product Designer</p>
@@ -389,7 +391,7 @@ export default function CandidateSettingsPage() {
             </div>
 
             {/* Right sidebar */}
-            <div className="w-[280px] shrink-0 space-y-4" data-gsap="fade-up">
+            <div className="w-full lg:w-[280px] lg:shrink-0 space-y-4" data-gsap="fade-up">
               <div className="bg-white border border-gray-100 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
@@ -449,9 +451,9 @@ export default function CandidateSettingsPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-100" data-gsap="fade-up">
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3 mt-8 pt-6 border-t border-gray-100" data-gsap="fade-up">
             <button className="px-6 py-2.5 text-sm font-semibold text-slate-500 hover:text-brand transition-colors">Discard Changes</button>
-            <button className="px-7 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">Save Profile</button>
+            <button className="w-full sm:w-auto px-7 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">Save Profile</button>
           </div>
         </>
       )}
@@ -459,12 +461,12 @@ export default function CandidateSettingsPage() {
       {/* ── Experience tab ── */}
       {activeTab === "Experience" && (
         <>
-          <div className="flex items-start justify-between mb-6" data-gsap="fade-down">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6" data-gsap="fade-down">
             <div>
               <h1 className="text-[28px] font-black text-brand tracking-tight">Professional Experience</h1>
               <p className="text-sm text-slate-500 mt-1">Showcase your career journey and key achievements.</p>
             </div>
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">
+            <button className="flex items-center gap-2 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors self-start">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
@@ -472,9 +474,9 @@ export default function CandidateSettingsPage() {
             </button>
           </div>
 
-          <div className="flex gap-6 items-start">
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
             {/* Experience list */}
-            <div className="flex-1 space-y-4" data-gsap="fade-up">
+            <div className="w-full lg:flex-1 lg:min-w-0 space-y-4" data-gsap="fade-up">
               {experiences.map((exp) => (
                 <ExperienceCard
                   key={exp.id}
@@ -486,7 +488,7 @@ export default function CandidateSettingsPage() {
             </div>
 
             {/* Right panel */}
-            <div className="w-[300px] shrink-0 space-y-4" data-gsap="fade-up">
+            <div className="w-full lg:w-[300px] lg:shrink-0 space-y-4" data-gsap="fade-up">
               {editingId !== null ? (
                 <EditPanel
                   exp={experiences.find((e) => e.id === editingId)!}
@@ -532,7 +534,7 @@ export default function CandidateSettingsPage() {
 
           <div className="space-y-4" data-gsap="fade-up">
             {/* Row 1: Security + Privacy */}
-            <div className="grid grid-cols-[1fr_320px] gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
               {/* Security */}
               <div className="bg-white border border-gray-100 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-5">
@@ -547,7 +549,7 @@ export default function CandidateSettingsPage() {
                     <label className="block text-xs font-semibold text-brand mb-1.5">Current Password</label>
                     <input type="password" defaultValue="password" className="w-full px-4 py-3 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm outline-none focus:border-brand-blue transition-colors" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-brand mb-1.5">New Password</label>
                       <input type="password" defaultValue="password" className="w-full px-4 py-3 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm outline-none focus:border-brand-blue transition-colors" />
@@ -590,7 +592,7 @@ export default function CandidateSettingsPage() {
             </div>
 
             {/* Row 2: Notifications + Danger Zone */}
-            <div className="grid grid-cols-[1fr_320px] gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
               {/* Notifications */}
               <div className="bg-white border border-gray-100 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-6">
@@ -600,7 +602,7 @@ export default function CandidateSettingsPage() {
                   <h2 className="text-base font-bold text-brand">Notifications</h2>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   {/* Email Alerts */}
                   <div>
                     <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center mb-3">

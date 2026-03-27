@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ export default function CreateJobPage() {
   const [selectedCerts, setSelectedCerts] = useState<string[]>([]);
   const [experienceLevel, setExperienceLevel] = useState("Mid-level");
   const [savedTime, setSavedTime] = useState("");
+  const { toast } = useToast();
 
   // Auto-save timestamp simulation
   useEffect(() => {
@@ -282,7 +284,7 @@ export default function CreateJobPage() {
             <Link href="/dashboard/employer/jobs" className="border border-gray-200 text-brand text-sm font-semibold rounded-xl px-5 py-2.5 hover:border-brand-blue hover:text-brand-blue transition-colors">
               Cancel & Discard
             </Link>
-            <button className="flex items-center gap-2 bg-brand text-white text-sm font-semibold rounded-xl px-6 py-2.5 hover:bg-brand-blue transition-colors">
+            <button onClick={() => toast("Job posted successfully", "success")} className="flex items-center gap-2 bg-brand text-white text-sm font-semibold rounded-xl px-6 py-2.5 hover:bg-brand-blue transition-colors">
               Post Job Now
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

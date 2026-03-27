@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ function timeToMinutes(t: string): number {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function EditJobPage() {
+  const { toast } = useToast();
   const [shiftTitle, setShiftTitle] = useState("");
   const [candidates, setCandidates] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
@@ -177,7 +179,10 @@ export default function EditJobPage() {
 
               {/* Post Job */}
               <div className="flex justify-end">
-                <button className="bg-brand text-white font-bold text-sm rounded-xl px-8 py-3 hover:bg-brand-blue transition-colors">
+                <button
+                  onClick={() => toast("Job updated successfully", "success")}
+                  className="bg-brand text-white font-bold text-sm rounded-xl px-8 py-3 hover:bg-brand-blue transition-colors"
+                >
                   Post Job
                 </button>
               </div>

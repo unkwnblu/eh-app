@@ -177,7 +177,7 @@ function JobCard({ job }: { job: typeof RECOMMENDED_JOBS[number] }) {
 
 export default function CandidateDashboardPage() {
   return (
-    <main className="flex-1 px-8 py-8">
+    <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
       {/* Welcome header */}
       <div className="mb-6" data-gsap="fade-down">
         <h1 className="text-[28px] font-black text-brand tracking-tight">Welcome back, Alex!</h1>
@@ -192,7 +192,7 @@ export default function CandidateDashboardPage() {
       </div>
 
       {/* Main grid */}
-      <div className="grid grid-cols-[1fr_300px] gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5">
 
         {/* Left column */}
         <div className="space-y-5">
@@ -216,7 +216,7 @@ export default function CandidateDashboardPage() {
                 View All Recommendations
               </Link>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {RECOMMENDED_JOBS.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
