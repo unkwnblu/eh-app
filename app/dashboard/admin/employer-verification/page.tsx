@@ -258,7 +258,7 @@ function DetailPanel({
       <div className="bg-white border border-gray-100 rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-brand">Employer Review</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
+          <button onClick={onClose} aria-label="Close review panel" className="p-1 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -319,9 +319,10 @@ function DetailPanel({
                 <p className="text-[11px] text-slate-400">{doc.type}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button className="text-[11px] font-semibold text-brand-blue hover:underline">View</button>
+                <button aria-label={`View ${doc.name}`} className="text-[11px] font-semibold text-brand-blue hover:underline">View</button>
                 <button
                   onClick={() => onToggleDoc(i)}
+                  aria-label={doc.verified ? `Mark ${doc.name} as unverified` : `Mark ${doc.name} as verified`}
                   className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${
                     doc.verified ? "bg-green-100 text-green-700" : "bg-white border border-gray-200 text-slate-500 hover:border-green-300 hover:text-green-600"
                   }`}
@@ -419,7 +420,7 @@ export default function EmployerVerificationPage() {
   }
 
   return (
-    <main className="flex-1 px-8 py-8 space-y-6">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
       <style>{`
         @keyframes panelSlideIn {
           from { opacity: 0; transform: translateX(20px); }
@@ -429,12 +430,12 @@ export default function EmployerVerificationPage() {
       `}</style>
 
       {/* Header */}
-      <div className="flex items-start justify-between" data-gsap="fade-down">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4" data-gsap="fade-down">
         <div>
           <h1 className="text-[28px] font-black text-brand tracking-tight">Employer Verification</h1>
           <p className="text-sm text-slate-400 mt-1">Review and verify employer registrations before they can post jobs.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className="px-3 py-1.5 bg-brand-blue/10 text-brand-blue text-xs font-bold uppercase tracking-wide rounded-xl border border-brand-blue/20">
             {pendingCount} Awaiting Review
           </span>
@@ -470,7 +471,7 @@ export default function EmployerVerificationPage() {
 
       {/* Card grid + panel */}
       <div className="flex gap-5 items-start" data-gsap="fade-up">
-        <div className="grid grid-cols-2 gap-4 flex-1">
+        <div className="grid md:grid-cols-2 gap-4 flex-1">
           {filtered.map((e) => (
             <EmployerCard
               key={e.id}
@@ -510,84 +511,88 @@ export default function EmployerVerificationPage() {
             Batch Verify ({selected.size})
           </button>
         </div>
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-50">
-              <th className="px-6 py-3 w-10">
-                <input
-                  type="checkbox"
-                  checked={selected.size === filtered.length && filtered.length > 0}
-                  onChange={toggleAll}
-                  className="w-4 h-4 rounded accent-brand-blue cursor-pointer"
-                />
-              </th>
-              <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Company</th>
-              <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Industry</th>
-              <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Primary Document</th>
-              <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Submitted</th>
-              <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.map((e) => {
-              const statusCfg = STATUS_CONFIG[e.status];
-              const initials  = e.company.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-              return (
-                <tr key={e.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-6 py-3.5">
+        <div className="overflow-x-auto">
+          <div className="min-w-[700px]">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-50">
+                  <th className="px-6 py-3 w-10">
                     <input
                       type="checkbox"
-                      checked={selected.has(e.id)}
-                      onChange={() => toggleSelect(e.id)}
+                      checked={selected.size === filtered.length && filtered.length > 0}
+                      onChange={toggleAll}
                       className="w-4 h-4 rounded accent-brand-blue cursor-pointer"
                     />
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center text-brand-blue text-[10px] font-black shrink-0">
-                        {initials}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-brand leading-snug">{e.company}</p>
-                        <p className="text-[11px] text-slate-400">{e.contactName}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[11px] font-semibold rounded-full">
-                      {e.industry}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5">
-                      <DocIcon type={e.primaryDocIcon} size={12} />
-                      <span className="text-xs font-medium text-slate-600">{e.primaryDoc}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5 text-xs text-slate-500">{e.submissionDate}</td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusCfg.style}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-                      {statusCfg.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <button
-                      onClick={() => setReviewing((prev) => prev === e.id ? null : e.id)}
-                      className="flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline"
-                    >
-                      Review
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                      </svg>
-                    </button>
-                  </td>
+                  </th>
+                  <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Company</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Industry</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Primary Document</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Submitted</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</th>
+                  <th className="px-4 py-3" />
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map((e) => {
+                  const statusCfg = STATUS_CONFIG[e.status];
+                  const initials  = e.company.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+                  return (
+                    <tr key={e.id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="px-6 py-3.5">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(e.id)}
+                          onChange={() => toggleSelect(e.id)}
+                          className="w-4 h-4 rounded accent-brand-blue cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center text-brand-blue text-[10px] font-black shrink-0">
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-brand leading-snug">{e.company}</p>
+                            <p className="text-[11px] text-slate-400">{e.contactName}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[11px] font-semibold rounded-full">
+                          {e.industry}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <DocIcon type={e.primaryDocIcon} size={12} />
+                          <span className="text-xs font-medium text-slate-600">{e.primaryDoc}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-500">{e.submissionDate}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusCfg.style}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <button
+                          onClick={() => setReviewing((prev) => prev === e.id ? null : e.id)}
+                          className="flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline"
+                        >
+                          Review
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </main>
   );

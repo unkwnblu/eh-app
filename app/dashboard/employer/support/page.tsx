@@ -76,6 +76,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
     <div className="border-b border-gray-100 last:border-0">
       <button
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         className="w-full flex items-center justify-between py-4 text-left gap-4 hover:text-brand-blue transition-colors"
       >
         <span className="text-sm font-semibold text-brand">{question}</span>
@@ -109,7 +110,7 @@ export default function SupportPage() {
   }
 
   return (
-        <main className="flex-1 px-8 py-8 space-y-6">
+        <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
 
           {/* Page header */}
           <div data-gsap="fade-down">
@@ -118,7 +119,7 @@ export default function SupportPage() {
           </div>
 
           {/* Contact channels */}
-          <div className="grid grid-cols-3 gap-4" data-gsap="fade-up">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-gsap="fade-up">
             {CONTACT_CHANNELS.map((ch) => (
               <div key={ch.label} className="bg-white border border-gray-100 rounded-2xl p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${ch.colour}`}>

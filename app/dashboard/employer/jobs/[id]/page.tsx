@@ -237,101 +237,101 @@ export default function JobPipelinePage() {
 
   return (
     <>
-        <main className="flex-1 px-8 py-8 flex flex-col">
-          {/* Job header */}
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-black text-brand tracking-tight">{JOB.title}</h1>
-                <span className="flex items-center gap-1.5 text-xs font-bold text-green-600">
-                  <span className="w-2 h-2 rounded-full bg-green-500" /> Live
+      <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 flex flex-col">
+        {/* Job header */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-black text-brand tracking-tight">{JOB.title}</h1>
+              <span className="flex items-center gap-1.5 text-xs font-bold text-green-600">
+                <span className="w-2 h-2 rounded-full bg-green-500" /> Live
+              </span>
+            </div>
+            <div className="flex items-center gap-5 text-xs text-slate-400">
+              <span className="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                {JOB.location}
+              </span>
+              <span className="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" /></svg>
+                {JOB.salary}
+              </span>
+              <span className="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {JOB.type}
+              </span>
+            </div>
+          </div>
+          <Link href={`/dashboard/employer/jobs/${id}/edit`} className="bg-brand text-white text-sm font-semibold rounded-xl px-5 py-2.5 hover:bg-brand-blue transition-colors">
+            Edit Job
+          </Link>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {STATS.map((stat) => (
+            <div key={stat.label} className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">{stat.label}</p>
+              <div className="flex items-end justify-between">
+                <p className="text-3xl font-black text-brand leading-none">{stat.value}</p>
+                <span className="flex items-center gap-0.5 text-xs font-bold text-brand-blue mb-0.5">
+                  {stat.delta}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
                 </span>
               </div>
-              <div className="flex items-center gap-5 text-xs text-slate-400">
-                <span className="flex items-center gap-1">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-                  {JOB.location}
-                </span>
-                <span className="flex items-center gap-1">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" /></svg>
-                  {JOB.salary}
-                </span>
-                <span className="flex items-center gap-1">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  {JOB.type}
-                </span>
+              <div className="mt-3 h-0.5 bg-brand-blue/20 rounded-full">
+                <div className="h-full bg-brand-blue rounded-full" style={{ width: `${(stat.value / 12) * 100}%` }} />
               </div>
             </div>
-            <Link href={`/dashboard/employer/jobs/${id}/edit`} className="bg-brand text-white text-sm font-semibold rounded-xl px-5 py-2.5 hover:bg-brand-blue transition-colors">
-              Edit Job
-            </Link>
-          </div>
+          ))}
+        </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-8">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">{stat.label}</p>
-                <div className="flex items-end justify-between">
-                  <p className="text-3xl font-black text-brand leading-none">{stat.value}</p>
-                  <span className="flex items-center gap-0.5 text-xs font-bold text-brand-blue mb-0.5">
-                    {stat.delta}
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
-                  </span>
-                </div>
-                <div className="mt-3 h-0.5 bg-brand-blue/20 rounded-full">
-                  <div className="h-full bg-brand-blue rounded-full" style={{ width: `${(stat.value / 12) * 100}%` }} />
-                </div>
-              </div>
+        {/* Kanban board */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={onDragStart}
+          onDragOver={onDragOver}
+          onDragEnd={onDragEnd}
+        >
+          <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+            {COLUMNS.map((col) => (
+              <KanbanColumn
+                key={col.key}
+                col={col}
+                candidates={candidates.filter((c) => c.column === col.key)}
+                isOver={overColumn === col.key}
+              />
             ))}
           </div>
 
-          {/* Kanban board */}
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDragEnd={onDragEnd}
-          >
-            <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-              {COLUMNS.map((col) => (
-                <KanbanColumn
-                  key={col.key}
-                  col={col}
-                  candidates={candidates.filter((c) => c.column === col.key)}
-                  isOver={overColumn === col.key}
-                />
-              ))}
-            </div>
+          <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
+            {activeCandidate && (
+              <CandidateCard candidate={activeCandidate} isDragging />
+            )}
+          </DragOverlay>
+        </DndContext>
+      </main>
 
-            <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
-              {activeCandidate && (
-                <CandidateCard candidate={activeCandidate} isDragging />
-              )}
-            </DragOverlay>
-          </DndContext>
-        </main>
-
-        {/* Status bar */}
-        <footer className="border-t border-gray-100 bg-white px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-green-500" /> Ready for Deployment
-            </span>
-            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-amber-400" /> Action Required
-            </span>
-            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-brand-blue" /> In Pipeline
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            <span>Total Candidates: {String(totalCandidates).padStart(2, "0")}</span>
-            <span className="text-slate-200">|</span>
-            <span>Last Updated: 2m ago</span>
-          </div>
-        </footer>
+      {/* Status bar */}
+      <footer className="border-t border-gray-100 bg-white px-6 py-3 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div className="flex items-center gap-6">
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <span className="w-2 h-2 rounded-full bg-green-500" /> Ready for Deployment
+          </span>
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <span className="w-2 h-2 rounded-full bg-amber-400" /> Action Required
+          </span>
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <span className="w-2 h-2 rounded-full bg-brand-blue" /> In Pipeline
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <span>Total Candidates: {String(totalCandidates).padStart(2, "0")}</span>
+          <span className="text-slate-200">|</span>
+          <span>Last Updated: 2m ago</span>
+        </div>
+      </footer>
     </>
   );
 }

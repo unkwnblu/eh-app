@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Toggle ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,8 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminSettingsPage() {
+  const { toast } = useToast();
+
   const [twoFactor,      setTwoFactor]      = useState(true);
   const [dbsRule,        setDbsRule]        = useState(true);
   const [gdprRule,       setGdprRule]       = useState(true);
@@ -22,14 +25,8 @@ export default function AdminSettingsPage() {
   const [navStyle,       setNavStyle]       = useState<"side" | "top">("side");
   const [brandColor,     setBrandColor]     = useState("#1275E2");
 
-  const integrations = [
-    { name: "Slack Notifications", status: "Connected",    icon: "slack" },
-    { name: "SendGrid API",         status: "Connected",    icon: "email" },
-    { name: "AWS S3 Storage",       status: "Pending Setup", icon: "cloud" },
-  ];
-
   return (
-    <main className="flex-1 px-8 py-8 space-y-6">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
 
       {/* Header */}
       <div data-gsap="fade-down">
@@ -51,14 +48,17 @@ export default function AdminSettingsPage() {
               <p className="text-xs text-slate-400">Customize the look and feel of the user portal.</p>
             </div>
           </div>
-          <button className="px-5 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">
+          <button
+            onClick={() => toast("Changes saved", "success")}
+            className="px-5 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+          >
             Save Changes
           </button>
         </div>
 
         <div className="flex gap-6">
           {/* Left: branding fields */}
-          <div className="flex-1 grid grid-cols-2 gap-6">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Logo upload */}
             <div>
               <label className="block text-xs font-semibold text-brand mb-2">Platform Logo</label>
@@ -135,7 +135,7 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* ── Compliance + Security ── */}
-      <div className="grid grid-cols-2 gap-5" data-gsap="fade-up">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5" data-gsap="fade-up">
 
         {/* Global Compliance Rules */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-4">
@@ -210,7 +210,7 @@ export default function AdminSettingsPage() {
             <Toggle on={twoFactor} onChange={() => setTwoFactor((v) => !v)} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Session Timeout</label>
               <select className="w-full px-3.5 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors">
@@ -254,7 +254,10 @@ export default function AdminSettingsPage() {
             </div>
             <h2 className="text-sm font-bold text-brand">API Integrations</h2>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity">
+          <button
+            onClick={() => toast("Integration coming soon", "info")}
+            className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
@@ -262,7 +265,7 @@ export default function AdminSettingsPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Slack */}
           <div className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow">
             <div className="flex items-center gap-3">
@@ -276,7 +279,10 @@ export default function AdminSettingsPage() {
                 <p className="text-xs font-semibold text-green-500">Connected</p>
               </div>
             </div>
-            <button className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors">
+            <button
+              aria-label="Configure Slack Notifications"
+              className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -297,7 +303,10 @@ export default function AdminSettingsPage() {
                 <p className="text-xs font-semibold text-green-500">Connected</p>
               </div>
             </div>
-            <button className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors">
+            <button
+              aria-label="Configure SendGrid API"
+              className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -318,7 +327,10 @@ export default function AdminSettingsPage() {
                 <p className="text-xs font-semibold text-slate-400">Pending Setup</p>
               </div>
             </div>
-            <button className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors">
+            <button
+              aria-label="Configure AWS S3 Storage"
+              className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
               </svg>
@@ -330,7 +342,12 @@ export default function AdminSettingsPage() {
       {/* Save footer */}
       <div className="flex items-center justify-end gap-3 pt-2" data-gsap="fade-up">
         <button className="px-6 py-2.5 text-sm font-semibold text-slate-500 hover:text-brand transition-colors">Discard Changes</button>
-        <button className="px-7 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">Save Settings</button>
+        <button
+          onClick={() => toast("Changes saved", "success")}
+          className="px-7 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+        >
+          Save Settings
+        </button>
       </div>
     </main>
   );

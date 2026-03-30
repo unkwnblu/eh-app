@@ -302,15 +302,15 @@ export default function JobModerationPage() {
   function reject(id: number)  { setStatuses((prev) => ({ ...prev, [id]: "rejected" })); }
 
   return (
-    <main className="flex-1 px-8 py-8">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6" data-gsap="fade-down">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6" data-gsap="fade-down">
         <div>
           <h1 className="text-[28px] font-black text-brand tracking-tight">Job Moderation</h1>
           <p className="text-sm text-slate-400 mt-1">Review and approve employer job listings before they go live.</p>
         </div>
-        <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wide rounded-xl">
+        <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wide rounded-xl shrink-0 self-start">
           {pendingCount} Pending
         </span>
       </div>
@@ -320,10 +320,16 @@ export default function JobModerationPage() {
         {/* Left: list */}
         <div className="w-[340px] shrink-0 space-y-3" data-gsap="fade-up">
           {/* Filter */}
-          <div className="bg-white border border-gray-100 rounded-xl p-1 flex gap-1">
+          <div
+            className="bg-white border border-gray-100 rounded-xl p-1 flex gap-1"
+            role="tablist"
+            aria-label="Filter job listings"
+          >
             {(["all", "pending", "approved", "flagged", "rejected"] as const).map((f) => (
               <button
                 key={f}
+                role="tab"
+                aria-selected={filter === f}
                 onClick={() => setFilter(f)}
                 className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-colors ${
                   filter === f ? "bg-brand-blue text-white" : "text-slate-500 hover:bg-gray-50"
@@ -384,6 +390,7 @@ export default function JobModerationPage() {
                     <button
                       onClick={() => approve(job.id)}
                       title="Approve"
+                      aria-label="Approve"
                       className="w-7 h-7 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 flex items-center justify-center transition-colors"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
@@ -391,6 +398,7 @@ export default function JobModerationPage() {
                     <button
                       onClick={() => flag(job.id)}
                       title="Flag"
+                      aria-label="Flag for review"
                       className="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center transition-colors"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" /></svg>
@@ -398,6 +406,7 @@ export default function JobModerationPage() {
                     <button
                       onClick={() => reject(job.id)}
                       title="Reject"
+                      aria-label="Reject"
                       className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>

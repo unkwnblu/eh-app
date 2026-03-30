@@ -76,6 +76,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
     <div className="border-b border-gray-100 last:border-0">
       <button
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         className="w-full flex items-center justify-between py-4 text-left gap-4 hover:text-brand-blue transition-colors"
       >
         <span className="text-sm font-semibold text-brand">{question}</span>
@@ -109,7 +110,7 @@ export default function CandidateSupportPage() {
   }
 
   return (
-    <main className="flex-1 px-8 py-8 space-y-6">
+    <main className="flex-1 px-4 py-6 md:px-8 md:py-8 space-y-6">
 
       {/* Page header */}
       <div data-gsap="fade-down">
@@ -118,7 +119,7 @@ export default function CandidateSupportPage() {
       </div>
 
       {/* Contact channels */}
-      <div className="grid grid-cols-3 gap-4" data-gsap="fade-up">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-gsap="fade-up">
         {CONTACT_CHANNELS.map((ch) => (
           <div key={ch.label} className="bg-white border border-gray-100 rounded-2xl p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${ch.colour}`}>
@@ -134,7 +135,7 @@ export default function CandidateSupportPage() {
       </div>
 
       {/* Main row: FAQ + contact form */}
-      <div className="flex gap-5">
+      <div className="flex flex-col lg:flex-row gap-5">
 
         {/* FAQ */}
         <div className="flex-1 bg-white border border-gray-100 rounded-2xl p-7" data-gsap="fade-up">
@@ -155,7 +156,7 @@ export default function CandidateSupportPage() {
         </div>
 
         {/* Contact form */}
-        <div className="w-[340px] shrink-0" data-gsap="fade-up">
+        <div className="w-full lg:w-[340px] lg:shrink-0" data-gsap="fade-up">
           <div className="bg-white border border-gray-100 rounded-2xl p-7">
             <div className="flex items-center gap-3 mb-1">
               <div className="w-8 h-8 rounded-xl bg-brand-blue/10 flex items-center justify-center">

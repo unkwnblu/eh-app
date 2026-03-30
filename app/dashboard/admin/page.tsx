@@ -68,10 +68,10 @@ function StatCard({
 
 export default function AdminDashboardPage() {
   return (
-    <main className="flex-1 px-8 py-8 space-y-6">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4" data-gsap="fade-down">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-gsap="fade-down">
         <StatCard label="Total Active Jobs"       value="1,482" trend="+12.5%"  />
         <StatCard label="Pending Verifications"   value="86"    badge="Urgent"  badgeVariant="urgent" />
         <StatCard label="Registered Employers"    value="432"   badge="Live"    badgeVariant="live"   />
@@ -79,7 +79,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Main row: Verification + Moderation */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
         {/* Candidate Verification Tagging */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6" data-gsap="fade-up">
@@ -95,7 +95,9 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
 
-          {/* Table header */}
+          {/* Table */}
+          <div className="overflow-x-auto -mx-2 px-2">
+          <div className="min-w-[420px]">
           <div className="grid grid-cols-[1fr_1fr_80px_100px] gap-3 px-3 mb-2">
             {["Candidate Name", "Target Sector", "Docs", "Action"].map((h) => (
               <p key={h} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{h}</p>
@@ -124,6 +126,8 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
+          </div>{/* min-w */}
+          </div>{/* overflow-x-auto */}
         </div>
 
         {/* Job Moderation Queue */}
@@ -140,7 +144,9 @@ export default function AdminDashboardPage() {
             </span>
           </div>
 
-          {/* Table header */}
+          {/* Table */}
+          <div className="overflow-x-auto -mx-2 px-2">
+          <div className="min-w-[400px]">
           <div className="grid grid-cols-[1fr_1fr_80px_80px] gap-3 px-3 mb-2">
             {["Employer Name", "Job Title", "Posted", "Actions"].map((h) => (
               <p key={h} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{h}</p>
@@ -168,17 +174,19 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
+          </div>{/* min-w */}
+          </div>{/* overflow-x-auto */}
         </div>
       </div>
 
       {/* User Management */}
       <div className="bg-white border border-gray-100 rounded-2xl p-6" data-gsap="fade-up">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
           <div>
             <h2 className="text-sm font-bold text-brand">User Management</h2>
             <p className="text-xs text-slate-400 mt-0.5">Manage administrative access and system level permissions.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/dashboard/admin/users/new"
               className="flex items-center gap-2 px-4 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
@@ -200,7 +208,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {USERS.map((user) => (
             <div
               key={user.id}

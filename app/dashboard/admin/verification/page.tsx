@@ -210,7 +210,7 @@ function DetailPanel({
       <div className="bg-white border border-gray-100 rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-brand">Candidate Review</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
+          <button onClick={onClose} aria-label="Close review panel" className="p-1 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -263,11 +263,12 @@ function DetailPanel({
                 <p className="text-[10px] text-slate-400">{doc.type}</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button className="px-2.5 py-1 text-[11px] font-semibold text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-blue-50 transition-colors">
+                <button aria-label={`View ${doc.name}`} className="px-2.5 py-1 text-[11px] font-semibold text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-blue-50 transition-colors">
                   View
                 </button>
                 <button
                   onClick={() => onToggleDoc(i)}
+                  aria-label={doc.verified ? `Mark ${doc.name} as unverified` : `Mark ${doc.name} as verified`}
                   className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors ${
                     doc.verified ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-slate-500 hover:bg-gray-200"
                   }`}
@@ -346,15 +347,15 @@ export default function CandidateVerificationPage() {
   }
 
   return (
-    <main className="flex-1 px-8 py-8 space-y-6">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
 
       {/* Header */}
-      <div className="flex items-start justify-between" data-gsap="fade-down">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4" data-gsap="fade-down">
         <div>
           <h1 className="text-[28px] font-black text-brand tracking-tight">Candidate Verifications</h1>
           <p className="text-sm text-slate-400 mt-1">Identity and document compliance management</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-3 px-5 py-3 bg-brand-blue text-white rounded-2xl">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -394,8 +395,8 @@ export default function CandidateVerificationPage() {
 
       {/* Cards + detail panel */}
       <div className="flex gap-5 items-start">
-        {/* Card grid — always 2 columns */}
-        <div className="grid grid-cols-2 gap-4 flex-1" data-gsap="fade-up">
+        {/* Card grid — always 2 columns at tablet+ */}
+        <div className="grid md:grid-cols-2 gap-4 flex-1" data-gsap="fade-up">
           {cardCandidates.map((c) => (
             <CandidateCard
               key={c.id}
@@ -442,51 +443,59 @@ export default function CandidateVerificationPage() {
           </div>
         </div>
 
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="w-10 pb-3">
-                <input type="checkbox" className="rounded accent-brand-blue"
-                  checked={selectedRows.length === candidates.length}
-                  onChange={(e) => setSelectedRows(e.target.checked ? candidates.map((c) => c.id) : [])} />
-              </th>
-              {["Candidate", "Sector", "Document", "Submission Date", "Status", "Actions"].map((h) => (
-                <th key={h} className="text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 pb-3 pr-4">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {candidates.map((c) => (
-              <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-3.5 pr-3">
-                  <input type="checkbox" className="rounded accent-brand-blue" checked={selectedRows.includes(c.id)} onChange={() => toggleRow(c.id)} />
-                </td>
-                <td className="py-3.5 pr-4"><span className="text-sm font-semibold text-brand">{c.name}</span></td>
-                <td className="py-3.5 pr-4"><span className="px-2.5 py-1 bg-blue-50 text-brand-blue text-[11px] font-semibold rounded-full">{c.sector}</span></td>
-                <td className="py-3.5 pr-4">
-                  <div className="flex items-center gap-1.5">
-                    <DocIcon type={c.docIcon} />
-                    <span className="text-sm text-slate-600">{c.docType}</span>
-                  </div>
-                </td>
-                <td className="py-3.5 pr-4"><span className="text-sm text-slate-500">{c.submissionDate}</span></td>
-                <td className="py-3.5 pr-4">
-                  <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${c.status === "verified" ? "text-green-600" : c.status === "flagged" ? "text-red-500" : "text-amber-600"}`}>
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${c.status === "verified" ? "bg-green-500" : c.status === "flagged" ? "bg-red-500" : "bg-amber-400"}`} />
-                    {c.status === "pending" ? "Pending" : c.status === "flagged" ? "Flagged" : c.status === "resubmission" ? "Re-Submission" : "Verified"}
-                  </span>
-                </td>
-                <td className="py-3.5">
-                  <button onClick={() => setReviewing(reviewing === c.id ? null : c.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.5 12a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <div className="min-w-[700px]">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="w-10 pb-3">
+                    <input type="checkbox" className="rounded accent-brand-blue"
+                      checked={selectedRows.length === candidates.length}
+                      onChange={(e) => setSelectedRows(e.target.checked ? candidates.map((c) => c.id) : [])} />
+                  </th>
+                  {["Candidate", "Sector", "Document", "Submission Date", "Status", "Actions"].map((h) => (
+                    <th key={h} className="text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 pb-3 pr-4">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {candidates.map((c) => (
+                  <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="py-3.5 pr-3">
+                      <input type="checkbox" className="rounded accent-brand-blue" checked={selectedRows.includes(c.id)} onChange={() => toggleRow(c.id)} />
+                    </td>
+                    <td className="py-3.5 pr-4"><span className="text-sm font-semibold text-brand">{c.name}</span></td>
+                    <td className="py-3.5 pr-4"><span className="px-2.5 py-1 bg-blue-50 text-brand-blue text-[11px] font-semibold rounded-full">{c.sector}</span></td>
+                    <td className="py-3.5 pr-4">
+                      <div className="flex items-center gap-1.5">
+                        <DocIcon type={c.docIcon} />
+                        <span className="text-sm text-slate-600">{c.docType}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 pr-4"><span className="text-sm text-slate-500">{c.submissionDate}</span></td>
+                    <td className="py-3.5 pr-4">
+                      <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${c.status === "verified" ? "text-green-600" : c.status === "flagged" ? "text-red-500" : "text-amber-600"}`}>
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${c.status === "verified" ? "bg-green-500" : c.status === "flagged" ? "bg-red-500" : "bg-amber-400"}`} />
+                        {c.status === "pending" ? "Pending" : c.status === "flagged" ? "Flagged" : c.status === "resubmission" ? "Re-Submission" : "Verified"}
+                      </span>
+                    </td>
+                    <td className="py-3.5">
+                      <button
+                        onClick={() => setReviewing(reviewing === c.id ? null : c.id)}
+                        aria-label={`Open review panel for ${c.name}`}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.5 12a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </main>
   );

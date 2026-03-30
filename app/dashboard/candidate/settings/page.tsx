@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import GsapAnimations from "@/components/landing/GsapAnimations";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ function ExperienceCard({
               )}
               <button
                 onClick={onEdit}
+                aria-label="Edit experience"
                 className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-slate-400 hover:text-brand-blue"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -202,7 +204,7 @@ function EditPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-brand mb-1.5">Start Date</label>
             <input
@@ -269,6 +271,7 @@ function EditPanel({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CandidateSettingsPage() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("Profile");
 
   // Profile tab state
@@ -299,10 +302,16 @@ export default function CandidateSettingsPage() {
     <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
       <GsapAnimations />
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200 mb-8 overflow-x-auto" data-gsap="fade-down">
+      <div
+        role="tablist"
+        className="flex items-center gap-6 border-b border-gray-200 mb-8 overflow-x-auto"
+        data-gsap="fade-down"
+      >
         {TABS.map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
             className={`pb-3 text-sm font-semibold transition-colors relative ${
               activeTab === tab ? "text-brand-blue" : "text-slate-500 hover:text-brand"
@@ -453,7 +462,12 @@ export default function CandidateSettingsPage() {
 
           <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3 mt-8 pt-6 border-t border-gray-100" data-gsap="fade-up">
             <button className="px-6 py-2.5 text-sm font-semibold text-slate-500 hover:text-brand transition-colors">Discard Changes</button>
-            <button className="w-full sm:w-auto px-7 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">Save Profile</button>
+            <button
+              onClick={() => toast("Changes saved", "success")}
+              className="w-full sm:w-auto px-7 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+            >
+              Save Profile
+            </button>
           </div>
         </>
       )}
@@ -559,7 +573,10 @@ export default function CandidateSettingsPage() {
                       <input type="password" defaultValue="password" className="w-full px-4 py-3 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm outline-none focus:border-brand-blue transition-colors" />
                     </div>
                   </div>
-                  <button className="px-6 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">
+                  <button
+                    onClick={() => toast("Changes saved", "success")}
+                    className="px-6 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                  >
                     Update Password
                   </button>
                 </div>

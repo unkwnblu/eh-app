@@ -136,13 +136,21 @@ function DocCard({ doc }: { doc: { id: number; title: string; description: strin
 
       {/* Actions */}
       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 hover:text-brand-blue transition-colors" title="View">
+        <button
+          aria-label="View document"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 hover:text-brand-blue transition-colors"
+          title="View"
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
-        <button className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 hover:text-brand-blue transition-colors" title="Download">
+        <button
+          aria-label="Download document"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 hover:text-brand-blue transition-colors"
+          title="Download"
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
           </svg>
@@ -162,16 +170,19 @@ export default function LegalPage() {
   const reviewCount = docs.filter((d) => d.status === "review").length;
 
   return (
-        <main className="flex-1 px-8 py-8 space-y-6">
+        <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
           {/* Header */}
-          <div className="flex items-start justify-between" data-gsap="fade-down">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:items-start gap-4" data-gsap="fade-down">
+            <div className="flex-1">
               <h1 className="text-[28px] font-black text-brand tracking-tight">Legal</h1>
               <p className="text-sm text-slate-400 mt-1">
                 Compliance documents, contracts, and policies governing your recruitment activity.
               </p>
             </div>
-            <button className="flex items-center gap-2 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-white hover:shadow-sm transition-all">
+            <button
+              aria-label="Download all documents"
+              className="flex items-center gap-2 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-white hover:shadow-sm transition-all self-start"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
               </svg>
@@ -180,7 +191,7 @@ export default function LegalPage() {
           </div>
 
           {/* Summary stats */}
-          <div className="grid grid-cols-3 gap-4" data-gsap="fade-up">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-gsap="fade-up">
             <div className="bg-white border border-gray-100 rounded-2xl px-6 py-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
@@ -225,10 +236,12 @@ export default function LegalPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center border-b border-gray-200" data-gsap="fade-down">
+          <div className="flex items-center border-b border-gray-200" role="tablist" data-gsap="fade-down">
             {TABS.map((t) => (
               <button
                 key={t.key}
+                role="tab"
+                aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
                 className={`px-1 pb-3 mr-6 text-sm font-semibold border-b-2 transition-all -mb-px ${
                   tab === t.key

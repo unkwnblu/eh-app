@@ -128,10 +128,10 @@ export default function NotificationsPage() {
   const filtered = historyFilter === "all" ? sent : sent.filter((n) => n.status === historyFilter);
 
   return (
-    <main className="flex-1 px-8 py-8 space-y-6">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
 
       {/* Header */}
-      <div className="flex items-start justify-between" data-gsap="fade-down">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4" data-gsap="fade-down">
         <div>
           <h1 className="text-[28px] font-black text-brand tracking-tight">Notifications</h1>
           <p className="text-sm text-slate-400 mt-1">Compose and broadcast messages to platform users.</p>
@@ -139,7 +139,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4" data-gsap="fade-up">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-gsap="fade-up">
         <div className="bg-white border border-gray-100 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-slate-400">Total Sent</p>
@@ -221,7 +221,7 @@ export default function NotificationsPage() {
           {/* Type selector */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Notification Type</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {NOTIF_TYPES.map((t) => (
                 <button
                   key={t}
@@ -350,10 +350,12 @@ export default function NotificationsPage() {
         <div className="flex-1 bg-white border border-gray-100 rounded-2xl overflow-hidden">
           {/* Tab bar */}
           <div className="flex items-center justify-between px-5 pt-4 border-b border-gray-100">
-            <div className="flex gap-1">
+            <div className="flex gap-1" role="tablist" aria-label="Filter notification history">
               {(["all", "delivered", "scheduled", "failed"] as const).map((f) => (
                 <button
                   key={f}
+                  role="tab"
+                  aria-selected={historyFilter === f}
                   onClick={() => setHistoryFilter(f)}
                   className={`px-4 py-2.5 text-xs font-semibold border-b-2 capitalize transition-colors ${
                     historyFilter === f

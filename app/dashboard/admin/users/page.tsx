@@ -58,6 +58,11 @@ export default function UserManagementPage() {
 
   const filtered = tab === "all" ? users : users.filter((u) => u.role === tab);
 
+  const [usersLoading] = useState(false);
+  const [usersError, setUsersError] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const { toast } = useToast();
+
   function suspend(id: number) {
     setUsers((p) => p.map((u) => u.id === id ? { ...u, status: "suspended" } : u));
     toast("User suspended", "info");
@@ -86,19 +91,14 @@ export default function UserManagementPage() {
     setNewName(""); setNewEmail(""); setNewRole("Candidate");
   }
 
-  const [usersLoading] = useState(false);
-  const [usersError, setUsersError] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const { toast } = useToast();
-
   const totalActive    = users.filter((u) => u.status === "active").length;
   const totalSuspended = users.filter((u) => u.status === "suspended").length;
 
   return (
-    <main className="flex-1 px-8 py-8 space-y-6">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
 
       {/* Header */}
-      <div className="flex items-start justify-between" data-gsap="fade-down">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4" data-gsap="fade-down">
         <div>
           <h1 className="text-[28px] font-black text-brand tracking-tight">User Management</h1>
           <p className="text-sm text-slate-400 mt-1 max-w-sm">
@@ -107,7 +107,7 @@ export default function UserManagementPage() {
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors shrink-0"
+          className="flex items-center gap-2 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors shrink-0 self-start"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
@@ -120,7 +120,7 @@ export default function UserManagementPage() {
       {showForm && (
         <div className="bg-white border border-brand-blue/30 rounded-2xl p-6" data-gsap="fade-down">
           <h3 className="text-sm font-bold text-brand mb-4">New User Profile</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Full Name</label>
               <input value={newName} onChange={(e) => setNewName(e.target.value)} type="text" placeholder="e.g. Jane Smith"
@@ -151,7 +151,7 @@ export default function UserManagementPage() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4" data-gsap="fade-up">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-gsap="fade-up">
         {/* Total */}
         <div className="bg-white border border-gray-100 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
@@ -214,10 +214,12 @@ export default function UserManagementPage() {
 
         {/* Tab bar */}
         <div className="flex items-center justify-between px-5 pt-4 pb-0 border-b border-gray-100">
-          <div className="flex gap-1">
+          <div className="flex gap-1" role="tablist" aria-label="Filter users by role">
             {(["all", "Employer", "Candidate", "Admin"] as const).map((t) => (
               <button
                 key={t}
+                role="tab"
+                aria-selected={tab === t}
                 onClick={() => setTab(t as typeof tab)}
                 className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors capitalize ${
                   tab === t
@@ -230,12 +232,18 @@ export default function UserManagementPage() {
             ))}
           </div>
           <div className="flex items-center gap-2 pb-2">
-            <button className="p-2 text-slate-400 hover:text-brand hover:bg-gray-50 rounded-lg transition-colors">
+            <button
+              aria-label="Sort users"
+              className="p-2 text-slate-400 hover:text-brand hover:bg-gray-50 rounded-lg transition-colors"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h9.75m4.5-4.5v12m0 0l-3.75-3.75M17.25 21L21 17.25" />
               </svg>
             </button>
-            <button className="p-2 text-slate-400 hover:text-brand hover:bg-gray-50 rounded-lg transition-colors">
+            <button
+              aria-label="Export users"
+              className="p-2 text-slate-400 hover:text-brand hover:bg-gray-50 rounded-lg transition-colors"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
               </svg>
@@ -331,6 +339,7 @@ export default function UserManagementPage() {
                     <button
                       onClick={() => setPanel(panel?.id === user.id ? null : user)}
                       title="View details"
+                      aria-label="View user details"
                       className="w-8 h-8 rounded-lg text-slate-400 hover:bg-brand-blue/10 hover:text-brand-blue flex items-center justify-center transition-colors"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -343,6 +352,7 @@ export default function UserManagementPage() {
                       <button
                         onClick={() => restore(user.id)}
                         title="Restore access"
+                        aria-label="Restore user access"
                         className="w-8 h-8 rounded-lg text-slate-400 hover:bg-green-50 hover:text-green-600 flex items-center justify-center transition-colors"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -353,6 +363,7 @@ export default function UserManagementPage() {
                       <button
                         onClick={() => suspend(user.id)}
                         title="Suspend user"
+                        aria-label="Suspend user"
                         className="w-8 h-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -365,6 +376,7 @@ export default function UserManagementPage() {
                     <button
                       onClick={() => deleteUser(user.id)}
                       title="Delete user"
+                      aria-label="Delete user"
                       className="w-8 h-8 rounded-lg text-slate-400 hover:bg-gray-100 hover:text-slate-600 flex items-center justify-center transition-colors"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -424,13 +436,17 @@ export default function UserManagementPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide ${ROLE_STYLES[u.role]}`}>{u.role}</span>
-                  <button onClick={() => setPanel(null)} className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors">
+                  <button
+                    onClick={() => setPanel(null)}
+                    aria-label="Close user details panel"
+                    className="p-1.5 text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors"
+                  >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Status</p>
                   <span className={`flex items-center gap-1.5 text-xs font-bold ${u.status === "active" ? "text-green-600" : "text-red-500"}`}>
@@ -478,7 +494,10 @@ export default function UserManagementPage() {
                       <button onClick={() => suspend(u.id)} className="px-5 py-2.5 border border-amber-200 text-amber-700 text-sm font-bold rounded-xl hover:bg-amber-50 transition-colors">
                         Suspend
                       </button>
-                      <button className="px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">
+                      <button
+                        onClick={() => toast("Edit profile coming soon", "info")}
+                        className="px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                      >
                         Edit Profile
                       </button>
                     </>

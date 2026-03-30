@@ -192,7 +192,7 @@ export default function CandidateDashboardPage() {
       </div>
 
       {/* Main grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
 
         {/* Left column */}
         <div className="space-y-5">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 type TabKey = "account" | "business";
 
@@ -8,6 +9,7 @@ type TabKey = "account" | "business";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<TabKey>("account");
+  const toast = useToast();
 
   // Account fields
   const [fullName, setFullName] = useState("");
@@ -23,15 +25,17 @@ export default function SettingsPage() {
   const [industry, setIndustry] = useState("");
 
   return (
-        <main className="flex-1 px-8 py-8">
+        <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
           {/* Page header */}
-          <div className="mb-6" data-gsap="fade-down">
-            <h1 className="text-[28px] font-black text-brand tracking-tight">Settings</h1>
-            <p className="text-sm text-slate-400 mt-1">Manage your recruiter profile and company information</p>
+          <div className="flex flex-col lg:flex-row lg:justify-between gap-4 mb-6" data-gsap="fade-down">
+            <div>
+              <h1 className="text-[28px] font-black text-brand tracking-tight">Settings</h1>
+              <p className="text-sm text-slate-400 mt-1">Manage your recruiter profile and company information</p>
+            </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center border-b border-gray-200 mb-6" data-gsap="fade-down">
+          <div className="flex items-center border-b border-gray-200 mb-6" role="tablist" data-gsap="fade-down">
             {(["account", "business"] as TabKey[]).map((t) => {
               const labels: Record<TabKey, string> = {
                 account: "Account Information",
@@ -40,6 +44,8 @@ export default function SettingsPage() {
               return (
                 <button
                   key={t}
+                  role="tab"
+                  aria-selected={tab === t}
                   onClick={() => setTab(t)}
                   className={`px-1 pb-3 mr-6 text-sm font-semibold border-b-2 transition-all -mb-px ${
                     tab === t
@@ -60,7 +66,7 @@ export default function SettingsPage() {
                 <h3 className="text-base font-bold text-brand mb-1">Account Information</h3>
                 <p className="text-sm text-slate-400 mb-6">Update your personal and company details.</p>
 
-                <div className="grid grid-cols-2 gap-5 mb-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
                       Full Name
@@ -87,7 +93,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
                       Job Title
@@ -104,7 +110,10 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex justify-end">
-                <button className="px-6 py-2.5 bg-brand-blue text-white rounded-xl text-sm font-bold hover:bg-brand-blue-dark transition-colors shadow-sm">
+                <button
+                  onClick={() => toast("Changes saved", "success")}
+                  className="px-6 py-2.5 bg-brand-blue text-white rounded-xl text-sm font-bold hover:bg-brand-blue-dark transition-colors shadow-sm"
+                >
                   Save Changes
                 </button>
               </div>
@@ -118,7 +127,7 @@ export default function SettingsPage() {
                 <h3 className="text-base font-bold text-brand mb-1">Business Information</h3>
                 <p className="text-sm text-slate-400 mb-6">Update your company profile and contact details.</p>
 
-                <div className="grid grid-cols-2 gap-5 mb-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
                       Company Name
@@ -145,7 +154,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5 mb-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
                       Phone Number
@@ -172,7 +181,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
                       Industry
@@ -201,7 +210,10 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex justify-end">
-                <button className="px-6 py-2.5 bg-brand-blue text-white rounded-xl text-sm font-bold hover:bg-brand-blue-dark transition-colors shadow-sm">
+                <button
+                  onClick={() => toast("Changes saved", "success")}
+                  className="px-6 py-2.5 bg-brand-blue text-white rounded-xl text-sm font-bold hover:bg-brand-blue-dark transition-colors shadow-sm"
+                >
                   Save Changes
                 </button>
               </div>
