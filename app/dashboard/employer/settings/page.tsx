@@ -9,7 +9,7 @@ type TabKey = "account" | "business";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<TabKey>("account");
-  const toast = useToast();
+  const { toast } = useToast();
 
   // Account fields
   const [fullName, setFullName] = useState("");
