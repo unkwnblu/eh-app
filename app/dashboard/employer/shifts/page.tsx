@@ -102,9 +102,9 @@ export default function ShiftManagementPage() {
   const activeShifts = roles.reduce((sum, r) => sum + r.totalShifts, 0);
 
   return (
-        <main className="flex-1 px-8 py-8">
+        <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
           {/* Page header */}
-          <div className="flex items-start justify-between mb-8" data-gsap="fade-down">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-8" data-gsap="fade-down">
             <div>
               <h1 className="text-[28px] font-black text-brand tracking-tight">Shift-Enabled Roles</h1>
               <p className="text-sm text-slate-400 mt-1.5 max-w-lg">

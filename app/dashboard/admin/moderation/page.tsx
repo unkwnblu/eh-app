@@ -315,10 +315,10 @@ export default function JobModerationPage() {
         </span>
       </div>
 
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
 
         {/* Left: list */}
-        <div className="w-[340px] shrink-0 space-y-3" data-gsap="fade-up">
+        <div className="w-full lg:w-[340px] lg:shrink-0 space-y-3" data-gsap="fade-up">
           {/* Filter */}
           <div
             className="bg-white border border-gray-100 rounded-xl p-1 flex gap-1"

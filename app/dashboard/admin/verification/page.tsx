@@ -394,7 +394,7 @@ export default function CandidateVerificationPage() {
       </div>
 
       {/* Cards + detail panel */}
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Card grid — always 2 columns at tablet+ */}
         <div className="grid md:grid-cols-2 gap-4 flex-1" data-gsap="fade-up">
           {cardCandidates.map((c) => (
@@ -417,7 +417,7 @@ export default function CandidateVerificationPage() {
               }
               .panel-slide-in { animation: panelSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
             `}</style>
-            <div className="panel-slide-in w-[440px] shrink-0">
+            <div className="panel-slide-in w-full lg:w-[440px] lg:shrink-0">
               <DetailPanel
                 candidate={reviewingCandidate}
                 docs={docStates[reviewingCandidate.id]}

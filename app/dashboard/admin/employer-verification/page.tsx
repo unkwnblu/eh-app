@@ -470,7 +470,7 @@ export default function EmployerVerificationPage() {
       </div>
 
       {/* Card grid + panel */}
-      <div className="flex gap-5 items-start" data-gsap="fade-up">
+      <div className="flex flex-col lg:flex-row gap-5 items-start" data-gsap="fade-up">
         <div className="grid md:grid-cols-2 gap-4 flex-1">
           {filtered.map((e) => (
             <EmployerCard

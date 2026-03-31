@@ -195,10 +195,10 @@ export default function NotificationsPage() {
       </div>
 
       {/* Main: compose + recent */}
-      <div className="flex gap-5 items-start" data-gsap="fade-up">
+      <div className="flex flex-col lg:flex-row gap-5 items-start" data-gsap="fade-up">
 
         {/* Compose panel */}
-        <div className="w-[420px] shrink-0 bg-white border border-gray-100 rounded-2xl p-6 space-y-5">
+        <div className="w-full lg:w-[420px] lg:shrink-0 bg-white border border-gray-100 rounded-2xl p-6 space-y-5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
