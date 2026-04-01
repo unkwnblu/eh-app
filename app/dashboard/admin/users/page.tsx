@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type UserStatus = "active" | "suspended";
+type UserStatus = "active" | "suspended" | "pending";
 type UserRole = "Candidate" | "Employer" | "Admin" | "Moderator";
 
 type AdminUser = {
@@ -464,7 +464,9 @@ export default function UserManagementPage() {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      user.status === "suspended" ? "bg-red-100 text-red-500" : "bg-brand-blue/10 text-brand-blue"
+                      user.status === "suspended" ? "bg-red-100 text-red-500"     :
+                      user.status === "pending"   ? "bg-amber-100 text-amber-600" :
+                                                    "bg-brand-blue/10 text-brand-blue"
                     }`}>
                       {user.avatar}
                     </div>
@@ -485,12 +487,18 @@ export default function UserManagementPage() {
                 {/* Status */}
                 <td className="px-6 py-4">
                   <span className={`flex items-center gap-1.5 text-xs font-bold w-fit ${
-                    user.status === "active" ? "text-green-600" : "text-red-500"
+                    user.status === "active"   ? "text-green-600" :
+                    user.status === "pending"  ? "text-amber-500" :
+                                                 "text-red-500"
                   }`}>
                     <span className={`w-2 h-2 rounded-full shrink-0 ${
-                      user.status === "active" ? "bg-green-500" : "bg-red-500"
+                      user.status === "active"  ? "bg-green-500" :
+                      user.status === "pending" ? "bg-amber-400" :
+                                                  "bg-red-500"
                     }`} />
-                    {user.status === "active" ? "ACTIVE" : "SUSPENDED"}
+                    {user.status === "active"  ? "ACTIVE" :
+                     user.status === "pending" ? "PENDING VERIFICATION" :
+                                                 "SUSPENDED"}
                   </span>
                 </td>
 
@@ -593,7 +601,9 @@ export default function UserManagementPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-base ${
-                    u.status === "suspended" ? "bg-red-100 text-red-500" : "bg-brand-blue/10 text-brand-blue"
+                    u.status === "suspended" ? "bg-red-100 text-red-500"     :
+                    u.status === "pending"   ? "bg-amber-100 text-amber-600" :
+                                               "bg-brand-blue/10 text-brand-blue"
                   }`}>{u.avatar}</div>
                   <div>
                     <h2 className="text-base font-black text-brand">{u.name}</h2>
@@ -617,9 +627,19 @@ export default function UserManagementPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Status</p>
-                  <span className={`flex items-center gap-1.5 text-xs font-bold ${u.status === "active" ? "text-green-600" : "text-red-500"}`}>
-                    <span className={`w-2 h-2 rounded-full ${u.status === "active" ? "bg-green-500" : "bg-red-500"}`} />
-                    {u.status === "active" ? "Active" : "Suspended"}
+                  <span className={`flex items-center gap-1.5 text-xs font-bold ${
+                    u.status === "active"  ? "text-green-600" :
+                    u.status === "pending" ? "text-amber-500" :
+                                             "text-red-500"
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${
+                      u.status === "active"  ? "bg-green-500" :
+                      u.status === "pending" ? "bg-amber-400" :
+                                               "bg-red-500"
+                    }`} />
+                    {u.status === "active"  ? "Active" :
+                     u.status === "pending" ? "Pending Verification" :
+                                              "Suspended"}
                   </span>
                 </div>
                 <div>

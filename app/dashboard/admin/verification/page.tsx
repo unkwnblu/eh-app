@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -9,78 +10,17 @@ type CardStatus = "pending" | "flagged" | "resubmission" | "verified";
 type Doc = { name: string; type: string; verified: boolean };
 
 type Candidate = {
-  id: number;
+  id: string;
   name: string;
   sector: string;
   joined: string;
   status: CardStatus;
   docType: string;
   docIcon: "passport" | "id" | "license" | "medical";
-  integrityScore: string;
-  integrityVariant: "high" | "medium" | "low";
   submissionDate: string;
   docs: Doc[];
 };
 
-// ─── Data ──────────────────────────────────────────────────────────────────────
-
-const INITIAL_CANDIDATES: Candidate[] = [
-  {
-    id: 1, name: "Mila Dragić",   sector: "Healthcare",  joined: "2h ago",  status: "pending",
-    docType: "Passport (EU)",    docIcon: "passport", integrityScore: "98% Match",      integrityVariant: "high",   submissionDate: "Oct 24, 2023",
-    docs: [
-      { name: "British_Passport_Mila.pdf",   type: "Passport (EU)",       verified: true  },
-      { name: "Enhanced_DBS_Certificate.pdf",type: "DBS Check",            verified: false },
-      { name: "Training_Record.pdf",         type: "Mandatory Training",   verified: true  },
-      { name: "Reference_Letter.pdf",        type: "Reference",            verified: false },
-    ],
-  },
-  {
-    id: 2, name: "Julian Thorne", sector: "Technology",  joined: "5h ago",  status: "pending",
-    docType: "National ID",      docIcon: "id",       integrityScore: "82% Match",      integrityVariant: "medium", submissionDate: "Oct 24, 2023",
-    docs: [
-      { name: "National_ID_Julian.pdf",      type: "National ID",          verified: false },
-      { name: "DBS_Certificate.pdf",         type: "DBS Check",            verified: false },
-      { name: "Employment_Reference.pdf",    type: "Reference",            verified: true  },
-    ],
-  },
-  {
-    id: 3, name: "Sarah Waters",  sector: "Finance",     joined: "1d ago",  status: "flagged",
-    docType: "Driver's License", docIcon: "license",  integrityScore: "Low Confidence", integrityVariant: "low",    submissionDate: "Oct 23, 2023",
-    docs: [
-      { name: "Drivers_License_Sarah.pdf",   type: "Driver's License",     verified: false },
-      { name: "DBS_Check.pdf",               type: "DBS Check",            verified: false },
-      { name: "Bank_Statement.pdf",          type: "Proof of Address",     verified: false },
-    ],
-  },
-  {
-    id: 4, name: "Aiden Miller",  sector: "Technology",  joined: "40m ago", status: "resubmission",
-    docType: "Passport (US)",    docIcon: "passport", integrityScore: "91% Match",      integrityVariant: "high",   submissionDate: "Oct 23, 2023",
-    docs: [
-      { name: "US_Passport_Aiden.pdf",       type: "Passport (US)",        verified: true  },
-      { name: "DBS_Certificate_v2.pdf",      type: "DBS Check",            verified: false },
-      { name: "Right_To_Work_Visa.pdf",      type: "Right to Work",        verified: true  },
-    ],
-  },
-  {
-    id: 5, name: "Elena Rossi",   sector: "Healthcare",  joined: "3d ago",  status: "pending",
-    docType: "Medical License",  docIcon: "medical",  integrityScore: "87% Match",      integrityVariant: "medium", submissionDate: "Oct 24, 2023",
-    docs: [
-      { name: "Medical_License_Elena.pdf",   type: "Medical License",      verified: false },
-      { name: "NMC_Registration.pdf",        type: "NMC Registration",     verified: true  },
-      { name: "Enhanced_DBS.pdf",            type: "DBS Check",            verified: false },
-    ],
-  },
-  {
-    id: 6, name: "Marcus Chen",   sector: "Technology",  joined: "2d ago",  status: "pending",
-    docType: "Global Passport",  docIcon: "passport", integrityScore: "95% Match",      integrityVariant: "high",   submissionDate: "Oct 23, 2023",
-    docs: [
-      { name: "Global_Passport_Marcus.pdf",  type: "Global Passport",      verified: true  },
-      { name: "DBS_Certificate.pdf",         type: "DBS Check",            verified: false },
-      { name: "Proof_Of_Address.pdf",        type: "Proof of Address",     verified: true  },
-    ],
-  },
-];
 
 const SECTORS  = ["All Sectors",   "Healthcare", "Technology", "Finance", "Logistics", "Hospitality"];
 const STATUSES = ["All Statuses",  "Pending Review", "Flagged", "Re-Submission", "Verified"];
@@ -107,21 +47,6 @@ function DocIcon({ type, size = 14 }: { type: Candidate["docIcon"]; size?: numbe
   return <>{icons[type]}</>;
 }
 
-// ─── Integrity score ───────────────────────────────────────────────────────────
-
-function IntegrityScore({ score, variant }: { score: string; variant: Candidate["integrityVariant"] }) {
-  const styles = { high: { icon: "text-green-500", text: "text-green-600" }, medium: { icon: "text-slate-400", text: "text-slate-600" }, low: { icon: "text-red-500", text: "text-red-500" } }[variant];
-  return (
-    <div className="flex items-center gap-1.5">
-      {variant === "low" ? (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.icon}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
-      ) : (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.icon}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-      )}
-      <span className={`text-sm font-bold ${styles.text}`}>{score}</span>
-    </div>
-  );
-}
 
 // ─── Candidate card ────────────────────────────────────────────────────────────
 
@@ -150,17 +75,11 @@ function CandidateCard({ c, isActive, onReview }: { c: Candidate; isActive: bool
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Document Type</p>
-          <div className="flex items-center gap-1.5">
-            <DocIcon type={c.docIcon} />
-            <span className="text-sm font-semibold text-brand">{c.docType}</span>
-          </div>
-        </div>
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Integrity Score</p>
-          <IntegrityScore score={c.integrityScore} variant={c.integrityVariant} />
+      <div className="mb-4">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Document Type</p>
+        <div className="flex items-center gap-1.5">
+          <DocIcon type={c.docIcon} />
+          <span className="text-sm font-semibold text-brand">{c.docType}</span>
         </div>
       </div>
 
@@ -193,6 +112,7 @@ function DetailPanel({
   onClose,
   onApprove,
   onReject,
+  actionLoading,
 }: {
   candidate: Candidate;
   docs: Doc[];
@@ -200,6 +120,7 @@ function DetailPanel({
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
+  actionLoading: boolean;
 }) {
   const statusCfg = STATUS_CONFIG[candidate.status];
   const verifiedCount = docs.filter((d) => d.verified).length;
@@ -229,17 +150,11 @@ function DetailPanel({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100">
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Document</p>
-            <div className="flex items-center gap-1.5">
-              <DocIcon type={candidate.docIcon} />
-              <span className="text-xs font-semibold text-brand">{candidate.docType}</span>
-            </div>
-          </div>
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Integrity</p>
-            <IntegrityScore score={candidate.integrityScore} variant={candidate.integrityVariant} />
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Document</p>
+          <div className="flex items-center gap-1.5">
+            <DocIcon type={candidate.docIcon} />
+            <span className="text-xs font-semibold text-brand">{candidate.docType}</span>
           </div>
         </div>
       </div>
@@ -285,11 +200,19 @@ function DetailPanel({
       <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between">
         <p className="text-xs text-slate-400">{verifiedCount} of {docs.length} docs verified</p>
         <div className="flex items-center gap-2">
-          <button onClick={onReject} className="px-4 py-2 border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 transition-colors">
+          <button
+            onClick={onReject}
+            disabled={actionLoading}
+            className="px-4 py-2 border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Reject
           </button>
-          <button onClick={onApprove} className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors">
-            Approve &amp; Tag
+          <button
+            onClick={onApprove}
+            disabled={actionLoading}
+            className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {actionLoading ? "Saving…" : "Approve & Activate"}
           </button>
         </div>
       </div>
@@ -300,17 +223,36 @@ function DetailPanel({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CandidateVerificationPage() {
-  const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
-  const [reviewing, setReviewing]   = useState<number | null>(null);
-  const [docStates, setDocStates]   = useState<Record<number, Doc[]>>(
-    Object.fromEntries(INITIAL_CANDIDATES.map((c) => [c.id, c.docs.map((d) => ({ ...d }))]))
-  );
+  const { toast } = useToast();
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [reviewing, setReviewing]   = useState<string | null>(null);
+  const [docStates, setDocStates]   = useState<Record<string, Doc[]>>({});
   const [statusFilter, setStatusFilter] = useState("All Statuses");
   const [sectorFilter, setSectorFilter] = useState("All Sectors");
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const pendingCount  = candidates.filter((c) => ["pending", "flagged", "resubmission"].includes(c.status)).length;
-  const verifiedToday = 142;
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/verification");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      const list: Candidate[] = data.candidates;
+      setCandidates(list);
+      setDocStates(Object.fromEntries(list.map((c) => [c.id, c.docs.map((d) => ({ ...d }))])));
+    } catch {
+      toast("Failed to load candidates", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const pendingCount       = candidates.filter((c) => ["pending", "flagged", "resubmission"].includes(c.status)).length;
+  const verifiedTodayCount = candidates.filter((c) => c.status === "verified").length;
 
   const reviewingCandidate = reviewing !== null ? candidates.find((c) => c.id === reviewing) ?? null : null;
 
@@ -325,24 +267,52 @@ export default function CandidateVerificationPage() {
     return sm && fm;
   });
 
-  function toggleDoc(candidateId: number, docIdx: number) {
+  function toggleDoc(candidateId: string, docIdx: number) {
     setDocStates((prev) => ({
       ...prev,
       [candidateId]: prev[candidateId].map((d, i) => i === docIdx ? { ...d, verified: !d.verified } : d),
     }));
   }
 
-  function approve(id: number) {
-    setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, status: "verified" as CardStatus } : c));
-    setReviewing(null);
+  async function approve(id: string) {
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/verification", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "approve" }),
+      });
+      if (!res.ok) throw new Error();
+      setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, status: "verified" as CardStatus } : c));
+      toast("Candidate approved & activated", "success");
+      setReviewing(null);
+    } catch {
+      toast("Failed to approve candidate", "error");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
-  function reject(id: number) {
-    setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, status: "flagged" as CardStatus } : c));
-    setReviewing(null);
+  async function reject(id: string) {
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/verification", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "reject" }),
+      });
+      if (!res.ok) throw new Error();
+      setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, status: "flagged" as CardStatus } : c));
+      toast("Candidate rejected", "info");
+      setReviewing(null);
+    } catch {
+      toast("Failed to reject candidate", "error");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
-  function toggleRow(id: number) {
+  function toggleRow(id: string) {
     setSelectedRows((prev) => prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]);
   }
 
@@ -370,10 +340,20 @@ export default function CandidateVerificationPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Verified Today</p>
-              <p className="text-2xl font-black text-brand leading-none">{verifiedToday}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Verified</p>
+              <p className="text-2xl font-black text-brand leading-none">{verifiedTodayCount}</p>
             </div>
           </div>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="p-3 bg-white border border-gray-100 rounded-2xl text-slate-400 hover:text-brand-blue hover:border-brand-blue/30 transition-colors disabled:opacity-40"
+            title="Refresh"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={loading ? "animate-spin" : ""}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -397,14 +377,40 @@ export default function CandidateVerificationPage() {
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Card grid — always 2 columns at tablet+ */}
         <div className="grid md:grid-cols-2 gap-4 flex-1" data-gsap="fade-up">
-          {cardCandidates.map((c) => (
-            <CandidateCard
-              key={c.id}
-              c={c}
-              isActive={reviewing === c.id}
-              onReview={() => setReviewing(reviewing === c.id ? null : c.id)}
-            />
-          ))}
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white border border-gray-100 rounded-2xl p-5 animate-pulse">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-slate-200 rounded w-32" />
+                    <div className="h-2.5 bg-slate-100 rounded w-20" />
+                  </div>
+                </div>
+                <div className="h-3 bg-slate-100 rounded w-full mb-2" />
+                <div className="h-10 bg-slate-100 rounded-xl mt-4" />
+              </div>
+            ))
+          ) : cardCandidates.length === 0 ? (
+            <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center mb-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-green-500">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-brand mb-1">No candidates to review</p>
+              <p className="text-xs text-slate-400">All submissions have been processed.</p>
+            </div>
+          ) : (
+            cardCandidates.map((c) => (
+              <CandidateCard
+                key={c.id}
+                c={c}
+                isActive={reviewing === c.id}
+                onReview={() => setReviewing(reviewing === c.id ? null : c.id)}
+              />
+            ))
+          )}
         </div>
 
         {/* Detail panel */}
@@ -420,11 +426,12 @@ export default function CandidateVerificationPage() {
             <div className="panel-slide-in w-full lg:w-[440px] lg:shrink-0">
               <DetailPanel
                 candidate={reviewingCandidate}
-                docs={docStates[reviewingCandidate.id]}
+                docs={docStates[reviewingCandidate.id] ?? []}
                 onToggleDoc={(i) => toggleDoc(reviewingCandidate.id, i)}
                 onClose={() => setReviewing(null)}
                 onApprove={() => approve(reviewingCandidate.id)}
                 onReject={() => reject(reviewingCandidate.id)}
+                actionLoading={actionLoading}
               />
             </div>
           </>
@@ -450,7 +457,7 @@ export default function CandidateVerificationPage() {
                 <tr>
                   <th className="w-10 pb-3">
                     <input type="checkbox" className="rounded accent-brand-blue"
-                      checked={selectedRows.length === candidates.length}
+                      checked={candidates.length > 0 && selectedRows.length === candidates.length}
                       onChange={(e) => setSelectedRows(e.target.checked ? candidates.map((c) => c.id) : [])} />
                   </th>
                   {["Candidate", "Sector", "Document", "Submission Date", "Status", "Actions"].map((h) => (

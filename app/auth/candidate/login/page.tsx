@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { candidateLoginSchema, validate, type FieldErrors } from "@/lib/validation";
+import { signIn } from "./actions";
 
 export default function CandidateLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,7 +21,15 @@ export default function CandidateLoginPage() {
       return;
     }
     setErrors({});
-    // auth logic goes here
+    setServerError(null);
+
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.append("email", form.email);
+      fd.append("password", form.password);
+      const res = await signIn(fd);
+      if (res?.error) setServerError(res.error);
+    });
   }
 
   return (
@@ -109,12 +120,20 @@ export default function CandidateLoginPage() {
               {errors.password && <p role="alert" className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
 
+            {/* Server error */}
+            {serverError && (
+              <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
+                <p className="text-red-600 dark:text-red-400 text-sm">{serverError}</p>
+              </div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-brand-blue text-white text-sm font-semibold rounded-full py-3.5 hover:bg-brand-blue-dark transition-colors mt-2"
+              disabled={isPending}
+              className="w-full bg-brand-blue text-white text-sm font-semibold rounded-full py-3.5 hover:bg-brand-blue-dark transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Sign In to My Profile
+              {isPending ? "Signing in…" : "Sign In to My Profile"}
             </button>
           </form>
 
@@ -129,7 +148,7 @@ export default function CandidateLoginPage() {
           <div className="space-y-3 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Don&apos;t have an account?{" "}
-              <Link href="/register/candidate" className="text-brand-blue font-medium hover:underline">
+              <Link href="/auth/candidate/register" className="text-brand-blue font-medium hover:underline">
                 Register as Candidate
               </Link>
             </p>
@@ -181,7 +200,7 @@ export default function CandidateLoginPage() {
         <div className="relative flex justify-end p-8">
           <div className="flex items-center gap-2 bg-white/8 border border-white/10 backdrop-blur-sm rounded-full px-5 py-2.5">
             <span className="text-white/50 text-xs">New to Edge Harbour?</span>
-            <Link href="/register/candidate" className="text-white text-xs font-bold tracking-wider uppercase hover:text-brand-blue transition-colors">
+            <Link href="/auth/candidate/register" className="text-white text-xs font-bold tracking-wider uppercase hover:text-brand-blue transition-colors">
               Register →
             </Link>
           </div>

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/Toast";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────────
 
@@ -102,20 +104,48 @@ function NotifFooter() {
 }
 
 export default function CandidateDashboardLayout({ children }: { children: React.ReactNode }) {
+  const [profileName, setProfileName] = useState("Candidate");
+  const [profileInitials, setProfileInitials] = useState("C");
+  const [profileEmail, setProfileEmail] = useState("");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      const meta = user.user_metadata as Record<string, string> | null;
+      const fullName =
+        meta?.full_name?.trim() ||
+        `${meta?.first_name ?? ""} ${meta?.last_name ?? ""}`.trim() ||
+        user.email?.split("@")[0] ||
+        "Candidate";
+      const email = user.email ?? "";
+      const initials = fullName
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "C";
+      setProfileName(fullName);
+      setProfileInitials(initials);
+      setProfileEmail(email);
+    });
+  }, []);
+
   return (
     <DashboardLayout
       navItems={NAV_ITEMS}
       basePath="/dashboard/candidate"
       searchPlaceholder="Search jobs, applications..."
       profileHref="/dashboard/candidate/profile"
-      profileName="Candidate Name"
-      profileSub="jeddy123@gmail.com"
-      profileInitials="CN"
+      profileName={profileName}
+      profileSub={profileEmail}
+      profileInitials={profileInitials}
       supportHref="/dashboard/candidate/support"
       notifData={NOTIF_DATA}
       notifIcon={notifIcon}
       notifColor={notifColor}
       notifFooter={<NotifFooter />}
+      logoutHref="/auth/candidate/login"
     >
       {children}
     </DashboardLayout>

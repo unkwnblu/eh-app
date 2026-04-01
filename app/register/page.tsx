@@ -122,7 +122,7 @@ export default function RegisterPage() {
 
           {/* Candidate card */}
           <Link
-            href="/register/candidate"
+            href="/auth/candidate/register"
             className="group relative bg-white dark:bg-[#111827] border border-gray-border dark:border-white/10 rounded-2xl p-8 hover:border-brand-blue hover:shadow-lg transition-all duration-300 flex flex-col"
           >
             {/* Icon */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { candidateStepSchemas, validate, type FieldErrors } from "@/lib/validation";
@@ -246,6 +246,8 @@ export default function CandidateRegisterPage() {
   const [submitted, setSubmitted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const set = (field: keyof FormData) => (val: string) => {
     setForm((prev) => ({ ...prev, [field]: val }));
@@ -285,33 +287,113 @@ export default function CandidateRegisterPage() {
     e.preventDefault();
     if (step < 6) {
       next();
-    } else {
+      return;
+    }
+    // Final step — create account + save all candidate data
+    setServerError(null);
+    startTransition(async () => {
+      const res = await fetch("/api/candidate/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
+          dateOfBirth: form.dateOfBirth,
+          nationality: form.nationality,
+          documentType: form.documentType,
+          documentNumber: form.documentNumber,
+          documentExpiry: form.documentExpiry,
+          sector: form.sector,
+          jobTypes: form.jobTypes,
+          locations: form.locations,
+          cvFileName: form.cvFileName,
+          dbsLevel: form.dbsLevel,
+          dbsFileName: form.dbsFileName,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setServerError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+
       clear();
       setSubmitted(true);
-    }
+    });
   }
 
-  // ── Success screen ──────────────────────────────────────────────────────────────
+  // ── Processing screen ───────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-soft dark:bg-[#0B1222] px-6">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-2xl bg-brand-blue flex items-center justify-center mx-auto mb-6">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
+        <div className="text-center max-w-md w-full">
+
+          {/* Animated clock icon */}
+          <div className="relative w-20 h-20 mx-auto mb-8">
+            <div className="w-20 h-20 rounded-full bg-brand-blue/10 border-2 border-brand-blue/30 flex items-center justify-center">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-blue">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            {/* Spinning ring */}
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-brand-blue animate-spin" />
           </div>
-          <h1 className="text-brand dark:text-slate-100 font-black text-3xl mb-3">Application submitted!</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
-            Welcome, <strong>{form.firstName}</strong>! We&apos;re reviewing your documents.
-            You&apos;ll receive a confirmation at <strong>{form.email}</strong> once your
-            profile is verified — usually within 24 hours.
+
+          <h1 className="text-brand dark:text-slate-100 font-black text-3xl mb-3">
+            Application <span className="text-brand-blue">Received.</span>
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6 max-w-sm mx-auto">
+            Thank you, <strong className="text-brand dark:text-slate-200">{form.firstName}</strong>. Your application is being reviewed by our compliance team. This typically takes <strong className="text-brand dark:text-slate-200">24–48 hours</strong>.
           </p>
+
+          {/* Status steps */}
+          <div className="bg-white dark:bg-[#111827] border border-gray-border rounded-2xl px-6 py-5 text-left space-y-4 mb-8">
+            {[
+              { label: "Application submitted", done: true },
+              { label: "Document & RTW review", done: false, active: true },
+              { label: "Account activated", done: false },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-3">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                  s.done
+                    ? "bg-brand-blue"
+                    : s.active
+                    ? "bg-amber-400/20 border-2 border-amber-400"
+                    : "bg-gray-100 dark:bg-white/5 border-2 border-gray-border"
+                }`}>
+                  {s.done && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  )}
+                  {s.active && <div className="w-2 h-2 rounded-full bg-amber-400" />}
+                </div>
+                <span className={`text-sm ${
+                  s.done
+                    ? "text-brand dark:text-slate-200 font-medium"
+                    : s.active
+                    ? "text-amber-600 dark:text-amber-400 font-medium"
+                    : "text-slate-400"
+                }`}>
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-slate-400 mb-6">
+            Confirmation sent to <strong className="text-slate-500 dark:text-slate-300">{form.email}</strong>
+          </p>
+
           <Link
             href="/"
-            className="inline-flex items-center gap-2 bg-brand-blue text-white text-sm font-semibold rounded-full px-8 py-3 hover:bg-brand-blue-dark transition-colors"
+            className="inline-flex items-center gap-2 text-brand-blue text-sm font-semibold hover:underline"
           >
-            Back to home
+            ← Back to home
           </Link>
         </div>
       </div>
@@ -710,13 +792,21 @@ export default function CandidateRegisterPage() {
               </div>
             )}
 
+            {/* ── Server error ── */}
+            {serverError && step === 6 && (
+              <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
+                <p className="text-red-600 dark:text-red-400 text-sm">{serverError}</p>
+              </div>
+            )}
+
             {/* ── Navigation buttons ── */}
             <div className={`flex gap-3 pt-2 ${step > 1 ? "justify-between" : "justify-end"}`}>
               {step > 1 && (
                 <button
                   type="button"
                   onClick={back}
-                  className="flex items-center gap-1.5 border border-gray-border text-brand dark:text-slate-300 text-sm font-semibold rounded-full px-6 py-3 hover:border-brand-blue hover:text-brand-blue transition-colors"
+                  disabled={isPending}
+                  className="flex items-center gap-1.5 border border-gray-border text-brand dark:text-slate-300 text-sm font-semibold rounded-full px-6 py-3 hover:border-brand-blue hover:text-brand-blue transition-colors disabled:opacity-50"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -726,9 +816,10 @@ export default function CandidateRegisterPage() {
               )}
               <button
                 type="submit"
-                className="flex-1 bg-brand-blue text-white text-sm font-semibold rounded-full py-3 hover:bg-brand-blue-dark transition-colors"
+                disabled={isPending}
+                className="flex-1 bg-brand-blue text-white text-sm font-semibold rounded-full py-3 hover:bg-brand-blue-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {step === 6 ? "Submit Application" : "Continue"}
+                {isPending ? "Creating account…" : step === 6 ? "Submit Application" : "Continue"}
               </button>
             </div>
 
