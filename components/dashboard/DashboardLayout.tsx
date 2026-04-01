@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useToast } from "@/components/ui/Toast";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -34,6 +34,7 @@ interface SidebarProps {
   logoSub?: string;
   supportHref?: string;
   sidebarBottom?: React.ReactNode;
+  logoutHref?: string;
 }
 
 interface TopbarProps {
@@ -43,6 +44,7 @@ interface TopbarProps {
   profileName: string;
   profileSub: string;
   profileInitials: string;
+  profileImageUrl?: string;
   notifData: NotifItem[];
   notifIcon: (type: string) => React.ReactNode;
   notifColor: (type: string) => string;
@@ -60,6 +62,7 @@ export interface DashboardLayoutProps {
   profileName: string;
   profileSub: string;
   profileInitials: string;
+  profileImageUrl?: string;
   // Sidebar extras
   logoSub?: string;
   supportHref?: string;
@@ -71,6 +74,8 @@ export interface DashboardLayoutProps {
   notifFooter?: React.ReactNode;
   // When true, mobile devices see a "desktop only" screen instead of the dashboard
   mobileBlocked?: boolean;
+  // Where to redirect after logout (defaults to "/")
+  logoutHref?: string;
 }
 
 // ─── Mobile blocker ──────────────────────────────────────────────────────────────
@@ -87,7 +92,7 @@ function MobileBlocker() {
 
       {/* Logo */}
       <div className="flex items-center gap-2 mb-6">
-        <Image src="/eh-logo.svg" alt="Edge Harbour" width={24} height={24} priority />
+        <img src="/eh-logo.svg" alt="Edge Harbour" width={24} height={24} />
         <span className="text-brand font-bold text-base tracking-tight">
           Edge<span className="text-brand-blue">Harbour</span>
         </span>
@@ -161,7 +166,7 @@ function SupportIcon({ active }: { active: boolean }) {
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────────
 
-function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, sidebarBottom }: SidebarProps) {
+function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, sidebarBottom, logoutHref }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -182,7 +187,7 @@ function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, side
       {/* Logo */}
       <div className="h-[72px] flex items-center px-6 border-b border-gray-100 dark:border-[#1e293b]">
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} priority />
+          <img src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} />
           <div>
             <span className="text-brand font-bold text-base tracking-tight leading-none">
               Edge<span className="text-brand-blue">Harbour</span>
@@ -239,9 +244,10 @@ function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, side
           </Link>
         )}
         <button
-          onClick={() => {
-            toast("Logged out successfully", "success");
-            router.push("/");
+          onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push(logoutHref ?? "/");
           }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-400 bg-red-50 hover:bg-red-100 transition-all"
         >
@@ -262,6 +268,7 @@ function Topbar({
   profileName,
   profileSub,
   profileInitials,
+  profileImageUrl,
   notifData,
   notifIcon,
   notifColor,
@@ -269,6 +276,7 @@ function Topbar({
 }: TopbarProps) {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState(notifData);
+  const [avatarError, setAvatarError] = useState(false);
   const { toast } = useToast();
   const unreadCount = notifs.filter((n) => !n.read).length;
 
@@ -329,8 +337,17 @@ function Topbar({
             <p className="text-sm font-semibold text-brand leading-none">{profileName}</p>
             <p className="text-xs text-slate-400 mt-0.5">{profileSub}</p>
           </div>
-          <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-slate-500 text-sm font-semibold shrink-0">
-            {profileInitials}
+          <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-blue flex items-center justify-center shrink-0">
+            {profileImageUrl && !avatarError ? (
+              <img
+                src={profileImageUrl}
+                alt={profileName}
+                className="w-full h-full object-cover"
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <span className="text-white text-sm font-semibold">{profileInitials}</span>
+            )}
           </div>
         </Link>
       </div>
@@ -426,6 +443,7 @@ export default function DashboardLayout({
   profileName,
   profileSub,
   profileInitials,
+  profileImageUrl,
   logoSub,
   supportHref,
   sidebarBottom,
@@ -434,6 +452,7 @@ export default function DashboardLayout({
   notifColor,
   notifFooter,
   mobileBlocked = false,
+  logoutHref,
 }: DashboardLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -450,6 +469,7 @@ export default function DashboardLayout({
         logoSub={logoSub}
         supportHref={supportHref}
         sidebarBottom={sidebarBottom}
+        logoutHref={logoutHref}
       />
 
       {/* Mobile sidebar backdrop */}
@@ -468,6 +488,7 @@ export default function DashboardLayout({
           profileName={profileName}
           profileSub={profileSub}
           profileInitials={profileInitials}
+          profileImageUrl={profileImageUrl}
           notifData={notifData}
           notifIcon={notifIcon}
           notifColor={notifColor}

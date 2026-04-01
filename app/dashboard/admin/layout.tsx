@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────────
 
@@ -105,34 +107,103 @@ function notifColor(type: string) {
   return "bg-green-500/15 text-green-500 dark:text-green-400";
 }
 
-// ─── Admin sidebar bottom: user card ─────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────────
 
-const AdminUserCard = (
-  <div className="flex items-center gap-3 px-3 py-2 mb-0.5">
-    <div className="w-9 h-9 rounded-full bg-brand-blue flex items-center justify-center text-white text-sm font-bold shrink-0">
-      MV
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
+function SidebarUserCard({ name, sub, initials, imageUrl }: {
+  name: string;
+  sub: string;
+  initials: string;
+  imageUrl?: string;
+}) {
+  const [imgError, setImgError] = useState(false);
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 mb-0.5">
+      <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-blue flex items-center justify-center shrink-0">
+        {imageUrl && !imgError ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <span className="text-white text-sm font-bold">{initials}</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-brand truncate">{name}</p>
+        <p className="text-[11px] text-slate-400 truncate">{sub}</p>
+      </div>
     </div>
-    <div className="min-w-0">
-      <p className="text-sm font-bold text-brand truncate">Marcus Vane</p>
-      <p className="text-[11px] text-slate-400 truncate">System Controller</p>
-    </div>
-  </div>
-);
+  );
+}
 
 // ─── Layout ──────────────────────────────────────────────────────────────────────
 
+// Nav items hidden from moderators
+const MODERATOR_HIDDEN = new Set(["/dashboard/admin/users", "/dashboard/admin/settings"]);
+
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
+  const [profileName, setProfileName] = useState("Admin");
+  const [profileInitials, setProfileInitials] = useState("A");
+  const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
+  const [role, setRole] = useState<string>("admin");
+
+  const profileSub = role === "moderator" ? "Moderator" : "System Controller";
+
+  const visibleNavItems =
+    role === "moderator"
+      ? NAV_ITEMS.filter((item) => !MODERATOR_HIDDEN.has(item.href))
+      : NAV_ITEMS;
+
+  useEffect(() => {
+    async function loadUser() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const name =
+          user.user_metadata?.full_name ||
+          user.email?.split("@")[0] ||
+          "Admin";
+        setProfileName(name);
+        setProfileInitials(getInitials(name));
+        setProfileImageUrl(user.user_metadata?.avatar_url ?? undefined);
+        setRole(user.app_metadata?.role ?? "admin");
+      }
+    }
+    loadUser();
+  }, []);
+
+  const sidebarBottom = (
+    <SidebarUserCard
+      name={profileName}
+      sub={profileSub}
+      initials={profileInitials}
+      imageUrl={profileImageUrl}
+    />
+  );
+
   return (
     <DashboardLayout
-      navItems={NAV_ITEMS}
+      navItems={visibleNavItems}
       basePath="/dashboard/admin"
       searchPlaceholder="Global system search..."
       profileHref="/dashboard/admin/profile"
-      profileName="Marcus Vane"
-      profileSub="System Controller"
-      profileInitials="MV"
+      profileName={profileName}
+      profileSub={profileSub}
+      profileInitials={profileInitials}
+      profileImageUrl={profileImageUrl}
       logoSub="Admin Portal"
-      sidebarBottom={AdminUserCard}
+      sidebarBottom={sidebarBottom}
       notifData={NOTIF_DATA}
       notifIcon={notifIcon}
       notifColor={notifColor}
@@ -145,6 +216,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         </Link>
       }
       mobileBlocked
+      logoutHref="/auth/admin/login"
     >
       {children}
     </DashboardLayout>
