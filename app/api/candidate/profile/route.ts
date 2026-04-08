@@ -17,7 +17,7 @@ export async function GET() {
   // Fetch from candidates table
   const { data: candidate } = await service
     .from("candidates")
-    .select("first_name, last_name, phone, nationality, sector, job_types, locations, document_type, document_expiry")
+    .select("first_name, last_name, phone, nationality, sector, job_types, locations, document_type, document_number, document_expiry, cv_file_name, dbs_file_name, dbs_level, skills")
     .eq("id", user.id)
     .single();
 
@@ -39,9 +39,14 @@ export async function GET() {
     sector:        candidate?.sector ?? "",
     jobTypes:      candidate?.job_types ?? [],
     locations:     candidate?.locations ?? [],
-    documentType:  candidate?.document_type ?? "",
+    skills:         candidate?.skills ?? [],
+    documentType:   candidate?.document_type ?? "",
+    documentNumber: candidate?.document_number ?? "",
     documentExpiry: candidate?.document_expiry ?? "",
-    status:        profile?.status ?? "pending",
+    cvFileName:     candidate?.cv_file_name ?? "",
+    dbsFileName:    candidate?.dbs_file_name ?? "",
+    dbsLevel:       candidate?.dbs_level ?? "",
+    status:         profile?.status ?? "pending",
   });
 }
 
@@ -56,7 +61,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { fullName, phone, bio } = body;
+  const { fullName, phone, bio, skills } = body;
 
   const service = createServiceClient();
   const errors: string[] = [];
@@ -77,10 +82,10 @@ export async function PATCH(request: NextRequest) {
     .eq("id", user.id);
   if (profileError) errors.push(profileError.message);
 
-  // 3 — Update candidates table (phone)
+  // 3 — Update candidates table (phone + skills)
   const { error: candidateError } = await service
     .from("candidates")
-    .update({ phone })
+    .update({ phone, skills: skills ?? [] })
     .eq("id", user.id);
   if (candidateError) errors.push(candidateError.message);
 

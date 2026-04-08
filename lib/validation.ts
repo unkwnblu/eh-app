@@ -76,26 +76,64 @@ export const employerStep2Schema = z.object({
     .min(1, "Company Registration Number is required")
     .regex(/^\d{7,8}$/, "CRN must be 7 or 8 digits"),
   registeredAddress: z.string().min(1, "Registered address is required"),
-  incorporationDate: z.string().min(1, "Incorporation date is required"),
-  companyStatus: z.string().min(1, "Select a company status"),
+  incorporationDate: z
+    .string()
+    .min(1, "Incorporation date is required")
+    .refine((d) => !d || new Date(d) <= new Date(), "Incorporation date cannot be in the future"),
+  companyStatus: z
+    .string()
+    .min(1, "Select a company status")
+    .refine((s) => !["Dissolved", "In Administration"].includes(s), {
+      message: "Companies with this status are not eligible to register",
+    }),
+  companyPhone: phoneField,
+  companyWebsite: z.string().min(1, "Company website is required").url("Enter a valid URL (e.g. https://yourcompany.co.uk)"),
 });
 
 export const employerStep3Schema = z.object({
   firstName: nameField("First name"),
   lastName: nameField("Last name"),
   jobTitle: z.string().min(1, "Job title is required"),
+  phone: phoneField,
   vatNumber: z.string().optional(),
 });
 
-export const employerStep4Schema = z.object({
-  industries: z.array(z.string()).min(1, "Select at least one industry"),
-});
+export const employerStep4Schema = z
+  .object({
+    industries:   z.array(z.string()).min(1, "Select at least one industry"),
+    cqcProviderId: z.string().optional().default(""),
+    dbsLevel:     z.string().optional().default(""),
+    modernSlaveryAct:          z.boolean().optional(),
+    employerLiabilityInsurance: z.boolean().optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.industries.includes("Healthcare")) {
+      if (!d.cqcProviderId?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "CQC Provider ID is required for healthcare employers", path: ["cqcProviderId"] });
+      }
+      if (!d.dbsLevel) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Select a minimum DBS level required", path: ["dbsLevel"] });
+      }
+    }
+    if (d.industries.includes("Hospitality")) {
+      if (!d.modernSlaveryAct) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "You must confirm Modern Slavery Act compliance", path: ["modernSlaveryAct"] });
+      }
+      if (!d.employerLiabilityInsurance) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "You must confirm Employer's Liability Insurance", path: ["employerLiabilityInsurance"] });
+      }
+    }
+  });
 
 export const employerStep5Schema = z.object({
-  billingName: z.string().min(1, "Billing name is required"),
-  billingEmail: workEmailField,
+  billingName:    z.string().min(1, "Billing contact name is required"),
+  billingEmail:   workEmailField,
   billingAddress: z.string().min(1, "Billing address is required"),
-  checkTerms: z.literal(true, { message: "You must accept the Terms & Privacy Policy" }),
+  checkEmployerLiability: z.literal(true, { message: "You must confirm Employer's Liability Insurance" }),
+  checkRiskAssessment:    z.literal(true, { message: "You must confirm Risk Assessment compliance" }),
+  checkBusinessCredit:    z.literal(true, { message: "You must consent to a business credit check" }),
+  checkGdpr:              z.literal(true, { message: "You must agree to the GDPR & Data Processing Agreement" }),
+  checkTerms:             z.literal(true, { message: "You must accept the Terms & Privacy Policy" }),
 });
 
 export const employerStepSchemas = [
@@ -123,15 +161,62 @@ export const candidateStep2Schema = z.object({
   firstName: nameField("First name"),
   lastName: nameField("Last name"),
   phone: phoneField,
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  dateOfBirth: z
+    .string()
+    .min(1, "Date of birth is required")
+    .refine((dob) => {
+      const d = new Date(dob);
+      if (isNaN(d.getTime())) return false;
+      const today = new Date();
+      let age = today.getFullYear() - d.getFullYear();
+      const m = today.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+      return age >= 18;
+    }, "You must be at least 18 years old"),
+  gender: z.enum(["Male", "Female", "Other", "Rather not say"], {
+    message: "Please select a gender",
+  }),
   nationality: z.string().min(1, "Nationality is required"),
 });
 
-export const candidateStep3Schema = z.object({
-  documentType: z.string().min(1, "Select a document type"),
-  documentNumber: z.string().min(1, "Document number is required"),
-  documentExpiry: z.string().min(1, "Document expiry date is required"),
-});
+export const candidateStep3Schema = z
+  .object({
+    documentType:   z.string().min(1, "Select a document type"),
+    documentNumber: z.string().optional().default(""),
+    documentExpiry: z.string().optional().default(""),
+    shareCode:      z.string().optional().default(""),
+  })
+  .superRefine((d, ctx) => {
+    if (d.documentType === "Biometric Residence Permit (BRP)") {
+      if (!d.documentNumber.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BRP number is required", path: ["documentNumber"] });
+      }
+      if (!d.documentExpiry) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Expiry date is required", path: ["documentExpiry"] });
+      }
+    }
+    if (d.documentType === "Non-UK Passport + Visa") {
+      if (!d.documentExpiry) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Visa expiry date is required", path: ["documentExpiry"] });
+      }
+    }
+    if (d.documentType === "Share Code (eVisa)") {
+      const code = d.shareCode.trim().toUpperCase();
+      if (!/^[A-Z0-9]{9}$/.test(code)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid 9-character share code", path: ["shareCode"] });
+      }
+      if (!d.documentExpiry) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Share code expiry date is required", path: ["documentExpiry"] });
+      } else {
+        const expiry = new Date(d.documentExpiry);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (expiry <= today) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Share code expiry date must be in the future", path: ["documentExpiry"] });
+        }
+      }
+    }
+  });
 
 export const candidateStep4Schema = z.object({
   sector: z.string().min(1, "Select a sector"),
@@ -140,9 +225,10 @@ export const candidateStep4Schema = z.object({
 });
 
 export const candidateStep5Schema = z.object({
-  cvFileName: z.string().min(1, "Please upload your CV"),
-  checkPrivacy: z.literal(true, { message: "You must consent to data processing" }),
-  checkTerms: z.literal(true, { message: "You must accept the Terms of Service" }),
+  cvFileName:    z.string().min(1, "Please upload your CV"),
+  checkPrivacy:  z.literal(true, { message: "You must consent to data processing" }),
+  checkTerms:    z.literal(true, { message: "You must accept the Terms of Service" }),
+  checkContact:  z.literal(true, { message: "You must agree to be contacted for job opportunities" }),
 });
 
 export const candidateStepSchemas = [

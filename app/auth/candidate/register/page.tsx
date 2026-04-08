@@ -18,11 +18,13 @@ type FormData = {
   lastName: string;
   phone: string;
   dateOfBirth: string;
+  gender: string;
   nationality: string;
   // Step 3 — Right to Work
   documentType: string;
   documentNumber: string;
   documentExpiry: string;
+  shareCode: string;
   // Step 4 — Work Preferences
   sector: string;
   jobTypes: string[];
@@ -32,8 +34,9 @@ type FormData = {
   dbsFileName: string;
   dbsLevel: string;
   // Consent
-  checkPrivacy: boolean;
-  checkTerms: boolean;
+  checkPrivacy:  boolean;
+  checkTerms:    boolean;
+  checkContact:  boolean;
 };
 
 const INITIAL: FormData = {
@@ -44,25 +47,27 @@ const INITIAL: FormData = {
   lastName: "",
   phone: "",
   dateOfBirth: "",
+  gender: "",
   nationality: "",
   documentType: "",
   documentNumber: "",
   documentExpiry: "",
+  shareCode: "",
   sector: "",
   jobTypes: [],
   locations: [],
   cvFileName: "",
   dbsFileName: "",
   dbsLevel: "",
-  checkPrivacy: false,
-  checkTerms: false,
+  checkPrivacy:  false,
+  checkTerms:    false,
+  checkContact:  false,
 };
 
 const DOCUMENT_TYPES = [
   "UK Passport",
   "Non-UK Passport + Visa",
   "Biometric Residence Permit (BRP)",
-  "UK Birth Certificate + NI Number",
   "Share Code (eVisa)",
 ];
 
@@ -70,11 +75,19 @@ const NATIONALITIES = [
   "British", "Irish", "EU / EEA", "Other",
 ];
 
+const GENDERS = ["Male", "Female", "Other", "Rather not say"];
+
+// Maximum DOB = today minus 18 years (ISO yyyy-mm-dd)
+const MAX_DOB = (() => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  return d.toISOString().split("T")[0];
+})();
+
 const SECTORS = [
   { id: "Healthcare", description: "Nurses, HCAs, Allied Health" },
   { id: "Hospitality", description: "Chefs, FOH, Hotel & Events" },
   { id: "Customer Care", description: "Contact Centre, CX & Support" },
-  { id: "Tech & Data", description: "Engineers, Analysts & SMEs" },
 ];
 
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Temporary / Ad-hoc"];
@@ -118,6 +131,7 @@ function Input({
   onChange,
   error,
   id,
+  max,
 }: {
   type?: string;
   placeholder?: string;
@@ -125,6 +139,7 @@ function Input({
   onChange: (v: string) => void;
   error?: string;
   id?: string;
+  max?: string;
 }) {
   return (
     <>
@@ -133,6 +148,7 @@ function Input({
         type={type}
         placeholder={placeholder}
         value={value ?? ""}
+        max={max}
         onChange={(e) => onChange(e.target.value)}
         className={`w-full border rounded-xl px-4 py-3 text-sm text-brand dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] ${
           error ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
@@ -179,6 +195,49 @@ function Select({
       </select>
       {error && <p role="alert" className="text-red-500 text-xs mt-1">{error}</p>}
     </>
+  );
+}
+
+function FileDrop({
+  file,
+  onFile,
+  hint,
+}: {
+  file: File | null;
+  onFile: (f: File) => void;
+  hint: string;
+}) {
+  return (
+    <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl px-4 py-6 cursor-pointer transition-colors ${
+      file ? "border-brand-blue bg-brand-blue/5" : "border-gray-border hover:border-brand-blue"
+    }`}>
+      <input
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+        }}
+      />
+      {file ? (
+        <>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-blue">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          <p className="text-xs text-brand-blue font-semibold truncate max-w-full">{file.name}</p>
+          <p className="text-[10px] text-slate-400">Click to replace</p>
+        </>
+      ) : (
+        <>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-slate-300">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          <p className="text-xs text-slate-400">{hint}</p>
+          <p className="text-[10px] text-slate-300">PDF or image · Max 5MB</p>
+        </>
+      )}
+    </label>
   );
 }
 
@@ -249,6 +308,13 @@ export default function CandidateRegisterPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // Files are kept in non-persisted state because File objects can't be JSON-serialised.
+  // The associated *file name* is still mirrored into form state for display + validation.
+  const [cvFile,       setCvFile]       = useState<File | null>(null);
+  const [dbsFile,      setDbsFile]      = useState<File | null>(null);
+  const [passportFile, setPassportFile] = useState<File | null>(null);
+  const [visaFile,     setVisaFile]     = useState<File | null>(null);
+
   const set = (field: keyof FormData) => (val: string) => {
     setForm((prev) => ({ ...prev, [field]: val }));
     if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
@@ -292,27 +358,35 @@ export default function CandidateRegisterPage() {
     // Final step — create account + save all candidate data
     setServerError(null);
     startTransition(async () => {
+      const fd = new FormData();
+      fd.append("payload", JSON.stringify({
+        email: form.email,
+        password: form.password,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender,
+        nationality: form.nationality,
+        documentType: form.documentType,
+        documentNumber: form.documentNumber,
+        documentExpiry: form.documentExpiry,
+        shareCode: form.shareCode,
+        sector: form.sector,
+        jobTypes: form.jobTypes,
+        locations: form.locations,
+        cvFileName: form.cvFileName,
+        dbsLevel: form.dbsLevel,
+        dbsFileName: form.dbsFileName,
+      }));
+      if (cvFile)       fd.append("cvFile", cvFile);
+      if (dbsFile)      fd.append("dbsFile", dbsFile);
+      if (passportFile) fd.append("passportFile", passportFile);
+      if (visaFile)     fd.append("visaFile", visaFile);
+
       const res = await fetch("/api/candidate/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-          firstName: form.firstName,
-          lastName: form.lastName,
-          phone: form.phone,
-          dateOfBirth: form.dateOfBirth,
-          nationality: form.nationality,
-          documentType: form.documentType,
-          documentNumber: form.documentNumber,
-          documentExpiry: form.documentExpiry,
-          sector: form.sector,
-          jobTypes: form.jobTypes,
-          locations: form.locations,
-          cvFileName: form.cvFileName,
-          dbsLevel: form.dbsLevel,
-          dbsFileName: form.dbsFileName,
-        }),
+        body: fd,
       });
 
       const data = await res.json();
@@ -515,7 +589,19 @@ export default function CandidateRegisterPage() {
                 </div>
                 <div>
                   <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <Input id="dateOfBirth" type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} error={errors.dateOfBirth} />
+                  <Input id="dateOfBirth" type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} error={errors.dateOfBirth} max={MAX_DOB} />
+                  <p className="text-[10px] text-slate-400 mt-1">You must be 18 or older to register.</p>
+                </div>
+                <div>
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    id="gender"
+                    value={form.gender}
+                    onChange={set("gender")}
+                    options={GENDERS}
+                    placeholder="Select gender"
+                    error={errors.gender}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="nationality">Nationality</Label>
@@ -546,23 +632,92 @@ export default function CandidateRegisterPage() {
                   <Select
                     id="documentType"
                     value={form.documentType}
-                    onChange={set("documentType")}
+                    onChange={(v) => {
+                      // Clear any previously-staged files + type-specific fields
+                      // so they aren't accidentally submitted under a different type.
+                      setPassportFile(null);
+                      setVisaFile(null);
+                      setForm((prev) => ({
+                        ...prev,
+                        documentType: v,
+                        documentNumber: "",
+                        documentExpiry: "",
+                        shareCode: "",
+                      }));
+                      if (errors.documentType) setErrors((p) => { const n = { ...p }; delete n.documentType; return n; });
+                    }}
                     options={DOCUMENT_TYPES}
                     placeholder="Select document type"
                     error={errors.documentType}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="documentNumber">Document Number</Label>
-                  <Input id="documentNumber" placeholder="e.g. 123456789" value={form.documentNumber} onChange={set("documentNumber")} error={errors.documentNumber} />
-                </div>
-                <div>
-                  <Label htmlFor="documentExpiry">Expiry Date</Label>
-                  <Input id="documentExpiry" type="date" value={form.documentExpiry} onChange={set("documentExpiry")} error={errors.documentExpiry} />
-                </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed">
-                  You&apos;ll be prompted to upload a scan or photo of this document after registration.
-                </p>
+
+                {/* UK Passport — upload only */}
+                {form.documentType === "UK Passport" && (
+                  <div>
+                    <Label>Upload Passport <span className="normal-case font-normal text-slate-300">(optional — can be added later)</span></Label>
+                    <FileDrop file={passportFile} onFile={setPassportFile} hint="Upload a scan or photo of your passport" />
+                  </div>
+                )}
+
+                {/* Non-UK Passport + Visa — two uploads + visa expiry */}
+                {form.documentType === "Non-UK Passport + Visa" && (
+                  <>
+                    <div>
+                      <Label>Passport Upload</Label>
+                      <FileDrop file={passportFile} onFile={setPassportFile} hint="Upload your passport" />
+                    </div>
+                    <div>
+                      <Label>Visa Upload</Label>
+                      <FileDrop file={visaFile} onFile={setVisaFile} hint="Upload your visa / vignette" />
+                    </div>
+                    <div>
+                      <Label htmlFor="documentExpiry">Visa Expiry Date</Label>
+                      <Input id="documentExpiry" type="date" value={form.documentExpiry} onChange={set("documentExpiry")} error={errors.documentExpiry} />
+                    </div>
+                  </>
+                )}
+
+                {/* BRP — number + expiry + upload */}
+                {form.documentType === "Biometric Residence Permit (BRP)" && (
+                  <>
+                    <div>
+                      <Label htmlFor="documentNumber">BRP Number</Label>
+                      <Input id="documentNumber" placeholder="e.g. RF1234567" value={form.documentNumber} onChange={set("documentNumber")} error={errors.documentNumber} />
+                    </div>
+                    <div>
+                      <Label htmlFor="documentExpiry">Expiry Date</Label>
+                      <Input id="documentExpiry" type="date" value={form.documentExpiry} onChange={set("documentExpiry")} error={errors.documentExpiry} />
+                    </div>
+                    <div>
+                      <Label>Upload BRP <span className="normal-case font-normal text-slate-300">(optional — can be added later)</span></Label>
+                      <FileDrop file={visaFile} onFile={setVisaFile} hint="Upload front and back of BRP" />
+                    </div>
+                  </>
+                )}
+
+                {/* Share Code — text input + expiry, no upload */}
+                {form.documentType === "Share Code (eVisa)" && (
+                  <>
+                    <div>
+                      <Label htmlFor="shareCode">Share Code</Label>
+                      <Input
+                        id="shareCode"
+                        placeholder="e.g. W88 K3F R9P"
+                        value={form.shareCode}
+                        onChange={(v) => set("shareCode")(v.toUpperCase())}
+                        error={errors.shareCode}
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Generate at gov.uk/prove-right-to-work. 9 characters, expires after 90 days.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="documentExpiry">Code Expiry Date</Label>
+                      <Input id="documentExpiry" type="date" value={form.documentExpiry} onChange={set("documentExpiry")} error={errors.documentExpiry} />
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -664,7 +819,10 @@ export default function CandidateRegisterPage() {
                       className="sr-only"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) set("cvFileName")(file.name);
+                        if (file) {
+                          setCvFile(file);
+                          set("cvFileName")(file.name);
+                        }
                       }}
                     />
                     {form.cvFileName ? (
@@ -709,7 +867,10 @@ export default function CandidateRegisterPage() {
                           className="sr-only"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) set("dbsFileName")(file.name);
+                            if (file) {
+                              setDbsFile(file);
+                              set("dbsFileName")(file.name);
+                            }
                           }}
                         />
                         {form.dbsFileName ? (
@@ -737,14 +898,15 @@ export default function CandidateRegisterPage() {
                 {/* Consent */}
                 <div className="space-y-3 pt-2">
                   {[
-                    { field: "checkPrivacy" as const, text: "I consent to Edge Harbour storing and processing my personal data in line with the Privacy Policy." },
-                    { field: "checkTerms" as const, text: "I agree to the Terms of Service and confirm the information I've provided is accurate." },
+                    { field: "checkPrivacy"  as const, text: "I consent to Edge Harbour storing and processing my personal data in line with the Privacy Policy." },
+                    { field: "checkTerms"    as const, text: "I agree to the Terms of Service and confirm the information I've provided is accurate." },
+                    { field: "checkContact"  as const, text: "I agree to be contacted by Edge Harbour and matched employers about job opportunities and service updates." },
                   ].map(({ field, text }) => (
                     <div key={field}>
                       <label className="flex items-start gap-3 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={form[field]}
+                          checked={form[field] ?? false}
                           onChange={(e) => { setForm((p) => ({ ...p, [field]: e.target.checked })); if (errors[field]) setErrors((p) => { const n = { ...p }; delete n[field]; return n; }); }}
                           className="mt-0.5 w-4 h-4 accent-brand-blue shrink-0"
                         />
@@ -769,13 +931,33 @@ export default function CandidateRegisterPage() {
                   <ReviewRow label="Full Name" value={`${form.firstName} ${form.lastName}`.trim()} />
                   <ReviewRow label="Phone" value={form.phone} />
                   <ReviewRow label="Date of Birth" value={form.dateOfBirth} />
+                  <ReviewRow label="Gender" value={form.gender} />
                   <ReviewRow label="Nationality" value={form.nationality} />
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Right to Work</p>
                   <ReviewRow label="Document Type" value={form.documentType} />
-                  <ReviewRow label="Document Number" value={form.documentNumber} />
-                  <ReviewRow label="Expiry Date" value={form.documentExpiry} />
+                  {form.documentType === "Biometric Residence Permit (BRP)" && (
+                    <ReviewRow label="BRP Number" value={form.documentNumber} />
+                  )}
+                  {form.documentType === "Share Code (eVisa)" && (
+                    <ReviewRow label="Share Code" value={form.shareCode} />
+                  )}
+                  {form.documentType !== "UK Passport" && (
+                    <ReviewRow label="Expiry Date" value={form.documentExpiry} />
+                  )}
+                  {form.documentType === "UK Passport" && (
+                    <ReviewRow label="Passport" value={passportFile?.name || "Not uploaded"} />
+                  )}
+                  {form.documentType === "Non-UK Passport + Visa" && (
+                    <>
+                      <ReviewRow label="Passport" value={passportFile?.name || "Not uploaded"} />
+                      <ReviewRow label="Visa"     value={visaFile?.name     || "Not uploaded"} />
+                    </>
+                  )}
+                  {form.documentType === "Biometric Residence Permit (BRP)" && (
+                    <ReviewRow label="BRP Document" value={visaFile?.name || "Not uploaded"} />
+                  )}
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Work Preferences</p>

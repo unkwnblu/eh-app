@@ -19,10 +19,13 @@ type FormData = {
   registeredAddress: string;
   incorporationDate: string;
   companyStatus: string;
+  companyPhone: string;
+  companyWebsite: string;
   // Step 3 — Profile
   firstName: string;
   lastName: string;
   jobTitle: string;
+  phone: string;
   vatNumber: string;
   // Step 4 — Industry
   industries: string[];
@@ -50,9 +53,12 @@ const INITIAL: FormData = {
   registeredAddress: "",
   incorporationDate: "",
   companyStatus: "",
+  companyPhone: "",
+  companyWebsite: "",
   firstName: "",
   lastName: "",
   jobTitle: "",
+  phone: "",
   vatNumber: "",
   industries: [],
   cqcProviderId: "",
@@ -77,6 +83,8 @@ const COMPANY_STATUSES = [
   "Dissolved",
 ];
 
+const BLOCKED_STATUSES = ["In Administration", "Dissolved"];
+
 
 const DBS_LEVELS = [
   "Basic",
@@ -100,11 +108,6 @@ const INDUSTRIES = [
     id: "Customer Care",
     description: "Contact Centre, CX & Support",
     image: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "Tech & Data",
-    description: "Engineers, Analysts & SMEs",
-    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80",
   },
 ];
 
@@ -377,13 +380,13 @@ export default function EmployerRegisterPage() {
             {step === 3 && (
               <>
                 <span className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 text-brand-blue text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1 mb-4">
-                  Step 03 — Profile Creation
+                  Step 03 — Your Details
                 </span>
                 <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
-                  LET&apos;S BUILD YOUR{" "}
-                  <span className="text-brand-blue">PROFILE</span>
-                  <br />AND YOUR{" "}
-                  <span className="text-brand-blue">BUSINESS</span>
+                  WHO&apos;S{" "}
+                  <span className="text-brand-blue">MAKING</span>
+                  <br />THIS{" "}
+                  <span className="text-brand-blue">ACCOUNT?</span>
                 </h1>
               </>
             )}
@@ -526,14 +529,19 @@ export default function EmployerRegisterPage() {
                 </div>
                 <div>
                   <Label htmlFor="incorporationDate">Incorporation Date</Label>
-                  <Input
+                  <input
                     id="incorporationDate"
                     type="date"
-                    placeholder="Date of incorporation"
+                    max={new Date().toISOString().split("T")[0]}
                     value={form.incorporationDate}
-                    onChange={set("incorporationDate")}
-                    error={errors.incorporationDate}
+                    onChange={(e) => set("incorporationDate")(e.target.value)}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm text-brand dark:text-slate-100 focus:outline-none focus:ring-1 transition-colors bg-white dark:bg-[#1e293b] ${
+                      errors.incorporationDate
+                        ? "border-red-400 focus:border-red-400 focus:ring-red-400"
+                        : "border-gray-border focus:border-brand-blue focus:ring-brand-blue"
+                    }`}
                   />
+                  {errors.incorporationDate && <p className="text-red-500 text-xs mt-1">{errors.incorporationDate}</p>}
                 </div>
                 <div>
                   <Label htmlFor="companyStatus">Company Status</Label>
@@ -544,6 +552,38 @@ export default function EmployerRegisterPage() {
                     options={COMPANY_STATUSES}
                     placeholder="Select"
                     error={errors.companyStatus}
+                  />
+                  {BLOCKED_STATUSES.includes(form.companyStatus) && (
+                    <div className="mt-2 flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-3.5 py-3">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500 shrink-0 mt-0.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                      </svg>
+                      <p className="text-xs text-red-600 leading-relaxed">
+                        Companies with a status of <strong>{form.companyStatus}</strong> are not eligible to register. Your application will be rejected.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="companyPhone">Company Phone Number</Label>
+                  <Input
+                    id="companyPhone"
+                    type="tel"
+                    placeholder="e.g. 020 7946 0123"
+                    value={form.companyPhone}
+                    onChange={set("companyPhone")}
+                    error={errors.companyPhone}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="companyWebsite">Company Website</Label>
+                  <Input
+                    id="companyWebsite"
+                    type="url"
+                    placeholder="e.g. https://yourcompany.co.uk"
+                    value={form.companyWebsite}
+                    onChange={set("companyWebsite")}
+                    error={errors.companyWebsite}
                   />
                 </div>
               </>
@@ -582,6 +622,17 @@ export default function EmployerRegisterPage() {
                     value={form.jobTitle}
                     onChange={set("jobTitle")}
                     error={errors.jobTitle}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Your Contact Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="e.g. 07700 900123"
+                    value={form.phone}
+                    onChange={set("phone")}
+                    error={errors.phone}
                   />
                 </div>
                 <div>
@@ -669,25 +720,27 @@ export default function EmployerRegisterPage() {
                       Healthcare Compliance
                     </p>
                     <div>
-                      <Label htmlFor="cqcProviderId">CQC Provider ID</Label>
+                      <Label htmlFor="cqcProviderId">CQC Provider ID <span className="text-brand-blue normal-case font-normal">*</span></Label>
                       <Input
                         id="cqcProviderId"
                         placeholder="e.g. 1-123456789"
                         value={form.cqcProviderId}
                         onChange={set("cqcProviderId")}
+                        error={errors.cqcProviderId}
                       />
                       <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed">
                         Your Care Quality Commission registration number. Confirms you are a legally registered care provider in the UK.
                       </p>
                     </div>
                     <div>
-                      <Label htmlFor="dbsLevel">Minimum DBS Level Required</Label>
+                      <Label htmlFor="dbsLevel">Minimum DBS Level Required <span className="text-brand-blue normal-case font-normal">*</span></Label>
                       <Select
                         id="dbsLevel"
                         value={form.dbsLevel}
                         onChange={set("dbsLevel")}
                         options={DBS_LEVELS}
                         placeholder="Select DBS level"
+                        error={errors.dbsLevel}
                       />
                     </div>
                   </div>
@@ -710,12 +763,13 @@ export default function EmployerRegisterPage() {
                         className="mt-0.5 w-4 h-4 rounded border-gray-border accent-brand-blue shrink-0"
                       />
                       <span className="text-xs text-brand leading-relaxed">
-                        <span className="font-semibold">UK Modern Slavery Act compliance</span>
+                        <span className="font-semibold">UK Modern Slavery Act compliance <span className="text-brand-blue">*</span></span>
                         <span className="text-slate-400 block mt-0.5">
                           I confirm this organisation complies with the Modern Slavery Act 2015, including publishing an annual transparency statement where required.
                         </span>
                       </span>
                     </label>
+                    {errors.modernSlaveryAct && <p className="text-red-500 text-xs -mt-1">{errors.modernSlaveryAct}</p>}
                     <label className="flex items-start gap-3 cursor-pointer group">
                       <input
                         type="checkbox"
@@ -726,12 +780,13 @@ export default function EmployerRegisterPage() {
                         className="mt-0.5 w-4 h-4 rounded border-gray-border accent-brand-blue shrink-0"
                       />
                       <span className="text-xs text-brand leading-relaxed">
-                        <span className="font-semibold">Employer&apos;s Liability Insurance</span>
+                        <span className="font-semibold">Employer&apos;s Liability Insurance <span className="text-brand-blue">*</span></span>
                         <span className="text-slate-400 block mt-0.5">
                           I confirm this organisation holds valid Employer&apos;s Liability Insurance as required by UK law.
                         </span>
                       </span>
                     </label>
+                    {errors.employerLiabilityInsurance && <p className="text-red-500 text-xs -mt-1">{errors.employerLiabilityInsurance}</p>}
                   </div>
                 )}
               </>
@@ -742,10 +797,10 @@ export default function EmployerRegisterPage() {
               <>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="billingName">Full Name</Label>
+                    <Label htmlFor="billingName">Billing Contact Name</Label>
                     <Input
                       id="billingName"
-                      placeholder="John Doe"
+                      placeholder="Name on invoices"
                       value={form.billingName}
                       onChange={set("billingName")}
                       error={errors.billingName}
@@ -800,7 +855,11 @@ export default function EmployerRegisterPage() {
                       </span>
                     </label>
                   ))}
-                  {errors.checkTerms && <p className="text-red-500 text-xs mt-1">{errors.checkTerms}</p>}
+                  {errors.checkEmployerLiability && <p className="text-red-500 text-xs">{errors.checkEmployerLiability}</p>}
+                  {errors.checkRiskAssessment    && <p className="text-red-500 text-xs">{errors.checkRiskAssessment}</p>}
+                  {errors.checkBusinessCredit    && <p className="text-red-500 text-xs">{errors.checkBusinessCredit}</p>}
+                  {errors.checkGdpr              && <p className="text-red-500 text-xs">{errors.checkGdpr}</p>}
+                  {errors.checkTerms             && <p className="text-red-500 text-xs">{errors.checkTerms}</p>}
                 </div>
               </>
             )}
@@ -821,12 +880,15 @@ export default function EmployerRegisterPage() {
                 <ReviewRow label="Address" value={form.registeredAddress} />
                 <ReviewRow label="Incorporated" value={form.incorporationDate} />
                 <ReviewRow label="Status" value={form.companyStatus} />
+                <ReviewRow label="Company Phone" value={form.companyPhone} />
+                <ReviewRow label="Website" value={form.companyWebsite} />
 
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-5 mb-3">
                   Profile
                 </p>
                 <ReviewRow label="Name" value={`${form.firstName} ${form.lastName}`} />
                 <ReviewRow label="Job Title" value={form.jobTitle} />
+                <ReviewRow label="Contact Phone" value={form.phone} />
                 <ReviewRow label="VAT Number" value={form.vatNumber} />
 
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-5 mb-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef } from "react";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 import { useToast } from "@/components/ui/Toast";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +20,16 @@ type Experience = {
   description: string;
   skills: string[];
   verified: boolean;
+};
+
+type Reference = {
+  id: string;           // UUID from DB (empty string = unsaved new entry)
+  fullName: string;
+  jobTitle: string;
+  company: string;
+  email: string;
+  phone: string;
+  relationship: string;
 };
 
 // ─── Toggle ────────────────────────────────────────────────────────────────────
@@ -315,6 +325,108 @@ function EditPanel({
   );
 }
 
+// ─── Reference form ────────────────────────────────────────────────────────────
+
+function ReferenceForm({
+  initial,
+  isNew,
+  onSave,
+  onCancel,
+}: {
+  initial: Reference;
+  isNew: boolean;
+  onSave: (ref: Reference) => void;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState({ ...initial });
+
+  function update<K extends keyof Reference>(key: K, value: Reference[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  return (
+    <div className="bg-[#F7F8FA] border border-gray-100 rounded-xl p-4 space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Full Name *</label>
+          <input
+            type="text"
+            value={form.fullName}
+            onChange={(e) => update("fullName", e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Job Title</label>
+          <input
+            type="text"
+            value={form.jobTitle}
+            onChange={(e) => update("jobTitle", e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Company</label>
+          <input
+            type="text"
+            value={form.company}
+            onChange={(e) => update("company", e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Relationship</label>
+          <select
+            value={form.relationship}
+            onChange={(e) => update("relationship", e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+          >
+            <option value="">Select…</option>
+            <option value="Line Manager">Line Manager</option>
+            <option value="Colleague">Colleague</option>
+            <option value="Supervisor">Supervisor</option>
+            <option value="Client">Client</option>
+            <option value="Mentor">Mentor</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Email</label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => update("email", e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Phone</label>
+          <input
+            type="text"
+            value={form.phone}
+            onChange={(e) => update("phone", e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={() => onSave(form)}
+          className="flex-1 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+        >
+          {isNew ? "Add Reference" : "Save Changes"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:text-brand transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CandidateSettingsPage() {
@@ -330,6 +442,8 @@ export default function CandidateSettingsPage() {
   const [sector, setSector] = useState("");
   const [jobTypes, setJobTypes] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [profileSkills, setProfileSkills] = useState<string[]>([]);
+  const [profileSkillInput, setProfileSkillInput] = useState("");
   const [profileStatus, setProfileStatus] = useState("pending");
   const [isSavingProfile, startSaveProfile] = useTransition();
 
@@ -352,6 +466,28 @@ export default function CandidateSettingsPage() {
 
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [isDeactivating, startDeactivate] = useTransition();
+
+  // ── CV state (Profile tab) ────────────────────────────────────────────────
+  const [cvFileName, setCvFileName] = useState("");
+  const [cvFilePath, setCvFilePath] = useState("");
+  const [uploadingCv, setUploadingCv] = useState(false);
+  const cvInputRef = useRef<HTMLInputElement>(null);
+
+  // ── References state (Profile tab) ────────────────────────────────────────
+  const [references, setReferences] = useState<Reference[]>([]);
+  const [refsLoading, setRefsLoading] = useState(true);
+  const [editingRefId, setEditingRefId] = useState<string | null>(null);
+  const [isAddingRef, setIsAddingRef] = useState(false);
+
+  const BLANK_REF: Reference = {
+    id: "",
+    fullName: "",
+    jobTitle: "",
+    company: "",
+    email: "",
+    phone: "",
+    relationship: "",
+  };
 
   // ── Experience tab state ──────────────────────────────────────────────────
   const [experiences, setExperiences] = useState<Experience[]>([]);
@@ -387,11 +523,92 @@ export default function CandidateSettingsPage() {
         setSector(data.sector ?? "");
         setJobTypes(data.jobTypes ?? []);
         setLocations(data.locations ?? []);
+        setProfileSkills(data.skills ?? []);
         setProfileStatus(data.status ?? "pending");
       })
       .catch(() => toast("Failed to load profile", "error"))
       .finally(() => setProfileLoading(false));
+
+    fetch("/api/candidate/references")
+      .then((r) => r.json())
+      .then((data) => setReferences(data.references ?? []))
+      .catch(() => toast("Failed to load references", "error"))
+      .finally(() => setRefsLoading(false));
+
+    fetch("/api/candidate/cv")
+      .then((r) => r.json())
+      .then((data) => {
+        setCvFileName(data.fileName ?? "");
+        setCvFilePath(data.filePath ?? "");
+      })
+      .catch(() => {});
   }, [toast]);
+
+  async function handleCvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setUploadingCv(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast("You must be signed in", "error");
+      setUploadingCv(false);
+      return;
+    }
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${user.id}/cv/${Date.now()}-${safeName}`;
+    const { error: upErr } = await supabase.storage
+      .from("candidate-documents")
+      .upload(path, file, { upsert: false, contentType: file.type });
+    if (upErr) {
+      toast(`Upload failed: ${upErr.message}`, "error");
+      setUploadingCv(false);
+      return;
+    }
+
+    const res = await fetch("/api/candidate/cv", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName: file.name, filePath: path }),
+    });
+    const data = await res.json();
+    setUploadingCv(false);
+    if (!res.ok) {
+      toast(data.error ?? "Failed to save CV", "error");
+      return;
+    }
+    setCvFileName(file.name);
+    setCvFilePath(path);
+    toast("CV uploaded", "success");
+  }
+
+  async function downloadCv() {
+    if (!cvFilePath) return;
+    const supabase = createClient();
+    const { data, error } = await supabase.storage
+      .from("candidate-documents")
+      .createSignedUrl(cvFilePath, 60);
+    if (error || !data) {
+      toast("Could not generate download link", "error");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function deleteCv() {
+    const res = await fetch("/api/candidate/cv", { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json();
+      toast(data.error ?? "Failed to delete CV", "error");
+      return;
+    }
+    setCvFileName("");
+    setCvFilePath("");
+    toast("CV removed", "success");
+  }
 
   // Load experiences when the Experience tab is first opened
   useEffect(() => {
@@ -409,7 +626,7 @@ export default function CandidateSettingsPage() {
       const res = await fetch("/api/candidate/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, phone: contact, bio }),
+        body: JSON.stringify({ fullName, phone: contact, bio, skills: profileSkills }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -541,6 +758,63 @@ export default function CandidateSettingsPage() {
     toast("Experience added", "success");
   }
 
+  // ── Reference CRUD ────────────────────────────────────────────────────────
+  async function addReference(newRef: Reference) {
+    if (!newRef.fullName.trim()) {
+      toast("Full name is required", "error");
+      return;
+    }
+    const res = await fetch("/api/candidate/references", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newRef),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast(data.error ?? "Failed to add reference", "error");
+      return;
+    }
+    setReferences((prev) => [data.reference, ...prev]);
+    setIsAddingRef(false);
+    toast("Reference added", "success");
+  }
+
+  async function saveReference(updated: Reference) {
+    if (!updated.fullName.trim()) {
+      toast("Full name is required", "error");
+      return;
+    }
+    const res = await fetch("/api/candidate/references", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      toast(data.error ?? "Failed to save reference", "error");
+      return;
+    }
+    setReferences((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    setEditingRefId(null);
+    toast("Reference updated", "success");
+  }
+
+  async function deleteReference(id: string) {
+    const res = await fetch("/api/candidate/references", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      toast(data.error ?? "Failed to delete reference", "error");
+      return;
+    }
+    setReferences((prev) => prev.filter((r) => r.id !== id));
+    if (editingRefId === id) setEditingRefId(null);
+    toast("Reference removed", "success");
+  }
+
   async function deleteExperience(id: string) {
     const res = await fetch("/api/candidate/experiences", {
       method: "DELETE",
@@ -560,6 +834,13 @@ export default function CandidateSettingsPage() {
   return (
     <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
       <GsapAnimations />
+      <input
+        ref={cvInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx"
+        className="sr-only"
+        onChange={handleCvUpload}
+      />
       {/* Tabs */}
       <div
         role="tablist"
@@ -680,6 +961,246 @@ export default function CandidateSettingsPage() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Skills */}
+              <div className="bg-white border border-gray-100 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                  </svg>
+                  <h2 className="text-sm font-bold text-brand">Skills</h2>
+                  {profileSkills.length > 0 && (
+                    <span className="ml-auto text-[10px] font-bold text-slate-400 uppercase tracking-widest">{profileSkills.length} added</span>
+                  )}
+                </div>
+
+                {/* Tag chips */}
+                {profileSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {profileSkills.map((skill) => (
+                      <span key={skill} className="flex items-center gap-1 pl-3 pr-1.5 py-1.5 bg-blue-50 rounded-full">
+                        <span className="text-xs font-semibold text-brand-blue">{skill}</span>
+                        <button
+                          type="button"
+                          onClick={() => setProfileSkills((prev) => prev.filter((s) => s !== skill))}
+                          className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors text-brand-blue ml-0.5"
+                        >
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Input */}
+                <div className="relative">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={profileSkillInput}
+                    disabled={profileLoading}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.endsWith(",")) {
+                        const skill = val.slice(0, -1).trim();
+                        if (skill && !profileSkills.includes(skill)) {
+                          setProfileSkills((prev) => [...prev, skill]);
+                        }
+                        setProfileSkillInput("");
+                      } else {
+                        setProfileSkillInput(val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const skill = profileSkillInput.trim();
+                        if (skill && !profileSkills.includes(skill)) {
+                          setProfileSkills((prev) => [...prev, skill]);
+                        }
+                        setProfileSkillInput("");
+                      }
+                      if (e.key === "Backspace" && profileSkillInput === "" && profileSkills.length > 0) {
+                        setProfileSkills((prev) => prev.slice(0, -1));
+                      }
+                    }}
+                    placeholder={profileSkills.length === 0 ? "e.g. Patient Care, Manual Handling, First Aid…" : "Add another skill…"}
+                    className="w-full pl-10 pr-4 py-3 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors disabled:opacity-50"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2">
+                  Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Enter</kbd> or type a <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">,</kbd> to add · <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Backspace</kbd> to remove last
+                </p>
+              </div>
+
+              {/* CV / Résumé */}
+              <div className="bg-white border border-gray-100 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  <h2 className="text-sm font-bold text-brand">CV / Résumé</h2>
+                </div>
+
+                {cvFileName ? (
+                  <div className="flex items-center gap-3 bg-[#F7F8FA] border border-gray-100 rounded-xl px-4 py-3">
+                    <div className="w-10 h-10 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-brand truncate">{cvFileName}</p>
+                      <p className="text-[11px] text-slate-400">Uploaded</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={downloadCv}
+                        aria-label="Download CV"
+                        className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-brand-blue transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cvInputRef.current?.click()}
+                        disabled={uploadingCv}
+                        className="px-3 py-1.5 text-[11px] font-bold text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-60"
+                      >
+                        {uploadingCv ? "Uploading…" : "Replace"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deleteCv}
+                        aria-label="Delete CV"
+                        className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => cvInputRef.current?.click()}
+                    disabled={uploadingCv}
+                    className="w-full border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-2 hover:border-brand-blue/50 hover:bg-blue-50/30 transition-colors text-center disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <p className="text-xs font-medium text-slate-500">
+                      {uploadingCv ? "Uploading…" : "Click to upload your CV"}
+                    </p>
+                    <p className="text-[10px] text-slate-400">PDF, DOC or DOCX · Max 10MB</p>
+                  </button>
+                )}
+              </div>
+
+              {/* References */}
+              <div className="bg-white border border-gray-100 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                  <h2 className="text-sm font-bold text-brand">References</h2>
+                  {references.length > 0 && (
+                    <span className="ml-auto text-[10px] font-bold text-slate-400 uppercase tracking-widest">{references.length} added</span>
+                  )}
+                </div>
+
+                {refsLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-14 bg-gray-100 rounded-xl" />
+                    <div className="h-14 bg-gray-100 rounded-xl" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {references.map((ref) =>
+                      editingRefId === ref.id ? (
+                        <ReferenceForm
+                          key={ref.id}
+                          initial={ref}
+                          isNew={false}
+                          onSave={saveReference}
+                          onCancel={() => setEditingRefId(null)}
+                        />
+                      ) : (
+                        <div key={ref.id} className="flex items-start gap-3 bg-[#F7F8FA] border border-gray-100 rounded-xl px-4 py-3">
+                          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 text-brand-blue text-xs font-black uppercase">
+                            {ref.fullName.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("")}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-brand truncate">{ref.fullName}</p>
+                            <p className="text-xs text-slate-500 truncate">
+                              {[ref.jobTitle, ref.company].filter(Boolean).join(" · ") || (ref.relationship || "—")}
+                            </p>
+                            {(ref.email || ref.phone) && (
+                              <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                                {[ref.email, ref.phone].filter(Boolean).join(" · ")}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => { setEditingRefId(ref.id); setIsAddingRef(false); }}
+                              aria-label="Edit reference"
+                              className="p-1.5 hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-brand-blue"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => deleteReference(ref.id)}
+                              aria-label="Delete reference"
+                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {isAddingRef && (
+                      <ReferenceForm
+                        initial={BLANK_REF}
+                        isNew
+                        onSave={addReference}
+                        onCancel={() => setIsAddingRef(false)}
+                      />
+                    )}
+
+                    {!isAddingRef && references.length === 0 && (
+                      <p className="text-xs text-slate-400 text-center py-4">No references added yet.</p>
+                    )}
+
+                    {!isAddingRef && (
+                      <button
+                        onClick={() => { setIsAddingRef(true); setEditingRefId(null); }}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-xs font-semibold text-slate-500 hover:border-brand-blue hover:text-brand-blue transition-colors"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Add Reference
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

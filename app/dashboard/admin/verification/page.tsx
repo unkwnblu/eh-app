@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 
 type CardStatus = "pending" | "flagged" | "resubmission" | "verified";
 
-type Doc = { name: string; type: string; verified: boolean };
+type Doc = { key: string; name: string; type: string; verified: boolean; url?: string; meta?: { code: string; expiry?: string } };
 
 type Candidate = {
   id: string;
@@ -22,7 +22,7 @@ type Candidate = {
 };
 
 
-const SECTORS  = ["All Sectors",   "Healthcare", "Technology", "Finance", "Logistics", "Hospitality"];
+const SECTORS  = ["All Sectors", "Healthcare", "Hospitality", "Customer Care"];
 const STATUSES = ["All Statuses",  "Pending Review", "Flagged", "Re-Submission", "Verified"];
 
 // ─── Status badge config ────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ function DocIcon({ type, size = 14 }: { type: Candidate["docIcon"]; size?: numbe
 
 // ─── Candidate card ────────────────────────────────────────────────────────────
 
-function CandidateCard({ c, isActive, onReview }: { c: Candidate; isActive: boolean; onReview: () => void }) {
+function CandidateCard({ c, isActive, onReview, onRequestInfo }: { c: Candidate; isActive: boolean; onReview: () => void; onRequestInfo: () => void }) {
   const statusCfg = STATUS_CONFIG[c.status];
   return (
     <div className={`bg-white border rounded-2xl p-5 hover:shadow-md transition-all ${isActive ? "border-brand-blue shadow-md" : "border-gray-100"}`}>
@@ -95,8 +95,11 @@ function CandidateCard({ c, isActive, onReview }: { c: Candidate; isActive: bool
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </button>
-        <button className="px-4 py-2.5 border border-gray-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap">
-          Request More Info
+        <button
+          onClick={(e) => { e.stopPropagation(); onRequestInfo(); }}
+          className="px-4 py-2.5 border border-amber-200 text-amber-600 text-sm font-semibold rounded-xl hover:bg-amber-50 transition-colors whitespace-nowrap"
+        >
+          Request Info
         </button>
       </div>
     </div>
@@ -112,6 +115,8 @@ function DetailPanel({
   onClose,
   onApprove,
   onReject,
+  onRequestInfo,
+  onViewShareCode,
   actionLoading,
 }: {
   candidate: Candidate;
@@ -120,6 +125,8 @@ function DetailPanel({
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
+  onRequestInfo: () => void;
+  onViewShareCode: (meta: { code: string; expiry?: string }) => void;
   actionLoading: boolean;
 }) {
   const statusCfg = STATUS_CONFIG[candidate.status];
@@ -178,9 +185,34 @@ function DetailPanel({
                 <p className="text-[10px] text-slate-400">{doc.type}</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button aria-label={`View ${doc.name}`} className="px-2.5 py-1 text-[11px] font-semibold text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-blue-50 transition-colors">
-                  View
-                </button>
+                {doc.url ? (
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`View ${doc.name}`}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    View
+                  </a>
+                ) : doc.meta ? (
+                  <button
+                    type="button"
+                    onClick={() => onViewShareCode(doc.meta!)}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    View
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    aria-label={`No file available for ${doc.name}`}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-slate-300 border border-gray-200 rounded-lg cursor-not-allowed"
+                  >
+                    View
+                  </button>
+                )}
                 <button
                   onClick={() => onToggleDoc(i)}
                   aria-label={doc.verified ? `Mark ${doc.name} as unverified` : `Mark ${doc.name} as verified`}
@@ -197,25 +229,45 @@ function DetailPanel({
       </div>
 
       {/* Actions */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between">
-        <p className="text-xs text-slate-400">{verifiedCount} of {docs.length} docs verified</p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onReject}
-            disabled={actionLoading}
-            className="px-4 py-2 border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Reject
-          </button>
-          <button
-            onClick={onApprove}
-            disabled={actionLoading}
-            className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {actionLoading ? "Saving…" : "Approve & Activate"}
-          </button>
-        </div>
-      </div>
+      {(() => {
+        const allVerified = docs.length > 0 && verifiedCount === docs.length;
+        return (
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-400">{verifiedCount} of {docs.length} docs verified</p>
+              {!allVerified && (
+                <p className="text-[11px] text-amber-600 font-semibold">
+                  All documents must be verified before approving
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 justify-end flex-wrap">
+              <button
+                onClick={onRequestInfo}
+                disabled={actionLoading}
+                className="px-4 py-2 border border-amber-200 text-amber-600 text-sm font-bold rounded-xl hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Request Info
+              </button>
+              <button
+                onClick={onReject}
+                disabled={actionLoading}
+                className="px-4 py-2 border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reject
+              </button>
+              <button
+                onClick={onApprove}
+                disabled={actionLoading || !allVerified}
+                title={!allVerified ? "Mark all documents as verified first" : undefined}
+                className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:bg-brand-blue-dark"
+              >
+                {actionLoading ? "Saving…" : "Approve & Activate"}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -232,6 +284,9 @@ export default function CandidateVerificationPage() {
   const [sectorFilter, setSectorFilter] = useState("All Sectors");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [requestInfoTarget, setRequestInfoTarget] = useState<string | null>(null);
+  const [requestInfoNote, setRequestInfoNote] = useState("");
+  const [shareCodeView, setShareCodeView] = useState<{ code: string; expiry?: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -267,11 +322,23 @@ export default function CandidateVerificationPage() {
     return sm && fm;
   });
 
-  function toggleDoc(candidateId: string, docIdx: number) {
+  async function toggleDoc(candidateId: string, docIdx: number) {
+    const doc = docStates[candidateId]?.[docIdx];
+    if (!doc) return;
+    const newVerified = !doc.verified;
+
+    // Optimistic update
     setDocStates((prev) => ({
       ...prev,
-      [candidateId]: prev[candidateId].map((d, i) => i === docIdx ? { ...d, verified: !d.verified } : d),
+      [candidateId]: prev[candidateId].map((d, i) => i === docIdx ? { ...d, verified: newVerified } : d),
     }));
+
+    // Persist to DB
+    await fetch("/api/admin/verification", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: candidateId, action: "toggle_doc", docKey: doc.key, verified: newVerified }),
+    });
   }
 
   async function approve(id: string) {
@@ -288,6 +355,29 @@ export default function CandidateVerificationPage() {
       setReviewing(null);
     } catch {
       toast("Failed to approve candidate", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function requestInfo(id: string, note: string) {
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/verification", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "request_info", note }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error ?? "Failed to send request", "error");
+        return;
+      }
+      setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, status: "resubmission" as CardStatus } : c));
+      toast("Candidate notified — account restricted to Legal tab", "info");
+      setReviewing(null);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to send request", "error");
     } finally {
       setActionLoading(false);
     }
@@ -408,6 +498,7 @@ export default function CandidateVerificationPage() {
                 c={c}
                 isActive={reviewing === c.id}
                 onReview={() => setReviewing(reviewing === c.id ? null : c.id)}
+                onRequestInfo={() => { setRequestInfoTarget(c.id); setRequestInfoNote(""); }}
               />
             ))
           )}
@@ -431,6 +522,8 @@ export default function CandidateVerificationPage() {
                 onClose={() => setReviewing(null)}
                 onApprove={() => approve(reviewingCandidate.id)}
                 onReject={() => reject(reviewingCandidate.id)}
+                onRequestInfo={() => { setRequestInfoTarget(reviewingCandidate.id); setRequestInfoNote(""); }}
+                onViewShareCode={(meta) => setShareCodeView(meta)}
                 actionLoading={actionLoading}
               />
             </div>
@@ -504,6 +597,125 @@ export default function CandidateVerificationPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Request More Info modal ── */}
+      {requestInfoTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-brand">Request More Information</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  The candidate&apos;s account will be restricted to the Legal tab until resolved.
+                </p>
+              </div>
+              <button
+                onClick={() => setRequestInfoTarget(null)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <p className="text-xs text-amber-700 font-semibold mb-0.5">What happens next</p>
+              <ul className="text-[11px] text-amber-600 space-y-0.5 list-disc list-inside">
+                <li>Candidate can still log in</li>
+                <li>All tabs except Legal are locked</li>
+                <li>Your message is shown as a banner on their Legal page</li>
+                <li>Access is restored when you approve their account</li>
+              </ul>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                Message to candidate <span className="normal-case font-normal text-slate-300">(required)</span>
+              </label>
+              <textarea
+                value={requestInfoNote}
+                onChange={(e) => setRequestInfoNote(e.target.value)}
+                rows={4}
+                placeholder="e.g. Please upload a clearer photo of your BRP — the document number is not legible."
+                className="w-full px-3.5 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-amber-400 transition-colors resize-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => setRequestInfoTarget(null)}
+                className="px-4 py-2 border border-gray-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!requestInfoNote.trim()) return;
+                  await requestInfo(requestInfoTarget, requestInfoNote);
+                  setRequestInfoTarget(null);
+                }}
+                disabled={!requestInfoNote.trim() || actionLoading}
+                className="px-4 py-2 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading ? "Sending…" : "Send Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Share Code View modal ── */}
+      {shareCodeView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-brand">Share Code Details</h3>
+              <button
+                onClick={() => setShareCodeView(null)}
+                className="p-1 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Code display */}
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Share Code</p>
+                <p className="text-2xl font-mono font-black text-brand tracking-widest">{shareCodeView.code}</p>
+              </div>
+              {shareCodeView.expiry && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Expiry Date</p>
+                  <p className="text-sm font-semibold text-brand">
+                    {new Date(shareCodeView.expiry).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { navigator.clipboard.writeText(shareCodeView.code); }}
+                className="flex-1 py-2.5 bg-gray-100 text-brand text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Copy Code
+              </button>
+              <a
+                href="https://www.gov.uk/view-right-to-work"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors text-center"
+              >
+                Verify on Gov.UK
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

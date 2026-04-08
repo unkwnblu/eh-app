@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import { useToast } from "@/components/ui/Toast";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
 import { createClient } from "@/lib/supabase/client";
@@ -104,13 +107,18 @@ function NotifFooter() {
 }
 
 export default function CandidateDashboardLayout({ children }: { children: React.ReactNode }) {
-  const [profileName, setProfileName] = useState("Candidate");
+  const router   = useRouter();
+  const pathname = usePathname();
+
+  const [profileName,     setProfileName]     = useState("Candidate");
   const [profileInitials, setProfileInitials] = useState("C");
-  const [profileEmail, setProfileEmail] = useState("");
+  const [profileEmail,    setProfileEmail]    = useState("");
+  const [profileStatus,   setProfileStatus]   = useState<string | null>(null);
+  const [resubmissionNote, setResubmissionNote] = useState<string>("");
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       const meta = user.user_metadata as Record<string, string> | null;
       const fullName =
@@ -128,12 +136,143 @@ export default function CandidateDashboardLayout({ children }: { children: React
       setProfileName(fullName);
       setProfileInitials(initials);
       setProfileEmail(email);
+
+      // Fetch profile status to enforce resubmission lock
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("status, resubmission_note")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setProfileStatus(profile.status);
+        setResubmissionNote(profile.resubmission_note ?? "");
+      }
     });
   }, []);
 
+  const isResubmission = profileStatus === "resubmission";
+  const isSuspended    = profileStatus === "suspended";
+
+  // Redirect away from non-legal pages while in resubmission state
+  useEffect(() => {
+    if (!isResubmission) return;
+    const legalPath = "/dashboard/candidate/legal";
+    if (!pathname.startsWith(legalPath)) {
+      router.replace(legalPath);
+    }
+  }, [isResubmission, pathname, router]);
+
+  // Don't render anything until we know the status — prevents dashboard flash
+  if (profileStatus === null) {
+    return (
+      <div className="min-h-screen bg-gray-soft dark:bg-[#0B1222] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-brand-blue border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  // ── Suspended: full-screen block ─────────────────────────────────────────────
+  if (isSuspended) {
+    const handleSignOut = async () => {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.replace("/auth/candidate/login");
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-soft dark:bg-[#0B1222] flex items-center justify-center px-6">
+        <style>{`
+          @keyframes float-up {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          .sus-fade { animation: float-up 0.5s ease forwards; }
+          .sus-fade-2 { animation: float-up 0.5s 0.1s ease both; }
+          .sus-fade-3 { animation: float-up 0.5s 0.2s ease both; }
+        `}</style>
+
+        <div className="w-full max-w-md text-center">
+          {/* Logo */}
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-10 sus-fade">
+            <Image src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} priority />
+            <span className="text-brand dark:text-slate-100 font-bold text-base tracking-tight leading-none">
+              Edge<span className="text-brand-blue">Harbour</span>
+            </span>
+          </Link>
+
+          {/* Icon */}
+          <div className="w-20 h-20 rounded-full bg-red-50 border-2 border-red-100 flex items-center justify-center mx-auto mb-6 sus-fade">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+
+          <div className="sus-fade-2">
+            <h1 className="text-brand dark:text-slate-100 font-black text-3xl leading-tight tracking-tight mb-3">
+              Application <span className="text-red-500">Not Approved.</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+              Unfortunately your application did not meet our compliance requirements at this time. If you believe this is an error or wish to appeal, please get in touch with our team.
+            </p>
+          </div>
+
+          <div className="sus-fade-3 space-y-3">
+            {/* Appeal / contact */}
+            <a
+              href="mailto:compliance@edgeharbour.com"
+              className="flex items-center justify-center gap-2 w-full py-3.5 bg-brand-blue text-white text-sm font-bold rounded-2xl hover:bg-brand-blue-dark transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+              Contact Compliance Team
+            </a>
+
+            <button
+              onClick={handleSignOut}
+              className="w-full py-3.5 border border-gray-200 dark:border-white/10 text-slate-500 dark:text-slate-400 text-sm font-semibold rounded-2xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+
+          <p className="text-[11px] text-slate-400 mt-8 sus-fade-3">
+            Reference: <span className="font-mono">{profileEmail}</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const navItems = isResubmission
+    ? NAV_ITEMS.filter((n) => n.href === "/dashboard/candidate/legal")
+    : NAV_ITEMS;
+
+  const resubmissionBanner = isResubmission ? (
+    <div className="mx-4 mt-4 md:mx-8 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-amber-800">Additional documents required</p>
+          {resubmissionNote ? (
+            <p className="text-xs text-amber-700 mt-1 leading-relaxed">{resubmissionNote}</p>
+          ) : (
+            <p className="text-xs text-amber-700 mt-1">Our compliance team has requested more information. Please upload the required documents below.</p>
+          )}
+          <p className="text-[11px] text-amber-600 mt-2 font-medium">Your account access will be restored once your documents are reviewed and approved.</p>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <DashboardLayout
-      navItems={NAV_ITEMS}
+      navItems={navItems}
       basePath="/dashboard/candidate"
       searchPlaceholder="Search jobs, applications..."
       profileHref="/dashboard/candidate/profile"
@@ -147,6 +286,7 @@ export default function CandidateDashboardLayout({ children }: { children: React
       notifFooter={<NotifFooter />}
       logoutHref="/auth/candidate/login"
     >
+      {resubmissionBanner}
       {children}
     </DashboardLayout>
   );
