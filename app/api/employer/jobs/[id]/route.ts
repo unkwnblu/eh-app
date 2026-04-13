@@ -49,7 +49,7 @@ export async function GET(
   }
 
   // Fetch candidate compliance data
-  const candidateIds = (applications ?? []).map((a) => (a.candidate as { id: string }).id);
+  const candidateIds = (applications ?? []).map((a) => (a.candidate as unknown as { id: string }).id);
   const complianceMap: Record<string, { share_code: string | null; verified_docs: Record<string, boolean> }> = {};
 
   if (candidateIds.length > 0) {
@@ -64,7 +64,7 @@ export async function GET(
   }
 
   const pipeline = (applications ?? []).map((a) => {
-    const candidate = a.candidate as { id: string; full_name: string };
+    const candidate = a.candidate as unknown as { id: string; full_name: string };
     const compliance = complianceMap[candidate.id];
     const rtwVerified = !!compliance?.share_code;
     const dbsVerified = !!compliance?.verified_docs?.dbs;

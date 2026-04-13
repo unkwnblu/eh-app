@@ -23,7 +23,7 @@ export async function GET() {
     .single();
 
   // Employer: compliance fields
-  const { data: employer, error } = await service
+  const { data: employerRaw, error } = await service
     .from("employers")
     .select(
       "crn, vat_number, cqc_provider_id, dbs_level, " +
@@ -31,6 +31,12 @@ export async function GET() {
     )
     .eq("id", user.id)
     .single();
+
+  const employer = employerRaw as {
+    crn?: string; vat_number?: string; cqc_provider_id?: string;
+    dbs_level?: string; modern_slavery_act?: boolean;
+    employer_liability_insurance?: boolean; industries?: string[];
+  } | null;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
