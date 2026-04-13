@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { employerLoginSchema, validate, type FieldErrors } from "@/lib/validation";
+import { signIn } from "./actions";
 
 export default function EmployerLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,7 +21,14 @@ export default function EmployerLoginPage() {
       return;
     }
     setErrors({});
-    // auth logic goes here
+    setServerError(null);
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("email", form.email);
+      fd.set("password", form.password);
+      const res = await signIn(fd);
+      if (res?.error) setServerError(res.error);
+    });
   }
 
   return (
@@ -47,6 +57,14 @@ export default function EmployerLoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
+            {serverError && (
+              <div role="alert" className="flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500 shrink-0 mt-0.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <p className="text-sm text-red-600">{serverError}</p>
+              </div>
+            )}
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
@@ -112,9 +130,10 @@ export default function EmployerLoginPage() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-brand text-white text-sm font-semibold rounded-full py-3.5 hover:bg-brand-blue transition-colors mt-2"
+              disabled={isPending}
+              className="w-full bg-brand text-white text-sm font-semibold rounded-full py-3.5 hover:bg-brand-blue transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Sign In to Dashboard
+              {isPending ? "Signing in…" : "Sign In to Dashboard"}
             </button>
           </form>
 

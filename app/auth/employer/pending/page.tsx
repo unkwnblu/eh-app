@@ -1,26 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
-import { signOut } from "@/app/auth/candidate/login/actions";
+import { signOut } from "../login/actions";
 
-export default function CandidatePendingPage() {
-  const [firstName, setFirstName] = useState("");
-  const [email, setEmail] = useState("");
+export default function EmployerPendingPage() {
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      const meta = user.user_metadata as Record<string, string> | null;
-      const fullName = meta?.full_name ?? "";
-      setFirstName(fullName.split(" ")[0] ?? "");
-      setEmail(user.email ?? "");
-    });
-  }, []);
 
   function handleSignOut() {
     startTransition(async () => {
@@ -52,14 +38,10 @@ export default function CandidatePendingPage() {
           {/* Heading */}
           <div className="mb-8">
             <h1 className="text-brand dark:text-slate-100 font-black text-4xl leading-tight tracking-tight mb-2">
-              {firstName ? (
-                <>WELCOME, <span className="text-brand-blue">{firstName.toUpperCase()}.</span></>
-              ) : (
-                <>UNDER <span className="text-brand-blue">REVIEW.</span></>
-              )}
+              UNDER <span className="text-brand-blue">REVIEW.</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-              Your identity documents have been submitted and are currently being reviewed by the Edge Harbour compliance team.
+              Your employer account has been submitted and is currently being reviewed by the Edge Harbour compliance team.
             </p>
           </div>
 
@@ -70,34 +52,25 @@ export default function CandidatePendingPage() {
               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Pending Verification</span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 text-sm">
               {[
-                { label: "Identity documents submitted and received", done: true,  active: false },
-                { label: "Document & RTW verification in progress",   done: false, active: true  },
-                { label: "Profile activated and full access unlocked", done: false, active: false },
+                { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", label: "Company registration verified against Companies House" },
+                { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", label: "Compliance documents checked" },
+                { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", label: "Account activated and dashboard unlocked" },
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                    step.done ? "bg-green-100" : step.active ? "bg-amber-100" : "bg-gray-100"
-                  }`}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={
-                      step.done ? "text-green-600" : step.active ? "text-amber-500" : "text-slate-300"
-                    }>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${i === 0 ? "bg-green-100" : i === 1 ? "bg-amber-100" : "bg-gray-100"}`}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={i === 0 ? "text-green-600" : i === 1 ? "text-amber-500" : "text-slate-300"}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={step.icon} />
                     </svg>
                   </div>
-                  <p className={`text-xs leading-relaxed ${
-                    step.done || step.active ? "text-slate-600 dark:text-slate-400" : "text-slate-300 dark:text-slate-600"
-                  }`}>{step.label}</p>
+                  <p className={`text-xs leading-relaxed ${i === 2 ? "text-slate-300 dark:text-slate-600" : "text-slate-600 dark:text-slate-400"}`}>{step.label}</p>
                 </div>
               ))}
             </div>
 
             <p className="text-[11px] text-slate-400 dark:text-slate-500 pt-1 border-t border-gray-200 dark:border-white/10">
-              Verification typically takes <span className="font-semibold text-slate-500 dark:text-slate-400">1–2 business days</span>.
-              {email && (
-                <> You&apos;ll be notified at <span className="font-semibold text-slate-500 dark:text-slate-400">{email}</span> once approved.</>
-              )}
+              Verification typically takes <span className="font-semibold text-slate-500 dark:text-slate-400">1–2 business days</span>. You&apos;ll receive an email once your account is approved.
             </p>
           </div>
 
@@ -179,15 +152,15 @@ export default function CandidatePendingPage() {
           {/* Headline */}
           <div style={{ animation: "panel-fade-up 0.7s ease 0.1s both" }}>
             <p className="text-brand-blue text-[10px] font-bold tracking-[0.2em] uppercase mb-4">
-              Edge Harbour Candidate Portal
+              Edge Harbour Employer Portal
             </p>
             <h2 className="text-white font-black text-4xl xl:text-5xl leading-[1.05] tracking-tight">
-              YOUR NEXT<br />
-              ROLE IS<br />
-              ALMOST <span className="text-brand-blue">YOURS.</span>
+              YOUR PIPELINE<br />
+              IS READY<br />
+              AND <span className="text-brand-blue">WAITING.</span>
             </h2>
             <p className="text-white/40 text-sm mt-4 max-w-xs leading-relaxed">
-              Once approved, you&apos;ll have full access to verified job listings, shift bookings, and your compliance dashboard.
+              Once approved, you&apos;ll have instant access to verified candidates, live roles, and a compliance dashboard built around your hiring needs.
             </p>
           </div>
 
@@ -200,14 +173,14 @@ export default function CandidatePendingPage() {
             <div className="overflow-hidden" style={{ height: "152px" }}>
               <div className="flex flex-col" style={{ animation: "ticker-scroll 10s linear infinite" }}>
                 {[
-                  { initials: "SR", color: "bg-indigo-400", name: "Sarah R.",  role: "ICU Nurse · Healthcare",    badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
-                  { initials: "TC", color: "bg-sky-500",    name: "Tom C.",    role: "Head Chef · Hospitality",   badge: "DBS Checked",   badgeColor: "text-sky-300",    badgeBg: "bg-sky-500/15 border-sky-300/25" },
-                  { initials: "AK", color: "bg-violet-400", name: "Aisha K.", role: "Data Analyst · Tech",        badge: "Refs Verified", badgeColor: "text-violet-300", badgeBg: "bg-violet-500/15 border-violet-300/25" },
-                  { initials: "ML", color: "bg-blue-400",   name: "Marcus L.", role: "CX Lead · Contact Centre",  badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
-                  { initials: "SR", color: "bg-indigo-400", name: "Sarah R.",  role: "ICU Nurse · Healthcare",    badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
-                  { initials: "TC", color: "bg-sky-500",    name: "Tom C.",    role: "Head Chef · Hospitality",   badge: "DBS Checked",   badgeColor: "text-sky-300",    badgeBg: "bg-sky-500/15 border-sky-300/25" },
-                  { initials: "AK", color: "bg-violet-400", name: "Aisha K.", role: "Data Analyst · Tech",        badge: "Refs Verified", badgeColor: "text-violet-300", badgeBg: "bg-violet-500/15 border-violet-300/25" },
-                  { initials: "ML", color: "bg-blue-400",   name: "Marcus L.", role: "CX Lead · Contact Centre",  badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
+                  { initials: "SR", color: "bg-indigo-400", name: "Sarah R.",  role: "ICU Nurse · Healthcare",      badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
+                  { initials: "TC", color: "bg-sky-500",    name: "Tom C.",    role: "Head Chef · Hospitality",     badge: "DBS Checked",   badgeColor: "text-sky-300",    badgeBg: "bg-sky-500/15 border-sky-300/25" },
+                  { initials: "AK", color: "bg-violet-400", name: "Aisha K.",  role: "Data Analyst · Tech",         badge: "Refs Verified", badgeColor: "text-violet-300", badgeBg: "bg-violet-500/15 border-violet-300/25" },
+                  { initials: "ML", color: "bg-blue-400",   name: "Marcus L.", role: "CX Lead · Contact Centre",    badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
+                  { initials: "SR", color: "bg-indigo-400", name: "Sarah R.",  role: "ICU Nurse · Healthcare",      badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
+                  { initials: "TC", color: "bg-sky-500",    name: "Tom C.",    role: "Head Chef · Hospitality",     badge: "DBS Checked",   badgeColor: "text-sky-300",    badgeBg: "bg-sky-500/15 border-sky-300/25" },
+                  { initials: "AK", color: "bg-violet-400", name: "Aisha K.",  role: "Data Analyst · Tech",         badge: "Refs Verified", badgeColor: "text-violet-300", badgeBg: "bg-violet-500/15 border-violet-300/25" },
+                  { initials: "ML", color: "bg-blue-400",   name: "Marcus L.", role: "CX Lead · Contact Centre",    badge: "RTW Verified",  badgeColor: "text-green-400",  badgeBg: "bg-green-500/15 border-green-400/25" },
                 ].map((c, i) => (
                   <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-0">
                     <div className={`w-7 h-7 rounded-lg ${c.color} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>{c.initials}</div>
@@ -230,9 +203,9 @@ export default function CandidatePendingPage() {
           {/* Stat pills */}
           <div className="grid grid-cols-3 gap-2" style={{ animation: "panel-fade-up 0.7s ease 0.4s both" }}>
             {[
-              { value: "5,000+", label: "Verified Roles" },
-              { value: "4 days", label: "Avg. placement" },
-              { value: "100%",   label: "RTW verified" },
+              { value: "200+", label: "UK Employers" },
+              { value: "4 days", label: "Avg. hire" },
+              { value: "100%", label: "RTW verified" },
             ].map((s) => (
               <div key={s.label} className="bg-white/5 border border-white/8 rounded-xl px-3 py-3 text-center">
                 <p className="text-brand-blue font-black text-lg leading-none">{s.value}</p>
@@ -245,7 +218,7 @@ export default function CandidatePendingPage() {
         {/* Bottom tagline */}
         <div className="relative p-8 pt-0">
           <p className="text-white/20 text-xs">
-            Thousands of candidates already placed with top UK employers through Edge Harbour
+            Trusted by 200+ UK firms already hiring smarter with Edge Harbour
           </p>
         </div>
       </div>

@@ -83,11 +83,11 @@ export const employerStep2Schema = z.object({
   companyStatus: z
     .string()
     .min(1, "Select a company status")
-    .refine((s) => !["Dissolved", "In Administration"].includes(s), {
+    .refine((s) => !["Dormant", "Dissolved", "In Administration"].includes(s), {
       message: "Companies with this status are not eligible to register",
     }),
   companyPhone: phoneField,
-  companyWebsite: z.string().min(1, "Company website is required").url("Enter a valid URL (e.g. https://yourcompany.co.uk)"),
+  companyWebsite: z.string().optional().refine((v) => !v || /^(https?:\/\/|www\.)\S+\.\S+/.test(v), { message: "Enter a valid URL (e.g. https://yourcompany.co.uk or www.company.co.uk)" }),
 });
 
 export const employerStep3Schema = z.object({

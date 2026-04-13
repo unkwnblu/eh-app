@@ -22,7 +22,7 @@ type Candidate = {
 };
 
 
-const SECTORS  = ["All Sectors", "Healthcare", "Hospitality", "Customer Care"];
+const SECTORS  = ["All Sectors", "Healthcare", "Hospitality", "Customer Care", "Tech & Data"];
 const STATUSES = ["All Statuses",  "Pending Review", "Flagged", "Re-Submission", "Verified"];
 
 // ─── Status badge config ────────────────────────────────────────────────────────

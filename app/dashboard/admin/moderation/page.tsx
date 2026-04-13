@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -9,97 +10,23 @@ type ModerationStatus = "pending" | "approved" | "rejected" | "flagged";
 type ComplianceItem = { label: string; pass: boolean };
 
 type Job = {
-  id: number;
+  id: string;
   employer: string;
   initials: string;
   title: string;
   sector: string;
   location: string;
-  salary: string;
+  salary: string | null;
   type: string;
   remote: boolean;
   posted: string;
   status: ModerationStatus;
   description: string;
+  responsibilities: string;
   flags: string[];
   compliance: number;
   complianceItems: ComplianceItem[];
 };
-
-// ─── Data ──────────────────────────────────────────────────────────────────────
-
-const JOBS: Job[] = [
-  {
-    id: 1, employer: "Global Nexus Corp", initials: "GN", title: "Senior Project Lead", sector: "FinTech",
-    location: "London, UK", salary: "£70,000–£90,000/yr", type: "Permanent", remote: false, posted: "2h ago",
-    status: "pending", compliance: 98,
-    description: "Lead cross-functional teams on high-value fintech product delivery. Manage stakeholder relationships, sprint planning, and delivery milestones. Minimum 8 years experience required. Strong background in agile methodologies and regulated financial environments essential.",
-    flags: [],
-    complianceItems: [
-      { label: "Salary range clearly stated", pass: true },
-      { label: "Job type specified", pass: true },
-      { label: "Location & remote policy clear", pass: true },
-      { label: "No prohibited language detected", pass: true },
-      { label: "Contact details absent from body", pass: true },
-    ],
-  },
-  {
-    id: 2, employer: "Arcane Dynamics", initials: "AD", title: "Cloud Architect", sector: "Tech",
-    location: "Remote", salary: "£85,000–£110,000/yr", type: "Contract", remote: true, posted: "5h ago",
-    status: "pending", compliance: 72,
-    description: "Design and implement cloud infrastructure on AWS and Azure. Lead architecture reviews and mentor junior engineers. Must hold active AWS Solutions Architect or Azure Expert certifications. Security clearance advantageous.",
-    flags: ["Salary not specified clearly"],
-    complianceItems: [
-      { label: "Salary range clearly stated", pass: false },
-      { label: "Job type specified", pass: true },
-      { label: "Location & remote policy clear", pass: true },
-      { label: "No prohibited language detected", pass: true },
-      { label: "Contact details absent from body", pass: true },
-    ],
-  },
-  {
-    id: 3, employer: "Swift Logistics", initials: "SL", title: "Operations Manager", sector: "Logistics",
-    location: "Birmingham, UK", salary: "£45,000–£55,000/yr", type: "Permanent", remote: false, posted: "Yesterday",
-    status: "approved", compliance: 91,
-    description: "Manage end-to-end logistics operations for a national distribution network. Oversee fleet scheduling, warehouse teams, and supplier relationships. Experience with TMS software preferred.",
-    flags: [],
-    complianceItems: [
-      { label: "Salary range clearly stated", pass: true },
-      { label: "Job type specified", pass: true },
-      { label: "Location & remote policy clear", pass: true },
-      { label: "No prohibited language detected", pass: true },
-      { label: "Contact details absent from body", pass: true },
-    ],
-  },
-  {
-    id: 4, employer: "Heritage Care Homes", initials: "HC", title: "Senior Care Assistant", sector: "Healthcare",
-    location: "Bristol, UK", salary: "£14.50–£16/hr", type: "Full-time", remote: false, posted: "Yesterday",
-    status: "pending", compliance: 45,
-    description: "Provide high-quality care to elderly residents in a CQC-rated Outstanding care home. DBS required. Immediate start available. Experience in dementia care preferred.",
-    flags: ["Missing compliance requirements", "DBS policy not detailed"],
-    complianceItems: [
-      { label: "Salary range clearly stated", pass: true },
-      { label: "Job type specified", pass: true },
-      { label: "Location & remote policy clear", pass: false },
-      { label: "No prohibited language detected", pass: false },
-      { label: "Contact details absent from body", pass: false },
-    ],
-  },
-  {
-    id: 5, employer: "BlueSky Hospitality", initials: "BH", title: "Hotel General Manager", sector: "Hospitality",
-    location: "Edinburgh, UK", salary: "£60,000–£75,000/yr", type: "Permanent", remote: false, posted: "2d ago",
-    status: "rejected", compliance: 38,
-    description: "Oversee all hotel operations including staff management, revenue optimisation, and guest experience delivery. P&L responsibility for a 4-star property. Contact hr@bluesky.com to apply.",
-    flags: ["Duplicate listing detected", "Contact details in description"],
-    complianceItems: [
-      { label: "Salary range clearly stated", pass: true },
-      { label: "Job type specified", pass: true },
-      { label: "Location & remote policy clear", pass: false },
-      { label: "No prohibited language detected", pass: false },
-      { label: "Contact details absent from body", pass: false },
-    ],
-  },
-];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -123,31 +50,97 @@ function complianceColor(score: number) {
   return { text: "text-red-500", bg: "bg-red-50", bar: "bg-red-500" };
 }
 
+// ─── Skeleton ──────────────────────────────────────────────────────────────────
+
+function Skeleton() {
+  return (
+    <div className="flex flex-col lg:flex-row gap-5 items-start animate-pulse">
+      {/* List skeleton */}
+      <div className="w-full lg:w-[340px] lg:shrink-0 space-y-3">
+        <div className="bg-white border border-gray-100 rounded-xl p-1 flex gap-1 h-9" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gray-200 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-3/4" />
+                <div className="h-3 bg-gray-100 rounded w-1/2" />
+                <div className="h-3 bg-gray-100 rounded w-1/3" />
+              </div>
+            </div>
+            <div className="h-0.5 bg-gray-100 rounded-full mt-2" />
+            <div className="flex justify-between items-center">
+              <div className="h-3 bg-gray-100 rounded w-16" />
+              <div className="flex gap-1">
+                {[0, 1, 2].map((j) => <div key={j} className="w-7 h-7 rounded-lg bg-gray-100" />)}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Detail skeleton */}
+      <div className="flex-1 space-y-4">
+        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+          <div className="h-24 bg-gray-200" />
+          <div className="p-6 space-y-3">
+            <div className="h-6 bg-gray-200 rounded w-1/2" />
+            <div className="flex gap-2">
+              {[0, 1, 2].map((i) => <div key={i} className="h-6 w-20 bg-gray-100 rounded-lg" />)}
+            </div>
+          </div>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-40" />
+          <div className="h-1.5 bg-gray-100 rounded-full" />
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-5 bg-gray-100 rounded w-full" />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty state ───────────────────────────────────────────────────────────────
+
+function EmptyState({ filter }: { filter: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
+        </svg>
+      </div>
+      <p className="text-sm font-bold text-brand mb-1">
+        {filter === "all" ? "No jobs posted yet" : `No ${filter} jobs`}
+      </p>
+      <p className="text-xs text-slate-400">
+        {filter === "pending"
+          ? "All caught up — no jobs awaiting review."
+          : "Jobs will appear here once employers post them."}
+      </p>
+    </div>
+  );
+}
+
 // ─── Detail Panel ──────────────────────────────────────────────────────────────
 
 function DetailPanel({
   job,
-  status,
-  onApprove,
-  onFlag,
-  onReject,
+  onAction,
+  actionLoading,
 }: {
   job: Job;
-  status: ModerationStatus;
-  onApprove: () => void;
-  onFlag: () => void;
-  onReject: () => void;
+  onAction: (action: "approve" | "flag" | "reject") => void;
+  actionLoading: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const c = complianceColor(job.compliance);
   const passCount = job.complianceItems.filter((i) => i.pass).length;
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="flex-1 space-y-4 min-w-0">
 
       {/* Banner + header */}
       <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-        {/* Banner gradient */}
         <div className="h-24 bg-gradient-to-r from-brand-blue/80 to-brand-blue relative flex items-end px-6 pb-3">
           <div className="absolute inset-0 opacity-20"
             style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.08) 10px, rgba(255,255,255,.08) 11px)" }}
@@ -172,19 +165,21 @@ function DetailPanel({
                 {job.remote && (
                   <span className="px-2.5 py-1 bg-brand-blue/10 text-brand-blue text-[11px] font-semibold rounded-lg">Remote Friendly</span>
                 )}
-                <span className="px-2.5 py-1 bg-[#F7F8FA] text-brand text-[11px] font-semibold rounded-lg flex items-center gap-1">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75"/></svg>
-                  {job.salary}
-                </span>
+                {job.salary && (
+                  <span className="px-2.5 py-1 bg-[#F7F8FA] text-brand text-[11px] font-semibold rounded-lg flex items-center gap-1">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75"/></svg>
+                    {job.salary}
+                  </span>
+                )}
                 <span className="px-2.5 py-1 bg-[#F7F8FA] text-slate-500 text-[11px] font-semibold rounded-lg flex items-center gap-1">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
                   {job.location}
                 </span>
               </div>
             </div>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 ${STATUS_STYLES[status]}`}>
-              <span className={`w-2 h-2 rounded-full ${STATUS_DOT[status]}`} />
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 ${STATUS_STYLES[job.status]}`}>
+              <span className={`w-2 h-2 rounded-full ${STATUS_DOT[job.status]}`} />
+              {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
             </span>
           </div>
         </div>
@@ -196,10 +191,11 @@ function DetailPanel({
           <h3 className="text-sm font-bold text-brand">Compliance Analysis</h3>
           <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${c.bg}`}>
             <span className={`text-sm font-black ${c.text}`}>{job.compliance}%</span>
-            <span className={`text-[10px] font-semibold ${c.text}`}>{job.compliance >= 85 ? "Pass" : job.compliance >= 65 ? "Review" : "Fail"}</span>
+            <span className={`text-[10px] font-semibold ${c.text}`}>
+              {job.compliance >= 85 ? "Pass" : job.compliance >= 65 ? "Review" : "Fail"}
+            </span>
           </div>
         </div>
-        {/* Score bar */}
         <div className="w-full h-1.5 bg-gray-100 rounded-full mb-4">
           <div className={`h-1.5 rounded-full transition-all ${c.bar}`} style={{ width: `${job.compliance}%` }} />
         </div>
@@ -233,7 +229,7 @@ function DetailPanel({
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
-            <h3 className="text-sm font-bold text-amber-700">Moderation Flags</h3>
+            <h3 className="text-sm font-bold text-amber-700">Compliance Flags</h3>
           </div>
           <ul className="space-y-1.5">
             {job.flags.map((flag, i) => (
@@ -247,37 +243,67 @@ function DetailPanel({
       )}
 
       {/* Job Description */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-6">
-        <h3 className="text-sm font-bold text-brand mb-3">Job Description</h3>
-        <p className={`text-sm text-slate-500 leading-relaxed ${!expanded ? "line-clamp-3" : ""}`}>
-          {job.description}
-        </p>
-        <button onClick={() => setExpanded((v) => !v)} className="text-xs font-semibold text-brand-blue mt-2 hover:underline">
-          {expanded ? "Show less" : "Read more"}
-        </button>
-      </div>
+      {job.description && (
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <h3 className="text-sm font-bold text-brand mb-3">Job Description</h3>
+          <p className={`text-sm text-slate-500 leading-relaxed ${!expanded ? "line-clamp-4" : ""}`}>
+            {job.description}
+          </p>
+          {job.description.length > 200 && (
+            <button onClick={() => setExpanded((v) => !v)} className="text-xs font-semibold text-brand-blue mt-2 hover:underline">
+              {expanded ? "Show less" : "Read more"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Responsibilities */}
+      {job.responsibilities && (
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <h3 className="text-sm font-bold text-brand mb-3">Key Responsibilities</h3>
+          <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-line">{job.responsibilities}</p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5">
-        <button
-          onClick={onApprove}
-          className="w-full py-3 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl transition-colors mb-3"
-        >
-          Approve Posting
-        </button>
+        {job.status !== "approved" && (
+          <button
+            onClick={() => onAction("approve")}
+            disabled={actionLoading}
+            className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors mb-3"
+          >
+            {actionLoading ? "Saving…" : "Approve & Make Live"}
+          </button>
+        )}
         <div className="flex gap-2">
-          <button
-            onClick={onFlag}
-            className="flex-1 py-2.5 border border-gray-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            Flag for Review
-          </button>
-          <button
-            onClick={onReject}
-            className="flex-1 py-2.5 border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 transition-colors"
-          >
-            Reject
-          </button>
+          {job.status !== "flagged" && (
+            <button
+              onClick={() => onAction("flag")}
+              disabled={actionLoading}
+              className="flex-1 py-2.5 border border-gray-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-gray-50 disabled:opacity-60 transition-colors"
+            >
+              Flag for Review
+            </button>
+          )}
+          {job.status !== "rejected" && (
+            <button
+              onClick={() => onAction("reject")}
+              disabled={actionLoading}
+              className="flex-1 py-2.5 border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 disabled:opacity-60 transition-colors"
+            >
+              Reject
+            </button>
+          )}
+          {(job.status === "approved" || job.status === "rejected" || job.status === "flagged") && (
+            <button
+              onClick={() => onAction("flag")}
+              disabled={actionLoading}
+              className="flex-1 py-2.5 border border-gray-200 text-slate-500 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-60 transition-colors"
+            >
+              Reset to Pending
+            </button>
+          )}
         </div>
         <p className="text-[11px] text-slate-400 text-center mt-3">Posted {job.posted}</p>
       </div>
@@ -288,146 +314,246 @@ function DetailPanel({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function JobModerationPage() {
-  const [selected, setSelected] = useState<Job>(JOBS[0]);
-  const [filter, setFilter] = useState<"all" | ModerationStatus>("pending");
-  const [statuses, setStatuses] = useState<Record<number, ModerationStatus>>(
-    Object.fromEntries(JOBS.map((j) => [j.id, j.status]))
-  );
+  const [jobs,          setJobs]          = useState<Job[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState<string | null>(null);
+  const [selected,      setSelected]      = useState<Job | null>(null);
+  const [filter,        setFilter]        = useState<"all" | ModerationStatus>("pending");
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const filtered = filter === "all" ? JOBS : JOBS.filter((j) => statuses[j.id] === filter);
-  const pendingCount = Object.values(statuses).filter((s) => s === "pending").length;
+  // ─── Load ──────────────────────────────────────────────────────────────────
 
-  function approve(id: number) { setStatuses((prev) => ({ ...prev, [id]: "approved" })); }
-  function flag(id: number)    { setStatuses((prev) => ({ ...prev, [id]: "flagged" })); }
-  function reject(id: number)  { setStatuses((prev) => ({ ...prev, [id]: "rejected" })); }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res  = await fetch("/api/admin/jobs");
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Failed to load");
+      const data = await res.json() as { jobs: Job[] };
+      setJobs(data.jobs);
+      // Keep selected in sync (or default to first pending)
+      setSelected((prev) => {
+        if (prev) {
+          return data.jobs.find((j) => j.id === prev.id) ?? data.jobs[0] ?? null;
+        }
+        return data.jobs.find((j) => j.status === "pending") ?? data.jobs[0] ?? null;
+      });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ─── Action ────────────────────────────────────────────────────────────────
+
+  async function handleAction(jobId: string, action: "approve" | "flag" | "reject") {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Action failed");
+      await load(); // Refresh list
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // ─── Derived ───────────────────────────────────────────────────────────────
+
+  const filtered     = filter === "all" ? jobs : jobs.filter((j) => j.status === filter);
+  const pendingCount = jobs.filter((j) => j.status === "pending").length;
+
+  const counts: Record<string, number> = {
+    all:      jobs.length,
+    pending:  jobs.filter((j) => j.status === "pending").length,
+    approved: jobs.filter((j) => j.status === "approved").length,
+    flagged:  jobs.filter((j) => j.status === "flagged").length,
+    rejected: jobs.filter((j) => j.status === "rejected").length,
+  };
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
+    <>
+      <GsapAnimations />
+      <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6" data-gsap="fade-down">
-        <div>
-          <h1 className="text-[28px] font-black text-brand tracking-tight">Job Moderation</h1>
-          <p className="text-sm text-slate-400 mt-1">Review and approve employer job listings before they go live.</p>
-        </div>
-        <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wide rounded-xl shrink-0 self-start">
-          {pendingCount} Pending
-        </span>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-5 items-start">
-
-        {/* Left: list */}
-        <div className="w-full lg:w-[340px] lg:shrink-0 space-y-3" data-gsap="fade-up">
-          {/* Filter */}
-          <div
-            className="bg-white border border-gray-100 rounded-xl p-1 flex gap-1"
-            role="tablist"
-            aria-label="Filter job listings"
-          >
-            {(["all", "pending", "approved", "flagged", "rejected"] as const).map((f) => (
-              <button
-                key={f}
-                role="tab"
-                aria-selected={filter === f}
-                onClick={() => setFilter(f)}
-                className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-colors ${
-                  filter === f ? "bg-brand-blue text-white" : "text-slate-500 hover:bg-gray-50"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6" data-gsap="fade-down">
+          <div>
+            <h1 className="text-[28px] font-black text-brand tracking-tight">Job Moderation</h1>
+            <p className="text-sm text-slate-400 mt-1">Review and approve employer job listings before they go live.</p>
           </div>
+          <div className="flex items-center gap-2 self-start">
+            {pendingCount > 0 && (
+              <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wide rounded-xl">
+                {pendingCount} Pending
+              </span>
+            )}
+            <button
+              onClick={load}
+              disabled={loading}
+              className="p-2 rounded-xl border border-gray-200 text-slate-400 hover:border-brand-blue hover:text-brand-blue transition-colors disabled:opacity-40"
+              title="Refresh"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={loading ? "animate-spin" : ""}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
-          {filtered.map((job) => {
-            const c = complianceColor(job.compliance);
-            return (
-              <div
-                key={job.id}
-                onClick={() => setSelected(job)}
-                className={`w-full text-left bg-white border rounded-2xl p-4 transition-all hover:shadow-sm cursor-pointer ${
-                  selected.id === job.id ? "border-brand-blue shadow-sm" : "border-gray-100"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Avatar initials */}
-                  <div className="w-9 h-9 rounded-xl bg-brand-blue/10 text-brand-blue text-xs font-black flex items-center justify-center shrink-0">
-                    {job.initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-0.5">
-                      <p className="text-sm font-bold text-brand leading-snug truncate">{job.title}</p>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${STATUS_STYLES[statuses[job.id]]}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[statuses[job.id]]}`} />
-                        {statuses[job.id].charAt(0).toUpperCase() + statuses[job.id].slice(1)}
+        {loading ? (
+          <Skeleton />
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <p className="font-bold text-brand mb-2">{error}</p>
+            <button onClick={load} className="text-sm font-semibold text-brand-blue underline">Try again</button>
+          </div>
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-5 items-start" data-gsap="fade-up">
+
+            {/* ── Left: list ── */}
+            <div className="w-full lg:w-[340px] lg:shrink-0 space-y-3">
+
+              {/* Filter tabs */}
+              <div className="bg-white border border-gray-100 rounded-xl p-1 flex gap-1" role="tablist">
+                {(["all", "pending", "approved", "flagged", "rejected"] as const).map((f) => (
+                  <button
+                    key={f}
+                    role="tab"
+                    aria-selected={filter === f}
+                    onClick={() => setFilter(f)}
+                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold capitalize transition-colors relative ${
+                      filter === f ? "bg-brand-blue text-white" : "text-slate-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    {f}
+                    {counts[f] > 0 && filter !== f && (
+                      <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center
+                        ${f === "pending" ? "bg-amber-400 text-white" : f === "flagged" ? "bg-orange-400 text-white" : "bg-gray-200 text-slate-500"}`}>
+                        {counts[f]}
                       </span>
-                    </div>
-                    <p className="text-[11px] font-semibold text-brand-blue">{job.employer}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[10px] text-slate-400">{job.sector}</span>
-                      <span className="text-slate-300 text-[10px]">·</span>
-                      <span className="text-[10px] text-slate-400">{job.posted}</span>
-                      {job.flags.length > 0 && (
-                        <>
-                          <span className="text-slate-300 text-[10px]">·</span>
-                          <span className="text-[10px] text-amber-500 font-semibold">{job.flags.length} flag{job.flags.length > 1 ? "s" : ""}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                    )}
+                  </button>
+                ))}
+              </div>
 
-                {/* Compliance score + inline actions */}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-14 h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div className={`h-1 rounded-full ${c.bar}`} style={{ width: `${job.compliance}%` }} />
+              {/* Job cards */}
+              {filtered.length === 0 ? (
+                <EmptyState filter={filter} />
+              ) : (
+                filtered.map((job) => {
+                  const c = complianceColor(job.compliance);
+                  return (
+                    <div
+                      key={job.id}
+                      onClick={() => setSelected(job)}
+                      className={`w-full text-left bg-white border rounded-2xl p-4 transition-all hover:shadow-sm cursor-pointer ${
+                        selected?.id === job.id ? "border-brand-blue shadow-sm" : "border-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-brand-blue/10 text-brand-blue text-xs font-black flex items-center justify-center shrink-0">
+                          {job.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-0.5">
+                            <p className="text-sm font-bold text-brand leading-snug truncate">{job.title}</p>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${STATUS_STYLES[job.status]}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[job.status]}`} />
+                              {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-semibold text-brand-blue truncate">{job.employer}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-[10px] text-slate-400">{job.sector}</span>
+                            <span className="text-slate-300 text-[10px]">·</span>
+                            <span className="text-[10px] text-slate-400">{job.posted}</span>
+                            {job.flags.length > 0 && (
+                              <>
+                                <span className="text-slate-300 text-[10px]">·</span>
+                                <span className="text-[10px] text-amber-500 font-semibold">
+                                  {job.flags.length} flag{job.flags.length > 1 ? "s" : ""}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Compliance + quick actions */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-14 h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-1 rounded-full ${c.bar}`} style={{ width: `${job.compliance}%` }} />
+                          </div>
+                          <span className={`text-[11px] font-bold ${c.text}`}>{job.compliance}%</span>
+                        </div>
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleAction(job.id, "approve")}
+                            title="Approve"
+                            disabled={actionLoading || job.status === "approved"}
+                            className="w-7 h-7 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 flex items-center justify-center transition-colors disabled:opacity-30"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                          </button>
+                          <button
+                            onClick={() => handleAction(job.id, "flag")}
+                            title="Flag for review"
+                            disabled={actionLoading || job.status === "flagged"}
+                            className="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center transition-colors disabled:opacity-30"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" /></svg>
+                          </button>
+                          <button
+                            onClick={() => handleAction(job.id, "reject")}
+                            title="Reject"
+                            disabled={actionLoading || job.status === "rejected"}
+                            className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors disabled:opacity-30"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <span className={`text-[11px] font-bold ${c.text}`}>{job.compliance}%</span>
+                  );
+                })
+              )}
+            </div>
+
+            {/* ── Right: detail panel ── */}
+            {selected ? (
+              <DetailPanel
+                key={selected.id}
+                job={selected}
+                onAction={(action) => handleAction(selected.id, action)}
+                actionLoading={actionLoading}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center py-24 text-center">
+                <div className="space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mx-auto">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                    </svg>
                   </div>
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => approve(job.id)}
-                      title="Approve"
-                      aria-label="Approve"
-                      className="w-7 h-7 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 flex items-center justify-center transition-colors"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    </button>
-                    <button
-                      onClick={() => flag(job.id)}
-                      title="Flag"
-                      aria-label="Flag for review"
-                      className="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center transition-colors"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" /></svg>
-                    </button>
-                    <button
-                      onClick={() => reject(job.id)}
-                      title="Reject"
-                      aria-label="Reject"
-                      className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
+                  <p className="text-sm font-semibold text-slate-400">Select a job to review</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Right: detail panel */}
-        <DetailPanel
-          key={selected.id}
-          job={selected}
-          status={statuses[selected.id]}
-          onApprove={() => approve(selected.id)}
-          onFlag={() => flag(selected.id)}
-          onReject={() => reject(selected.id)}
-        />
-      </div>
-    </main>
+            )}
+          </div>
+        )}
+      </main>
+    </>
   );
 }

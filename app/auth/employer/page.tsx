@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { employerStepSchemas, validate, type FieldErrors } from "@/lib/validation";
@@ -83,7 +83,7 @@ const COMPANY_STATUSES = [
   "Dissolved",
 ];
 
-const BLOCKED_STATUSES = ["In Administration", "Dissolved"];
+const BLOCKED_STATUSES = ["Dormant", "In Administration", "Dissolved"];
 
 
 const DBS_LEVELS = [
@@ -108,6 +108,11 @@ const INDUSTRIES = [
     id: "Customer Care",
     description: "Contact Centre, CX & Support",
     image: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&auto=format&fit=crop&q=80",
+  },
+  {
+    id: "Tech & Data",
+    description: "Engineers, Analysts & SMEs",
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80",
   },
 ];
 
@@ -272,6 +277,8 @@ export default function EmployerRegisterPage() {
   const [submitted, setSubmitted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const set = (field: keyof FormData) => (val: string) => {
     setForm((prev) => ({ ...prev, [field]: val }));
@@ -303,10 +310,52 @@ export default function EmployerRegisterPage() {
     e.preventDefault();
     if (step < 6) {
       next();
-    } else {
+      return;
+    }
+    // Final step — create employer account
+    setServerError(null);
+    startTransition(async () => {
+      const res = await fetch("/api/employer/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email:                     form.email,
+          password:                  form.password,
+          companyName:               form.companyName,
+          crn:                       form.crn,
+          registeredAddress:         form.registeredAddress,
+          incorporationDate:         form.incorporationDate,
+          companyStatus:             form.companyStatus,
+          companyPhone:              form.companyPhone,
+          companyWebsite:            form.companyWebsite,
+          vatNumber:                 form.vatNumber,
+          firstName:                 form.firstName,
+          lastName:                  form.lastName,
+          jobTitle:                  form.jobTitle,
+          phone:                     form.phone,
+          industries:                form.industries,
+          cqcProviderId:             form.cqcProviderId,
+          dbsLevel:                  form.dbsLevel,
+          modernSlaveryAct:          form.modernSlaveryAct,
+          employerLiabilityInsurance: form.employerLiabilityInsurance,
+          billingName:               form.billingName,
+          billingEmail:              form.billingEmail,
+          billingAddress:            form.billingAddress,
+          checkEmployerLiability:    form.checkEmployerLiability,
+          checkRiskAssessment:       form.checkRiskAssessment,
+          checkBusinessCredit:       form.checkBusinessCredit,
+          checkGdpr:                 form.checkGdpr,
+          checkTerms:                form.checkTerms,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setServerError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
       clear();
       setSubmitted(true);
-    }
+    });
   }
 
   // ── Success screen ─────────────────────────────────────────────────────────────
@@ -579,8 +628,8 @@ export default function EmployerRegisterPage() {
                   <Label htmlFor="companyWebsite">Company Website</Label>
                   <Input
                     id="companyWebsite"
-                    type="url"
-                    placeholder="e.g. https://yourcompany.co.uk"
+                    type="text"
+                    placeholder="e.g. www.yourcompany.co.uk"
                     value={form.companyWebsite}
                     onChange={set("companyWebsite")}
                     error={errors.companyWebsite}
@@ -922,22 +971,34 @@ export default function EmployerRegisterPage() {
               </div>
             )}
 
+            {/* ── Server error ── */}
+            {serverError && (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500 shrink-0 mt-0.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <p className="text-xs text-red-600">{serverError}</p>
+              </div>
+            )}
+
             {/* ── Navigation buttons ── */}
             <div className={`flex gap-3 pt-2 ${step > 1 ? "flex-row" : "flex-col"}`}>
               {step > 1 && (
                 <button
                   type="button"
                   onClick={back}
-                  className="flex-1 border border-gray-border text-brand text-sm font-semibold rounded-full py-3 hover:border-brand hover:bg-gray-soft transition-all"
+                  disabled={isPending}
+                  className="flex-1 border border-gray-border text-brand text-sm font-semibold rounded-full py-3 hover:border-brand hover:bg-gray-soft transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Back
                 </button>
               )}
               <button
                 type="submit"
-                className="flex-1 bg-brand-blue text-white text-sm font-bold rounded-full py-3 hover:bg-brand-blue-dark transition-colors tracking-wide uppercase"
+                disabled={isPending}
+                className="flex-1 bg-brand-blue text-white text-sm font-bold rounded-full py-3 hover:bg-brand-blue-dark transition-colors tracking-wide uppercase disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {step === 6 ? "Submit Application" : step === 1 ? "Get Started" : "Continue"}
+                {isPending ? "Submitting…" : step === 6 ? "Submit Application" : step === 1 ? "Get Started" : "Continue"}
               </button>
             </div>
           </form>

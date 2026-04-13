@@ -88,6 +88,7 @@ const SECTORS = [
   { id: "Healthcare", description: "Nurses, HCAs, Allied Health" },
   { id: "Hospitality", description: "Chefs, FOH, Hotel & Events" },
   { id: "Customer Care", description: "Contact Centre, CX & Support" },
+  { id: "Tech & Data", description: "Engineers, Analysts & SMEs" },
 ];
 
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Temporary / Ad-hoc"];
