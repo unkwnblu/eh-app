@@ -52,7 +52,8 @@ export async function GET() {
     .from("jobs")
     .select(`
       id, title, sector, employment_type, location, remote,
-      salary_min, salary_max, description, responsibilities,
+      salary_min, salary_max, live_salary_min, live_salary_max,
+      description, responsibilities,
       required_certifications, experience_level,
       status, closes_at, created_at,
       employer_id
@@ -127,11 +128,13 @@ export async function GET() {
       salary:           formatSalary(j.salary_min, j.salary_max),
       salaryMin:        j.salary_min,
       salaryMax:        j.salary_max,
+      liveSalaryMin:    j.live_salary_min ?? null,
+      liveSalaryMax:    j.live_salary_max ?? null,
       type:             j.employment_type,
       remote:           j.remote,
       posted:           relativeTime(j.created_at),
-      dbStatus:         j.status,                          // raw DB value
-      status:           statusMap[j.status] ?? "pending",  // moderation view
+      dbStatus:         j.status,
+      status:           statusMap[j.status] ?? "pending",
       description:      j.description ?? "",
       responsibilities: j.responsibilities ?? "",
       flags:            compliance.flags,

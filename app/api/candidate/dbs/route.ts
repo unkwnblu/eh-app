@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { setResubmissionIfActive } from "@/lib/supabase/setResubmission";
 
 const VALID_LEVELS = ["None", "Basic", "Standard", "Enhanced", "Enhanced with Barred Lists"];
 
@@ -72,6 +73,9 @@ export async function PUT(request: NextRequest) {
     .eq("id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // A new file upload (not just a level change) requires re-verification
+  if (filePath) await setResubmissionIfActive(user.id);
 
   return NextResponse.json({ success: true });
 }

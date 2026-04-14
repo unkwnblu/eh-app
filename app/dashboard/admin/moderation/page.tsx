@@ -17,6 +17,10 @@ type Job = {
   sector: string;
   location: string;
   salary: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  liveSalaryMin: number | null;
+  liveSalaryMax: number | null;
   type: string;
   remote: boolean;
   posted: string;
@@ -126,13 +130,49 @@ function EmptyState({ filter }: { filter: string }) {
 function DetailPanel({
   job,
   onAction,
+  onPriceUpdate,
   actionLoading,
 }: {
   job: Job;
   onAction: (action: "approve" | "flag" | "reject") => void;
+  onPriceUpdate: (min: number | null, max: number | null) => Promise<void>;
   actionLoading: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded,     setExpanded]     = useState(false);
+  const [liveMin,      setLiveMin]      = useState(job.liveSalaryMin != null ? String(job.liveSalaryMin) : "");
+  const [liveMax,      setLiveMax]      = useState(job.liveSalaryMax != null ? String(job.liveSalaryMax) : "");
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceSaved,   setPriceSaved]   = useState(false);
+  const [priceError,   setPriceError]   = useState("");
+
+  const hasOverride = job.liveSalaryMin != null || job.liveSalaryMax != null;
+
+  async function savePricing() {
+    setPriceError("");
+    const min = liveMin ? Number(liveMin) : null;
+    const max = liveMax ? Number(liveMax) : null;
+    if (min !== null && max !== null && min > max) {
+      setPriceError("Min cannot exceed max.");
+      return;
+    }
+    setPriceLoading(true);
+    try {
+      await onPriceUpdate(min, max);
+      setPriceSaved(true);
+      setTimeout(() => setPriceSaved(false), 2500);
+    } catch {
+      setPriceError("Failed to save pricing.");
+    } finally {
+      setPriceLoading(false);
+    }
+  }
+
+  function clearPricing() {
+    setLiveMin("");
+    setLiveMax("");
+    onPriceUpdate(null, null);
+  }
+
   const c = complianceColor(job.compliance);
   const passCount = job.complianceItems.filter((i) => i.pass).length;
 
@@ -220,6 +260,112 @@ function DetailPanel({
           ))}
         </ul>
         <p className="text-[11px] text-slate-400 mt-3">{passCount} of {job.complianceItems.length} checks passed</p>
+      </div>
+
+      {/* Live Pricing Override */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-orange-500">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-brand">Live Pricing</h3>
+              <p className="text-[11px] text-slate-400">Override what candidates see — leave blank to use employer&apos;s rate</p>
+            </div>
+          </div>
+          {hasOverride && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 border border-orange-100 rounded-lg text-[10px] font-bold text-orange-600 uppercase tracking-wide shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Override Active
+            </span>
+          )}
+        </div>
+
+        {/* Employer's original salary — read-only reference */}
+        {job.salary && (
+          <div className="mt-4 mb-4 flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-[11px] text-slate-500">
+              Employer set: <span className="font-semibold text-brand">{job.salary}</span>
+            </span>
+          </div>
+        )}
+
+        {/* Live pricing inputs */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+              Live Min (£/yr)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm font-semibold">£</span>
+              <input
+                type="number"
+                value={liveMin}
+                onChange={(e) => { setLiveMin(e.target.value); setPriceError(""); }}
+                placeholder={job.salaryMin ? String(job.salaryMin) : "e.g. 28000"}
+                className="w-full border border-gray-200 rounded-xl pl-7 pr-4 py-2.5 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+              Live Max (£/yr)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm font-semibold">£</span>
+              <input
+                type="number"
+                value={liveMax}
+                onChange={(e) => { setLiveMax(e.target.value); setPriceError(""); }}
+                placeholder={job.salaryMax ? String(job.salaryMax) : "e.g. 35000"}
+                className="w-full border border-gray-200 rounded-xl pl-7 pr-4 py-2.5 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+
+        {priceError && (
+          <p className="text-xs text-red-500 mt-2">{priceError}</p>
+        )}
+
+        <div className="flex items-center gap-2 mt-3">
+          <button
+            onClick={savePricing}
+            disabled={priceLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-xs font-bold rounded-xl hover:bg-brand-blue disabled:opacity-60 transition-colors"
+          >
+            {priceLoading ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Saving…
+              </>
+            ) : priceSaved ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                Saved
+              </>
+            ) : (
+              "Save Live Pricing"
+            )}
+          </button>
+          {hasOverride && (
+            <button
+              onClick={clearPricing}
+              className="px-4 py-2 border border-gray-200 text-slate-500 text-xs font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Clear Override
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Flags */}
@@ -537,6 +683,15 @@ export default function JobModerationPage() {
                 key={selected.id}
                 job={selected}
                 onAction={(action) => handleAction(selected.id, action)}
+                onPriceUpdate={async (min, max) => {
+                  const res = await fetch(`/api/admin/jobs/${selected.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ liveSalaryMin: min, liveSalaryMax: max }),
+                  });
+                  if (!res.ok) throw new Error("Failed to save pricing");
+                  await load(); // keep list in sync
+                }}
                 actionLoading={actionLoading}
               />
             ) : (

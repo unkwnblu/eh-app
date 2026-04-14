@@ -1,39 +1,60 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 
-// ─── Data ──────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
-const VERIFICATION_QUEUE = [
-  { id: 1, name: "Sarah Jenkins",   sector: "FinTech / SaaS",  files: 4 },
-  { id: 2, name: "Marcus Osei",     sector: "Healthcare",       files: 4 },
-  { id: 3, name: "Priya Kapoor",    sector: "Logistics",        files: 3 },
-  { id: 4, name: "Tom Whitfield",   sector: "Hospitality",      files: 4 },
-];
+interface DashboardStats {
+  activeJobs:           number;
+  pendingVerifications: number;
+  registeredEmployers:  number;
+  totalCandidates:      number;
+}
 
-const MODERATION_QUEUE = [
-  { id: 1, employer: "Global Nexus Corp",    title: "Senior Project Lead",  posted: "2h ago"    },
-  { id: 2, employer: "Arcane Dynamics",      title: "Cloud Architect",      posted: "5h ago"    },
-  { id: 3, employer: "Swift Logistics",      title: "Operations Manager",   posted: "Yesterday" },
-  { id: 4, employer: "Heritage Care Homes",  title: "Senior Care Assistant",posted: "Yesterday" },
-];
+interface VerifQueueRow {
+  id:     string;
+  name:   string;
+  sector: string;
+  files:  number;
+  status: string;
+}
 
-const USERS = [
-  { id: 1, name: "Linda Thompson", role: "Content Moderator",  avatar: "LT", status: "active"    },
-  { id: 2, name: "Robert King",    role: "Security Auditor",   avatar: "RK", status: "active"    },
-  { id: 3, name: "Samira Aziz",    role: "Profile Suspended",  avatar: "SA", status: "suspended" },
-];
+interface ModerationRow {
+  id:       string;
+  title:    string;
+  employer: string;
+  posted:   string;
+}
+
+interface AdminUser {
+  id:     string;
+  name:   string;
+  role:   string;
+  avatar: string;
+  status: "active" | "suspended";
+  email:  string;
+}
+
+interface DashboardData {
+  stats:             DashboardStats;
+  verificationQueue: VerifQueueRow[];
+  moderationQueue:   ModerationRow[];
+  adminUsers:        AdminUser[];
+}
 
 // ─── Stat card ─────────────────────────────────────────────────────────────────
 
 function StatCard({
-  label, value, badge, badgeVariant, trend,
+  label, value, badge, badgeVariant, trend, loading,
 }: {
-  label: string;
-  value: string;
-  badge?: string;
-  badgeVariant?: "urgent" | "live" | "positive";
-  trend?: string;
+  label:          string;
+  value:          string | number;
+  badge?:         string;
+  badgeVariant?:  "urgent" | "live" | "positive";
+  trend?:         string;
+  loading?:       boolean;
 }) {
   const badgeStyles = {
     urgent:   "bg-amber-100 text-amber-700",
@@ -59,7 +80,11 @@ function StatCard({
         )}
       </div>
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
-      <p className="text-3xl font-black text-brand mt-1">{value}</p>
+      {loading ? (
+        <div className="h-9 w-20 mt-1 bg-gray-100 rounded-lg animate-pulse" />
+      ) : (
+        <p className="text-3xl font-black text-brand mt-1">{value.toLocaleString()}</p>
+      )}
     </div>
   );
 }
@@ -67,15 +92,145 @@ function StatCard({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
+  const [data,    setData]    = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState<string | null>(null);
+
+  // Track optimistic removes from moderation queue after approve/reject
+  const [removedJobIds, setRemovedJobIds] = useState<Set<string>>(new Set());
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/dashboard");
+      if (!res.ok) throw new Error("Failed to load dashboard data");
+      const json = await res.json() as DashboardData;
+      setData(json);
+      setRemovedJobIds(new Set()); // clear on full refresh
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  // ── Job moderation quick actions ───────────────────────────────────────────
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+
+  async function handleJobAction(jobId: string, action: "approve" | "reject") {
+    setActionLoading((prev) => ({ ...prev, [jobId]: true }));
+    try {
+      const res = await fetch(`/api/admin/jobs/${jobId}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ action }),
+      });
+      if (res.ok) {
+        // Optimistically remove from queue
+        setRemovedJobIds((prev) => new Set([...prev, jobId]));
+        // Also update the stat count
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                stats: {
+                  ...prev.stats,
+                  activeJobs:
+                    action === "approve"
+                      ? prev.stats.activeJobs + 1
+                      : prev.stats.activeJobs,
+                },
+              }
+            : prev
+        );
+      }
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [jobId]: false }));
+    }
+  }
+
+  const stats             = data?.stats;
+  const verificationQueue = data?.verificationQueue ?? [];
+  const moderationQueue   = (data?.moderationQueue ?? []).filter((j) => !removedJobIds.has(j.id));
+  const adminUsers        = data?.adminUsers ?? [];
+
+  // ── Error state ────────────────────────────────────────────────────────────
+  if (!loading && error) {
+    return (
+      <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-red-500 mb-3">{error}</p>
+          <button
+            onClick={load}
+            className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
+      <GsapAnimations />
+
+      {/* Header */}
+      <div className="flex items-center justify-between" data-gsap="fade-down">
+        <div>
+          <h1 className="text-xl font-black text-brand">Dashboard</h1>
+          <p className="text-xs text-slate-400 mt-0.5">Platform overview and activity summary</p>
+        </div>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="p-2.5 bg-white border border-gray-100 rounded-xl text-slate-400 hover:text-brand-blue hover:border-brand-blue/20 transition-colors disabled:opacity-50"
+          title="Refresh"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={loading ? "animate-spin" : ""}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+        </button>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-gsap="fade-down">
-        <StatCard label="Total Active Jobs"       value="1,482" trend="+12.5%"  />
-        <StatCard label="Pending Verifications"   value="86"    badge="Urgent"  badgeVariant="urgent" />
-        <StatCard label="Registered Employers"    value="432"   badge="Live"    badgeVariant="live"   />
-        <StatCard label="Total Placements"        value="2,904" trend="+5.2%"   />
+        <StatCard
+          label="Total Active Jobs"
+          value={stats?.activeJobs ?? 0}
+          trend={stats ? undefined : undefined}
+          loading={loading}
+        />
+        <StatCard
+          label="Pending Verifications"
+          value={stats?.pendingVerifications ?? 0}
+          badge={stats && stats.pendingVerifications > 0 ? "Urgent" : undefined}
+          badgeVariant="urgent"
+          loading={loading}
+        />
+        <StatCard
+          label="Registered Employers"
+          value={stats?.registeredEmployers ?? 0}
+          badge="Live"
+          badgeVariant="live"
+          loading={loading}
+        />
+        <StatCard
+          label="Total Candidates"
+          value={stats?.totalCandidates ?? 0}
+          loading={loading}
+        />
       </div>
 
       {/* Main row: Verification + Moderation */}
@@ -98,34 +253,59 @@ export default function AdminDashboardPage() {
           {/* Table */}
           <div className="overflow-x-auto -mx-2 px-2">
           <div className="min-w-[420px]">
-          <div className="grid grid-cols-[1fr_1fr_80px_100px] gap-3 px-3 mb-2">
-            {["Candidate Name", "Target Sector", "Docs", "Action"].map((h) => (
-              <p key={h} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{h}</p>
-            ))}
-          </div>
 
-          <div className="space-y-2">
-            {VERIFICATION_QUEUE.map((row) => (
-              <div key={row.id} className="grid grid-cols-[1fr_1fr_80px_100px] gap-3 items-center px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-brand-blue text-[10px] font-bold shrink-0">
-                    {row.name.split(" ").map((n) => n[0]).join("")}
-                  </div>
-                  <span className="text-sm font-semibold text-brand truncate">{row.name}</span>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="grid grid-cols-[1fr_1fr_80px_100px] gap-3 px-3 py-3">
+                  {Array.from({ length: 4 }).map((__, j) => (
+                    <div key={j} className="h-6 bg-gray-100 rounded-lg animate-pulse" />
+                  ))}
                 </div>
-                <span className="text-sm text-slate-500">{row.sector}</span>
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-brand-blue text-[11px] font-bold rounded-lg w-fit">
-                  {row.files} Files
-                </span>
-                <Link
-                  href={`/dashboard/admin/verification/${row.id}`}
-                  className="px-3 py-1.5 bg-brand-blue text-white text-[11px] font-bold rounded-lg hover:bg-brand-blue-dark transition-colors text-center"
-                >
-                  Review &amp; Tag
-                </Link>
+              ))}
+            </div>
+          ) : verificationQueue.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-green-500">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
               </div>
-            ))}
-          </div>
+              <p className="text-sm font-semibold text-brand">All caught up!</p>
+              <p className="text-xs text-slate-400 mt-1">No candidates awaiting verification.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-[1fr_1fr_80px_100px] gap-3 px-3 mb-2">
+                {["Candidate Name", "Target Sector", "Docs", "Action"].map((h) => (
+                  <p key={h} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{h}</p>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {verificationQueue.map((row) => (
+                  <div key={row.id} className="grid grid-cols-[1fr_1fr_80px_100px] gap-3 items-center px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-brand-blue text-[10px] font-bold shrink-0">
+                        {row.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                      </div>
+                      <span className="text-sm font-semibold text-brand truncate">{row.name}</span>
+                    </div>
+                    <span className="text-sm text-slate-500">{row.sector}</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-brand-blue text-[11px] font-bold rounded-lg w-fit">
+                      {row.files} Files
+                    </span>
+                    <Link
+                      href={`/dashboard/admin/verification/${row.id}`}
+                      className="px-3 py-1.5 bg-brand-blue text-white text-[11px] font-bold rounded-lg hover:bg-brand-blue-dark transition-colors text-center"
+                    >
+                      Review &amp; Tag
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           </div>{/* min-w */}
           </div>{/* overflow-x-auto */}
         </div>
@@ -139,41 +319,89 @@ export default function AdminDashboardPage() {
               </svg>
               <h2 className="text-sm font-bold text-brand">Job Moderation Queue</h2>
             </div>
-            <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide rounded-lg">
-              {MODERATION_QUEUE.length * 3 + 2} Pending
-            </span>
+            {!loading && moderationQueue.length > 0 && (
+              <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide rounded-lg">
+                {moderationQueue.length} Pending
+              </span>
+            )}
+            {!loading && moderationQueue.length === 0 && (
+              <Link href="/dashboard/admin/moderation" className="text-xs font-semibold text-brand-blue hover:underline">
+                View All
+              </Link>
+            )}
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto -mx-2 px-2">
           <div className="min-w-[400px]">
-          <div className="grid grid-cols-[1fr_1fr_80px_80px] gap-3 px-3 mb-2">
-            {["Employer Name", "Job Title", "Posted", "Actions"].map((h) => (
-              <p key={h} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{h}</p>
-            ))}
-          </div>
 
-          <div className="space-y-1">
-            {MODERATION_QUEUE.map((row) => (
-              <div key={row.id} className="grid grid-cols-[1fr_1fr_80px_80px] gap-3 items-center px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors">
-                <span className="text-sm font-semibold text-brand truncate">{row.employer}</span>
-                <span className="text-sm text-slate-500 truncate">{row.title}</span>
-                <span className="text-xs text-slate-400">{row.posted}</span>
-                <div className="flex items-center gap-1.5">
-                  <button className="w-7 h-7 rounded-full bg-green-50 flex items-center justify-center text-green-600 hover:bg-green-100 transition-colors" title="Approve">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  </button>
-                  <button className="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center text-red-500 hover:bg-red-100 transition-colors" title="Reject">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px] gap-3 px-3 py-3">
+                  {Array.from({ length: 4 }).map((__, j) => (
+                    <div key={j} className="h-6 bg-gray-100 rounded-lg animate-pulse" />
+                  ))}
                 </div>
+              ))}
+            </div>
+          ) : moderationQueue.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-green-500">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
               </div>
-            ))}
-          </div>
+              <p className="text-sm font-semibold text-brand">Queue is clear!</p>
+              <p className="text-xs text-slate-400 mt-1">No jobs awaiting moderation.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-[1fr_1fr_80px_80px] gap-3 px-3 mb-2">
+                {["Employer Name", "Job Title", "Posted", "Actions"].map((h) => (
+                  <p key={h} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{h}</p>
+                ))}
+              </div>
+              <div className="space-y-1">
+                {moderationQueue.map((row) => (
+                  <div key={row.id} className="grid grid-cols-[1fr_1fr_80px_80px] gap-3 items-center px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors">
+                    <span className="text-sm font-semibold text-brand truncate">{row.employer}</span>
+                    <span className="text-sm text-slate-500 truncate">{row.title}</span>
+                    <span className="text-xs text-slate-400">{row.posted}</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleJobAction(row.id, "approve")}
+                        disabled={actionLoading[row.id]}
+                        className="w-7 h-7 rounded-full bg-green-50 flex items-center justify-center text-green-600 hover:bg-green-100 transition-colors disabled:opacity-50"
+                        title="Approve"
+                      >
+                        {actionLoading[row.id] ? (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                          </svg>
+                        ) : (
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleJobAction(row.id, "reject")}
+                        disabled={actionLoading[row.id]}
+                        className="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center text-red-500 hover:bg-red-100 transition-colors disabled:opacity-50"
+                        title="Reject"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           </div>{/* min-w */}
           </div>{/* overflow-x-auto */}
         </div>
@@ -208,57 +436,79 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {USERS.map((user) => (
-            <div
-              key={user.id}
-              className={`flex items-center gap-3 p-4 rounded-xl border transition-colors ${
-                user.status === "suspended" ? "border-red-100 bg-red-50/40" : "border-gray-100 bg-gray-50/50"
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                user.status === "suspended" ? "bg-red-100 text-red-500" : "bg-brand-blue/10 text-brand-blue"
-              }`}>
-                {user.avatar}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 bg-gray-50/50 animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-brand truncate">{user.name}</p>
-                <p className={`text-xs mt-0.5 font-medium truncate ${user.status === "suspended" ? "text-red-500" : "text-slate-400"}`}>
-                  {user.role}
-                </p>
+            ))}
+          </div>
+        ) : adminUsers.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-slate-400">No admin users found.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {adminUsers.map((u) => (
+              <div
+                key={u.id}
+                className={`flex items-center gap-3 p-4 rounded-xl border transition-colors ${
+                  u.status === "suspended" ? "border-red-100 bg-red-50/40" : "border-gray-100 bg-gray-50/50"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                  u.status === "suspended" ? "bg-red-100 text-red-500" : "bg-brand-blue/10 text-brand-blue"
+                }`}>
+                  {u.avatar}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-brand truncate">{u.name}</p>
+                  <p className={`text-xs mt-0.5 font-medium truncate ${u.status === "suspended" ? "text-red-500" : "text-slate-400"}`}>
+                    {u.role}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {u.status === "suspended" ? (
+                    <>
+                      <button className="p-1.5 rounded-lg hover:bg-red-100 text-red-400 transition-colors" title="Restore">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                      </button>
+                      <button className="p-1.5 rounded-lg hover:bg-red-100 text-red-400 transition-colors" title="Delete">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/dashboard/admin/users/${u.id}`}
+                        className="p-1.5 rounded-lg hover:bg-gray-200 text-slate-400 transition-colors"
+                        title="Edit"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                        </svg>
+                      </Link>
+                      <button className="p-1.5 rounded-lg hover:bg-gray-200 text-slate-400 transition-colors" title="Suspend">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {user.status === "suspended" ? (
-                  <>
-                    <button className="p-1.5 rounded-lg hover:bg-red-100 text-red-400 transition-colors" title="Restore">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                      </svg>
-                    </button>
-                    <button className="p-1.5 rounded-lg hover:bg-red-100 text-red-400 transition-colors" title="Delete">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                      </svg>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button className="p-1.5 rounded-lg hover:bg-gray-200 text-slate-400 transition-colors" title="Edit">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-                      </svg>
-                    </button>
-                    <button className="p-1.5 rounded-lg hover:bg-gray-200 text-slate-400 transition-colors" title="Suspend">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                      </svg>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </main>

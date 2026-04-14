@@ -1,46 +1,36 @@
 "use client";
 
-import { useState } from "react";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { NotificationRowSkeleton } from "@/components/ui/Skeleton";
+import { useState, useEffect, useCallback } from "react";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type NotifType     = "System Alert" | "Feature Update" | "Compliance Notice" | "Maintenance";
-type Audience      = "All Users" | "Employers" | "Candidates" | "Admins";
-type Priority      = "Low" | "Medium" | "High" | "Critical";
-type Delivery      = "In-App" | "Email" | "Both";
-type NotifStatus   = "delivered" | "scheduled" | "failed" | "draft";
+type NotifType   = "System Alert" | "Feature Update" | "Compliance Notice" | "Maintenance";
+type Audience    = "All Users" | "Employers" | "Candidates" | "Admins";
+type Priority    = "Low" | "Medium" | "High" | "Critical";
+type Delivery    = "In-App" | "Email" | "Both";
+type NotifStatus = "delivered" | "scheduled" | "failed" | "draft";
 
-type SentNotif = {
-  id: number;
-  title: string;
-  type: NotifType;
-  audience: Audience;
-  priority: Priority;
-  delivery: Delivery;
-  status: NotifStatus;
-  sent: string;
-  readRate: number | null;
+type Notif = {
+  id:         string;
+  title:      string;
+  message:    string;
+  type:       NotifType;
+  audience:   Audience;
+  priority:   Priority;
+  delivery:   Delivery;
+  status:     NotifStatus;
+  sent:       string;
+  readRate:   number | null;
   recipients: number;
 };
 
-// ─── Data ──────────────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────────
 
-const INITIAL_SENT: SentNotif[] = [
-  { id: 1, title: "Scheduled Maintenance — 2 Nov 02:00 UTC",    type: "Maintenance",       audience: "All Users",  priority: "High",     delivery: "Both",   status: "delivered", sent: "Oct 28, 2023",  readRate: 78,  recipients: 12482 },
-  { id: 2, title: "New Compliance Rules for Healthcare Roles",   type: "Compliance Notice", audience: "Employers",  priority: "Critical", delivery: "Email",  status: "delivered", sent: "Oct 25, 2023",  readRate: 64,  recipients: 3210  },
-  { id: 3, title: "Profile Verification Reminder",               type: "System Alert",      audience: "Candidates", priority: "Medium",   delivery: "In-App", status: "delivered", sent: "Oct 24, 2023",  readRate: 55,  recipients: 8120  },
-  { id: 4, title: "Introducing Smart Job Matching (Beta)",       type: "Feature Update",    audience: "All Users",  priority: "Low",      delivery: "Both",   status: "delivered", sent: "Oct 20, 2023",  readRate: 82,  recipients: 12482 },
-  { id: 5, title: "November Platform Downtime Notice",           type: "Maintenance",       audience: "All Users",  priority: "High",     delivery: "Both",   status: "scheduled", sent: "Nov 1, 2023",   readRate: null, recipients: 12482 },
-  { id: 6, title: "DBS Check Deadline — Action Required",        type: "Compliance Notice", audience: "Candidates", priority: "Critical", delivery: "Email",  status: "failed",    sent: "Oct 22, 2023",  readRate: null, recipients: 432   },
-];
-
-const NOTIF_TYPES:  NotifType[] = ["System Alert", "Feature Update", "Compliance Notice", "Maintenance"];
-const AUDIENCES:    Audience[]  = ["All Users", "Employers", "Candidates", "Admins"];
-const PRIORITIES:   Priority[]  = ["Low", "Medium", "High", "Critical"];
-const DELIVERIES:   Delivery[]  = ["In-App", "Email", "Both"];
+const NOTIF_TYPES: NotifType[] = ["System Alert", "Feature Update", "Compliance Notice", "Maintenance"];
+const AUDIENCES:   Audience[]  = ["All Users", "Employers", "Candidates", "Admins"];
+const PRIORITIES:  Priority[]  = ["Low", "Medium", "High", "Critical"];
+const DELIVERIES:  Delivery[]  = ["In-App", "Email", "Both"];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -91,44 +81,114 @@ const STATUS_CONFIG: Record<NotifStatus, { label: string; dot: string; text: str
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
-  const [sent, setSent]               = useState<SentNotif[]>(INITIAL_SENT);
-  const [title, setTitle]             = useState("");
-  const [message, setMessage]         = useState("");
-  const [type, setType]               = useState<NotifType>("System Alert");
-  const [audience, setAudience]       = useState<Audience>("All Users");
-  const [priority, setPriority]       = useState<Priority>("Medium");
-  const [delivery, setDelivery]       = useState<Delivery>("Both");
+  // ── Data state ──────────────────────────────────────────────────────────────
+  const [notifs,         setNotifs]         = useState<Notif[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError,   setHistoryError]   = useState<string | null>(null);
+
+  // ── Compose state ──────────────────────────────────────────────────────────
+  const [title,        setTitle]        = useState("");
+  const [message,      setMessage]      = useState("");
+  const [type,         setType]         = useState<NotifType>("System Alert");
+  const [audience,     setAudience]     = useState<Audience>("All Users");
+  const [priority,     setPriority]     = useState<Priority>("Medium");
+  const [delivery,     setDelivery]     = useState<Delivery>("Both");
   const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
-  const [success, setSuccess]         = useState(false);
+  const [scheduleAt,   setScheduleAt]   = useState("");
+  const [sending,      setSending]      = useState(false);
+  const [success,      setSuccess]      = useState(false);
+  const [sendError,    setSendError]    = useState<string | null>(null);
+
+  // ── Filters ────────────────────────────────────────────────────────────────
   const [historyFilter, setHistoryFilter] = useState<"all" | NotifStatus>("all");
-  const [historyLoading] = useState(false);
-  const [historyError, setHistoryError] = useState(false);
 
-  const totalSent      = sent.filter((n) => n.status === "delivered").length;
-  const totalScheduled = sent.filter((n) => n.status === "scheduled").length;
-  const avgReadRate    = Math.round(sent.filter((n) => n.readRate !== null).reduce((a, n) => a + (n.readRate ?? 0), 0) / sent.filter((n) => n.readRate !== null).length);
-  const totalRecipients = sent.filter((n) => n.status === "delivered").reduce((a, n) => a + n.recipients, 0);
+  // ── Load history ───────────────────────────────────────────────────────────
+  const load = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const res = await fetch("/api/admin/notifications");
+      if (!res.ok) throw new Error("Failed to load notifications");
+      const json = await res.json() as { notifications: Notif[] };
+      setNotifs(json.notifications);
+    } catch (e) {
+      setHistoryError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
 
-  function sendNotification() {
-    if (!title || !message) return;
-    const notif: SentNotif = {
-      id: Date.now(), title, type, audience, priority, delivery,
-      status: scheduleMode === "now" ? "delivered" : "scheduled",
-      sent: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-      readRate: scheduleMode === "now" ? 0 : null,
-      recipients: audience === "All Users" ? 12482 : audience === "Candidates" ? 8120 : audience === "Employers" ? 3210 : 42,
-    };
-    setSent((prev) => [notif, ...prev]);
-    setTitle(""); setMessage("");
-    setType("System Alert"); setAudience("All Users"); setPriority("Medium"); setDelivery("Both");
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3500);
+  useEffect(() => { void load(); }, [load]);
+
+  // ── Derived stats ──────────────────────────────────────────────────────────
+  const delivered       = notifs.filter((n) => n.status === "delivered");
+  const totalSent       = delivered.length;
+  const totalScheduled  = notifs.filter((n) => n.status === "scheduled").length;
+  const withReadRate    = notifs.filter((n) => n.readRate !== null);
+  const avgReadRate     = withReadRate.length > 0
+    ? Math.round(withReadRate.reduce((a, n) => a + (n.readRate ?? 0), 0) / withReadRate.length)
+    : 0;
+  const totalRecipients = delivered.reduce((a, n) => a + n.recipients, 0);
+
+  // ── Send ───────────────────────────────────────────────────────────────────
+  async function sendNotification() {
+    if (!title.trim() || !message.trim()) return;
+    if (scheduleMode === "later" && !scheduleAt) {
+      setSendError("Please choose a scheduled date and time.");
+      return;
+    }
+
+    setSending(true);
+    setSendError(null);
+    try {
+      const res = await fetch("/api/admin/notifications", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          message,
+          type,
+          audience,
+          priority,
+          delivery,
+          scheduleAt: scheduleMode === "later" ? scheduleAt : null,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json() as { error?: string };
+        throw new Error(json.error ?? "Failed to send notification");
+      }
+
+      // Reset form
+      setTitle(""); setMessage("");
+      setType("System Alert"); setAudience("All Users");
+      setPriority("Medium"); setDelivery("Both");
+      setScheduleMode("now"); setScheduleAt("");
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3500);
+
+      // Refresh list
+      await load();
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setSending(false);
+    }
   }
 
-  const filtered = historyFilter === "all" ? sent : sent.filter((n) => n.status === historyFilter);
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  async function deleteNotification(id: string) {
+    setNotifs((prev) => prev.filter((n) => n.id !== id));
+    await fetch(`/api/admin/notifications?id=${id}`, { method: "DELETE" });
+  }
+
+  const filtered = historyFilter === "all" ? notifs : notifs.filter((n) => n.status === historyFilter);
 
   return (
     <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
+      <GsapAnimations />
 
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4" data-gsap="fade-down">
@@ -136,10 +196,25 @@ export default function NotificationsPage() {
           <h1 className="text-[28px] font-black text-brand tracking-tight">Notifications</h1>
           <p className="text-sm text-slate-400 mt-1">Compose and broadcast messages to platform users.</p>
         </div>
+        <button
+          onClick={load}
+          disabled={historyLoading}
+          className="self-start p-2.5 bg-white border border-gray-100 rounded-xl text-slate-400 hover:text-brand-blue hover:border-brand-blue/20 transition-colors disabled:opacity-50"
+          title="Refresh"
+        >
+          <svg
+            width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2"
+            className={historyLoading ? "animate-spin" : ""}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+        </button>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-gsap="fade-up">
+
         <div className="bg-white border border-gray-100 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-slate-400">Total Sent</p>
@@ -149,8 +224,12 @@ export default function NotificationsPage() {
               </svg>
             </div>
           </div>
-          <p className="text-2xl font-black text-brand-blue">{totalSent}</p>
-          <p className="text-xs text-slate-400 font-medium mt-1">This month</p>
+          {historyLoading ? (
+            <div className="h-8 w-12 bg-gray-100 rounded-lg animate-pulse" />
+          ) : (
+            <p className="text-2xl font-black text-brand-blue">{totalSent}</p>
+          )}
+          <p className="text-xs text-slate-400 font-medium mt-1">Delivered</p>
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-5">
@@ -162,7 +241,11 @@ export default function NotificationsPage() {
               </svg>
             </div>
           </div>
-          <p className="text-2xl font-black text-brand-blue">{totalRecipients.toLocaleString()}</p>
+          {historyLoading ? (
+            <div className="h-8 w-16 bg-gray-100 rounded-lg animate-pulse" />
+          ) : (
+            <p className="text-2xl font-black text-brand-blue">{totalRecipients.toLocaleString()}</p>
+          )}
           <p className="text-xs text-slate-400 font-medium mt-1">Unique users reached</p>
         </div>
 
@@ -176,8 +259,12 @@ export default function NotificationsPage() {
               </svg>
             </div>
           </div>
-          <p className="text-2xl font-black text-brand-blue">{avgReadRate}%</p>
-          <p className="text-xs text-green-500 font-semibold mt-1">+4% vs last month</p>
+          {historyLoading ? (
+            <div className="h-8 w-14 bg-gray-100 rounded-lg animate-pulse" />
+          ) : (
+            <p className="text-2xl font-black text-brand-blue">{avgReadRate}%</p>
+          )}
+          <p className="text-xs text-slate-400 font-medium mt-1">Across delivered</p>
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-5">
@@ -189,15 +276,20 @@ export default function NotificationsPage() {
               </svg>
             </div>
           </div>
-          <p className="text-2xl font-black text-brand-blue">{totalScheduled}</p>
+          {historyLoading ? (
+            <div className="h-8 w-10 bg-gray-100 rounded-lg animate-pulse" />
+          ) : (
+            <p className="text-2xl font-black text-brand-blue">{totalScheduled}</p>
+          )}
           <p className="text-xs text-slate-400 font-medium mt-1">Pending dispatch</p>
         </div>
+
       </div>
 
-      {/* Main: compose + recent */}
+      {/* Main: compose + history */}
       <div className="flex flex-col lg:flex-row gap-5 items-start" data-gsap="fade-up">
 
-        {/* Compose panel */}
+        {/* ── Compose panel ───────────────────────────────────────────────── */}
         <div className="w-full lg:w-[420px] lg:shrink-0 bg-white border border-gray-100 rounded-2xl p-6 space-y-5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center">
@@ -215,6 +307,16 @@ export default function NotificationsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p className="text-xs font-semibold text-green-700">Notification sent successfully!</p>
+            </div>
+          )}
+
+          {/* Error banner */}
+          {sendError && (
+            <div className="flex items-center gap-2.5 p-3 bg-red-50 border border-red-100 rounded-xl">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-red-500 shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+              <p className="text-xs font-semibold text-red-600">{sendError}</p>
             </div>
           )}
 
@@ -258,10 +360,13 @@ export default function NotificationsPage() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
+              maxLength={500}
               placeholder="Write your notification message here..."
               className="w-full px-3.5 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors resize-none"
             />
-            <p className="text-[11px] text-slate-400 mt-1 text-right">{message.length}/500</p>
+            <p className={`text-[11px] mt-1 text-right font-medium ${message.length > 450 ? "text-amber-500" : "text-slate-400"}`}>
+              {message.length}/500
+            </p>
           </div>
 
           {/* Audience + Priority row */}
@@ -328,6 +433,9 @@ export default function NotificationsPage() {
             {scheduleMode === "later" && (
               <input
                 type="datetime-local"
+                value={scheduleAt}
+                onChange={(e) => setScheduleAt(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
                 className="w-full mt-2 px-3.5 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
               />
             )}
@@ -336,21 +444,33 @@ export default function NotificationsPage() {
           {/* Send button */}
           <button
             onClick={sendNotification}
-            disabled={!title || !message}
+            disabled={!title.trim() || !message.trim() || sending}
             className="w-full py-3 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-            </svg>
-            {scheduleMode === "now" ? "Send Notification" : "Schedule Notification"}
+            {sending ? (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Sending…
+              </>
+            ) : (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+                {scheduleMode === "now" ? "Send Notification" : "Schedule Notification"}
+              </>
+            )}
           </button>
         </div>
 
-        {/* History table */}
+        {/* ── History table ────────────────────────────────────────────────── */}
         <div className="flex-1 bg-white border border-gray-100 rounded-2xl overflow-hidden">
+
           {/* Tab bar */}
           <div className="flex items-center justify-between px-5 pt-4 border-b border-gray-100">
-            <div className="flex gap-1" role="tablist" aria-label="Filter notification history">
+            <div className="flex gap-1" role="tablist">
               {(["all", "delivered", "scheduled", "failed"] as const).map((f) => (
                 <button
                   key={f}
@@ -364,86 +484,152 @@ export default function NotificationsPage() {
                   }`}
                 >
                   {f === "all" ? "All" : STATUS_CONFIG[f].label}
+                  {f !== "all" && !historyLoading && (
+                    <span className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold ${
+                      historyFilter === f ? "bg-brand-blue text-white" : "bg-gray-100 text-slate-500"
+                    }`}>
+                      {notifs.filter((n) => n.status === f).length}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
-            <span className="text-[11px] text-slate-400 pb-3">{filtered.length} notification{filtered.length !== 1 ? "s" : ""}</span>
+            <span className="text-[11px] text-slate-400 pb-3">
+              {!historyLoading && `${filtered.length} notification${filtered.length !== 1 ? "s" : ""}`}
+            </span>
           </div>
 
+          {/* Body */}
           <div className="divide-y divide-gray-50">
-            {historyLoading ? (
-              <div className="p-5">
-                <NotificationRowSkeleton count={5} />
+
+            {/* Loading skeleton */}
+            {historyLoading && (
+              <div className="p-5 space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3 animate-pulse">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-100 rounded w-2/3" />
+                      <div className="h-3 bg-gray-100 rounded w-1/2" />
+                      <div className="h-1.5 bg-gray-100 rounded w-full" />
+                    </div>
+                    <div className="space-y-1.5 shrink-0">
+                      <div className="h-3 w-16 bg-gray-100 rounded" />
+                      <div className="h-3 w-20 bg-gray-100 rounded" />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : historyError ? (
-              <div className="p-5">
-                <ErrorState message="Unable to load notification history." onRetry={() => setHistoryError(false)} />
+            )}
+
+            {/* Error state */}
+            {!historyLoading && historyError && (
+              <div className="p-10 text-center">
+                <p className="text-sm text-red-500 mb-3">{historyError}</p>
+                <button
+                  onClick={load}
+                  className="px-4 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                >
+                  Retry
+                </button>
               </div>
-            ) : filtered.length === 0 ? (
-              <div className="p-5">
-                <EmptyState
-                  icon={
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                    </svg>
-                  }
-                  title="No notifications sent yet"
-                  description="Compose and send your first notification using the panel on the left."
-                />
+            )}
+
+            {/* Empty state */}
+            {!historyLoading && !historyError && filtered.length === 0 && (
+              <div className="py-16 text-center">
+                <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-slate-300">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-brand">
+                  {historyFilter === "all" ? "No notifications sent yet" : `No ${historyFilter} notifications`}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {historyFilter === "all"
+                    ? "Compose and send your first notification using the panel on the left."
+                    : "Switch to a different filter or send a new notification."}
+                </p>
               </div>
-            ) : (
-              filtered.map((n) => {
-                const sc = STATUS_CONFIG[n.status];
-                return (
-                  <div key={n.id} className="px-5 py-4 hover:bg-gray-50/60 transition-colors">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${TYPE_STYLES[n.type]}`}>
-                          {TYPE_ICONS[n.type]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-brand truncate">{n.title}</p>
-                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${TYPE_STYLES[n.type]}`}>{n.type}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${PRIORITY_STYLES[n.priority]}`}>{n.priority}</span>
-                            <span className="text-[11px] text-slate-400">{n.audience}</span>
-                            <span className="text-slate-300 text-[11px]">·</span>
-                            <span className="text-[11px] text-slate-400">{n.delivery}</span>
-                          </div>
+            )}
+
+            {/* Notification rows */}
+            {!historyLoading && !historyError && filtered.map((n) => {
+              const sc = STATUS_CONFIG[n.status];
+              return (
+                <div key={n.id} className="px-5 py-4 hover:bg-gray-50/60 transition-colors group">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${TYPE_STYLES[n.type]}`}>
+                        {TYPE_ICONS[n.type]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-brand truncate">{n.title}</p>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${TYPE_STYLES[n.type]}`}>{n.type}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${PRIORITY_STYLES[n.priority]}`}>{n.priority}</span>
+                          <span className="text-[11px] text-slate-400">{n.audience}</span>
+                          <span className="text-slate-300 text-[11px]">·</span>
+                          <span className="text-[11px] text-slate-400">{n.delivery}</span>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <div className="flex items-start gap-3 shrink-0">
+                      <div className="flex flex-col items-end gap-1.5">
                         <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${sc.text}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
                           {sc.label}
                         </span>
                         <p className="text-[11px] text-slate-400">{n.sent}</p>
                       </div>
+                      {/* Delete button — visible on hover */}
+                      <button
+                        onClick={() => deleteNotification(n.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"
+                        title="Delete"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
                     </div>
-
-                    {/* Read rate bar */}
-                    {n.readRate !== null && (
-                      <div className="mt-3 flex items-center gap-3">
-                        <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-1 bg-brand-blue rounded-full" style={{ width: `${n.readRate}%` }} />
-                        </div>
-                        <span className="text-[11px] font-bold text-slate-500 shrink-0">{n.readRate}% read</span>
-                        <span className="text-[11px] text-slate-400 shrink-0">{n.recipients.toLocaleString()} recipients</span>
-                      </div>
-                    )}
-                    {n.readRate === null && n.status === "scheduled" && (
-                      <p className="mt-2 text-[11px] text-blue-500 font-medium">Queued for {n.sent}</p>
-                    )}
-                    {n.readRate === null && n.status === "failed" && (
-                      <p className="mt-2 text-[11px] text-red-500 font-medium">Delivery failed · {n.recipients.toLocaleString()} recipients affected</p>
-                    )}
                   </div>
-                );
-              })
-            )}
+
+                  {/* Read rate bar */}
+                  {n.readRate !== null && n.status === "delivered" && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-1 bg-brand-blue rounded-full transition-all" style={{ width: `${n.readRate}%` }} />
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-500 shrink-0">{n.readRate}% read</span>
+                      <span className="text-[11px] text-slate-400 shrink-0">{n.recipients.toLocaleString()} recipients</span>
+                    </div>
+                  )}
+                  {n.status === "delivered" && n.readRate === null && n.recipients > 0 && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-1 bg-gray-100 rounded-full" />
+                      <span className="text-[11px] text-slate-400 shrink-0">{n.recipients.toLocaleString()} recipients</span>
+                    </div>
+                  )}
+                  {n.status === "scheduled" && (
+                    <p className="mt-2 text-[11px] text-blue-500 font-medium">
+                      Queued for {n.sent} · {n.recipients.toLocaleString()} recipients
+                    </p>
+                  )}
+                  {n.status === "failed" && (
+                    <p className="mt-2 text-[11px] text-red-500 font-medium">
+                      Delivery failed · {n.recipients.toLocaleString()} recipients affected
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+
           </div>
         </div>
+
       </div>
     </main>
   );

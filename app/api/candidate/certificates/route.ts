@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { setResubmissionIfActive } from "@/lib/supabase/setResubmission";
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -76,6 +77,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await setResubmissionIfActive(user.id);
 
   return NextResponse.json({ certificate: toCamel(data) });
 }
