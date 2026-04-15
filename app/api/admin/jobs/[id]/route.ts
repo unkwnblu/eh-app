@@ -13,10 +13,113 @@ async function getAdmin() {
   return user;
 }
 
+// ─── GET — single job detail + pipeline (for admin pipeline page) ────────────
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await getAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+
+  const { id } = await params;
+  const service = createServiceClient();
+
+  const { data: job, error: jobError } = await service
+    .from("jobs")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (jobError || !job) {
+    return NextResponse.json({ error: "Job not found" }, { status: 404 });
+  }
+
+  // Employer company name
+  const { data: employer } = await service
+    .from("employers")
+    .select("company_name")
+    .eq("id", job.employer_id)
+    .single();
+
+  // Applications + candidate profile info
+  const { data: applications, error: appsError } = await service
+    .from("job_applications")
+    .select(`
+      id, stage, applied_at,
+      candidate:profiles!job_applications_candidate_id_fkey (
+        id, full_name
+      )
+    `)
+    .eq("job_id", id)
+    .order("applied_at", { ascending: true });
+
+  if (appsError) {
+    return NextResponse.json({ error: appsError.message }, { status: 500 });
+  }
+
+  // Candidate compliance
+  const candidateIds = (applications ?? []).map((a) => (a.candidate as unknown as { id: string }).id);
+  const complianceMap: Record<string, { share_code: string | null; verified_docs: Record<string, boolean> }> = {};
+
+  if (candidateIds.length > 0) {
+    const { data: candidates } = await service
+      .from("candidates")
+      .select("id, share_code, verified_docs")
+      .in("id", candidateIds);
+
+    for (const c of candidates ?? []) {
+      complianceMap[c.id] = { share_code: c.share_code, verified_docs: c.verified_docs ?? {} };
+    }
+  }
+
+  const pipeline = (applications ?? []).map((a) => {
+    const candidate  = a.candidate as unknown as { id: string; full_name: string };
+    const compliance = complianceMap[candidate.id];
+    const rtwVerified = !!compliance?.share_code;
+    const dbsVerified = !!compliance?.verified_docs?.dbs;
+
+    return {
+      id:          a.id,
+      candidateId: candidate.id,
+      name:        candidate.full_name,
+      stage:       a.stage as "new" | "interviewing" | "offers" | "rejected",
+      appliedAt:   a.applied_at,
+      compliance:  rtwVerified ? "rtw-verified" : dbsVerified ? "dbs-verified" : "in-pipeline",
+    };
+  });
+
+  return NextResponse.json({
+    job: {
+      id:                     job.id,
+      title:                  job.title,
+      employer:               employer?.company_name ?? "Unknown Employer",
+      employerId:             job.employer_id,
+      sector:                 job.sector,
+      employmentType:         job.employment_type,
+      location:               job.location,
+      remote:                 job.remote,
+      salaryMin:              job.salary_min,
+      salaryMax:              job.salary_max,
+      liveSalaryMin:          job.live_salary_min ?? null,
+      liveSalaryMax:          job.live_salary_max ?? null,
+      description:            job.description,
+      responsibilities:       job.responsibilities,
+      requiredCertifications: job.required_certifications,
+      experienceLevel:        job.experience_level,
+      status:                 job.status,
+      createdAt:              job.created_at,
+      closesAt:               job.closes_at,
+    },
+    pipeline,
+  });
+}
+
 // ─── PATCH ────────────────────────────────────────────────────────────────────
-// Two shapes:
-//   { action: "approve" | "flag" | "reject" | "reset" }  → update status
+// Three shapes:
+//   { action: "approve" | "flag" | "reject" | "reset" }         → update job status
 //   { liveSalaryMin: number|null, liveSalaryMax: number|null }  → set live pricing
+//   { applicationId: string, stage: ColumnKey }                 → move candidate stage
 
 export async function PATCH(
   request: NextRequest,
@@ -28,6 +131,21 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json() as Record<string, unknown>;
   const service = createServiceClient();
+
+  // ── Pipeline stage move ─────────────────────────────────────────────────────
+  if (body.applicationId && body.stage) {
+    const validStages = ["new", "interviewing", "offers", "rejected"];
+    if (!validStages.includes(body.stage as string)) {
+      return NextResponse.json({ error: "Invalid stage." }, { status: 400 });
+    }
+    const { error } = await service
+      .from("job_applications")
+      .update({ stage: body.stage })
+      .eq("id", body.applicationId as string)
+      .eq("job_id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
 
   // ── Live pricing update ──────────────────────────────────────────────────────
   if ("liveSalaryMin" in body || "liveSalaryMax" in body) {

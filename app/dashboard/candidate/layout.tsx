@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useToast } from "@/components/ui/Toast";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
 import { createClient } from "@/lib/supabase/client";
+import SessionGuard from "@/components/session/SessionGuard";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────────
 
@@ -271,6 +272,8 @@ export default function CandidateDashboardLayout({ children }: { children: React
   ) : null;
 
   return (
+    <>
+    <SessionGuard idleMinutes={60} logoutHref="/auth/candidate/login" />
     <DashboardLayout
       navItems={navItems}
       basePath="/dashboard/candidate"
@@ -289,5 +292,6 @@ export default function CandidateDashboardLayout({ children }: { children: React
       {resubmissionBanner}
       {children}
     </DashboardLayout>
+    </>
   );
 }

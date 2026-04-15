@@ -1,10 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { employerLoginSchema, validate, type FieldErrors } from "@/lib/validation";
 import { signIn } from "./actions";
+import SessionReasonBanner from "@/components/session/SessionReasonBanner";
 
 export default function EmployerLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -54,6 +56,11 @@ export default function EmployerLoginPage() {
               Sign in to your employer dashboard to manage your hiring pipeline.
             </p>
           </div>
+
+          {/* Session reason banner (idle / expired) */}
+          <Suspense fallback={null}>
+            <SessionReasonBanner />
+          </Suspense>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">

@@ -2,6 +2,7 @@
 
 import { useToast } from "@/components/ui/Toast";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
+import SessionGuard from "@/components/session/SessionGuard";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────────
 
@@ -99,22 +100,26 @@ function NotifFooter() {
 
 export default function EmployerDashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardLayout
-      navItems={NAV_ITEMS}
-      basePath="/dashboard/employer"
-      searchPlaceholder="Search candidates, jobs, or shifts..."
-      profileHref="/dashboard/employer/profile"
-      profileName="John Doe"
-      profileSub="Company Name"
-      profileInitials="JD"
-      supportHref="/dashboard/employer/support"
-      notifData={NOTIF_DATA}
-      notifIcon={notifIcon}
-      notifColor={notifColor}
-      notifFooter={<NotifFooter />}
-      mobileBlocked
-    >
-      {children}
-    </DashboardLayout>
+    <>
+      <SessionGuard idleMinutes={30} logoutHref="/auth/employer/login" />
+      <DashboardLayout
+        navItems={NAV_ITEMS}
+        basePath="/dashboard/employer"
+        searchPlaceholder="Search candidates, jobs, or shifts..."
+        profileHref="/dashboard/employer/profile"
+        profileName="John Doe"
+        profileSub="Company Name"
+        profileInitials="JD"
+        supportHref="/dashboard/employer/support"
+        notifData={NOTIF_DATA}
+        notifIcon={notifIcon}
+        notifColor={notifColor}
+        notifFooter={<NotifFooter />}
+        mobileBlocked
+        logoutHref="/auth/employer/login"
+      >
+        {children}
+      </DashboardLayout>
+    </>
   );
 }

@@ -11,6 +11,7 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  useDroppable,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
@@ -20,7 +21,6 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -29,26 +29,28 @@ type ComplianceStatus = "rtw-verified" | "dbs-verified" | "in-pipeline";
 type ColumnKey = "new" | "interviewing" | "offers" | "rejected";
 
 type Candidate = {
-  id: string;         // application id (used for dnd-kit)
+  id:          string;        // application id
   candidateId: string;
-  name: string;
-  appliedAt: string;
-  compliance: ComplianceStatus;
-  column: ColumnKey;
+  name:        string;
+  appliedAt:   string;
+  compliance:  ComplianceStatus;
+  column:      ColumnKey;
 };
 
 type JobDetail = {
-  id: string;
-  title: string;
-  sector: string;
+  id:             string;
+  title:          string;
+  employer:       string;
+  employerId:     string;
+  sector:         string;
   employmentType: string;
-  location: string;
-  remote: boolean;
-  salaryMin: number | null;
-  salaryMax: number | null;
-  status: "draft" | "review" | "live" | "closed";
-  createdAt: string;
-  closesAt: string | null;
+  location:       string;
+  remote:         boolean;
+  salaryMin:      number | null;
+  salaryMax:      number | null;
+  status:         "draft" | "review" | "live" | "closed" | "flagged" | "rejected";
+  createdAt:      string;
+  closesAt:       string | null;
 };
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -70,8 +72,8 @@ function formatSalary(min: number | null, max: number | null): string {
   return `Up to ${fmt(max!)}`;
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
+function relativeTime(iso: string, now: number): string {
+  const diff = now - new Date(iso).getTime();
   const mins  = Math.floor(diff / 60_000);
   const hours = Math.floor(diff / 3_600_000);
   const days  = Math.floor(diff / 86_400_000);
@@ -84,19 +86,23 @@ function relativeTime(iso: string): string {
 
 function statusColor(status: JobDetail["status"]): string {
   switch (status) {
-    case "live":   return "text-green-600";
-    case "review": return "text-amber-600";
-    case "closed": return "text-slate-400";
-    default:       return "text-slate-400";
+    case "live":     return "text-green-600";
+    case "review":   return "text-amber-600";
+    case "flagged":  return "text-orange-600";
+    case "rejected": return "text-red-500";
+    case "closed":   return "text-slate-400";
+    default:         return "text-slate-400";
   }
 }
 
 function statusDot(status: JobDetail["status"]): string {
   switch (status) {
-    case "live":   return "bg-green-500";
-    case "review": return "bg-amber-400";
-    case "closed": return "bg-slate-300";
-    default:       return "bg-slate-300";
+    case "live":     return "bg-green-500";
+    case "review":   return "bg-amber-400";
+    case "flagged":  return "bg-orange-500";
+    case "rejected": return "bg-red-500";
+    case "closed":   return "bg-slate-300";
+    default:         return "bg-slate-300";
   }
 }
 
@@ -134,7 +140,6 @@ function ComplianceBadge({ status }: { status: ComplianceStatus }) {
 function SkeletonPipeline() {
   return (
     <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 flex flex-col animate-pulse">
-      {/* Header skeleton */}
       <div className="flex items-start justify-between mb-6">
         <div className="space-y-2">
           <div className="h-7 w-64 bg-gray-200 rounded-xl" />
@@ -143,9 +148,7 @@ function SkeletonPipeline() {
             <div className="h-4 w-20 bg-gray-100 rounded-lg" />
           </div>
         </div>
-        <div className="h-10 w-24 bg-gray-200 rounded-xl" />
       </div>
-      {/* Stats skeleton */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-white border border-gray-100 rounded-2xl px-5 py-4 space-y-3">
@@ -155,7 +158,6 @@ function SkeletonPipeline() {
           </div>
         ))}
       </div>
-      {/* Columns skeleton */}
       <div className="flex gap-4 flex-1 overflow-x-hidden">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex flex-col w-[300px] shrink-0">
@@ -181,7 +183,11 @@ function SkeletonPipeline() {
 
 // ─── Sortable candidate card ───────────────────────────────────────────────────
 
-function CandidateCard({ candidate, isDragging = false }: { candidate: Candidate; isDragging?: boolean }) {
+function CandidateCard({ candidate, now, isDragging = false }: {
+  candidate: Candidate;
+  now: number;
+  isDragging?: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = useSortable({ id: candidate.id });
 
   const style = {
@@ -204,7 +210,6 @@ function CandidateCard({ candidate, isDragging = false }: { candidate: Candidate
       className={`bg-white border rounded-xl p-4 select-none ${isDragging ? "shadow-2xl rotate-1 border-brand-blue/30" : "border-gray-100 shadow-sm"}`}
     >
       <div className="flex items-start gap-3 mb-3">
-        {/* Drag handle */}
         <div
           {...attributes}
           {...listeners}
@@ -219,14 +224,13 @@ function CandidateCard({ candidate, isDragging = false }: { candidate: Candidate
           ))}
         </div>
 
-        {/* Avatar */}
         <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0">
           <span className="text-[10px] font-black text-brand-blue">{initials}</span>
         </div>
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-brand truncate">{candidate.name}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Applied {relativeTime(candidate.appliedAt)}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Applied {relativeTime(candidate.appliedAt, now)}</p>
         </div>
       </div>
       <ComplianceBadge status={candidate.compliance} />
@@ -236,7 +240,12 @@ function CandidateCard({ candidate, isDragging = false }: { candidate: Candidate
 
 // ─── Droppable column ──────────────────────────────────────────────────────────
 
-function KanbanColumn({ col, candidates, isOver }: { col: { key: ColumnKey; label: string }; candidates: Candidate[]; isOver: boolean }) {
+function KanbanColumn({ col, candidates, isOver, now }: {
+  col: { key: ColumnKey; label: string };
+  candidates: Candidate[];
+  isOver: boolean;
+  now: number;
+}) {
   const isRejected = col.key === "rejected";
   const { setNodeRef } = useDroppable({ id: col.key });
 
@@ -255,7 +264,7 @@ function KanbanColumn({ col, candidates, isOver }: { col: { key: ColumnKey; labe
             : isRejected ? "bg-red-50/70" : "bg-[#F0F2F5]"
         }`}>
           {candidates.map((c) => (
-            <CandidateCard key={c.id} candidate={c} />
+            <CandidateCard key={c.id} candidate={c} now={now} />
           ))}
           {candidates.length === 0 && (
             <div className="flex items-center justify-center h-24 rounded-xl border-2 border-dashed border-slate-200">
@@ -270,7 +279,7 @@ function KanbanColumn({ col, candidates, isOver }: { col: { key: ColumnKey; labe
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default function JobPipelinePage() {
+export default function AdminJobPipelineDetailPage() {
   const { id } = useParams<{ id: string }>();
 
   const [job,        setJob]        = useState<JobDetail | null>(null);
@@ -278,20 +287,23 @@ export default function JobPipelinePage() {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
 
-  const [activeId,    setActiveId]    = useState<string | null>(null);
-  const [overColumn,  setOverColumn]  = useState<ColumnKey | null>(null);
+  const [activeId,   setActiveId]   = useState<string | null>(null);
+  const [overColumn, setOverColumn] = useState<ColumnKey | null>(null);
+
+  // Stable "now" for relative time display
+  const [now] = useState(() => Date.now());
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  // ─── Load data ───────────────────────────────────────────────────────────────
+  // ─── Load ────────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/employer/jobs/${id}`);
+      const res = await fetch(`/api/admin/jobs/${id}`);
       if (!res.ok) {
         const data = await res.json() as { error?: string };
         throw new Error(data.error ?? "Failed to load job");
@@ -327,7 +339,7 @@ export default function JobPipelinePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ─── Drag helpers ─────────────────────────────────────────────────────────────
+  // ─── Drag helpers ────────────────────────────────────────────────────────────
 
   const activeCandidate = candidates.find((c) => c.id === activeId) ?? null;
 
@@ -362,24 +374,24 @@ export default function JobPipelinePage() {
     const candidate = candidates.find((c) => c.id === active.id);
     if (!candidate || candidate.column === overCol) return;
 
-    // Optimistic update already applied in onDragOver — persist to API
     setCandidates((prev) =>
       prev.map((c) => c.id === active.id ? { ...c, column: overCol } : c)
     );
 
     try {
-      await fetch(`/api/employer/jobs/${id}`, {
+      const res = await fetch(`/api/admin/jobs/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ applicationId: active.id, stage: overCol }),
       });
+      if (!res.ok) throw new Error("Failed to persist stage change");
     } catch {
-      // Silently revert on failure
+      // Revert on failure
       load();
     }
   }
 
-  // ─── Computed stats ───────────────────────────────────────────────────────────
+  // ─── Stats ───────────────────────────────────────────────────────────────────
 
   const totalApplied   = candidates.length;
   const newCount       = candidates.filter((c) => c.column === "new").length;
@@ -387,20 +399,20 @@ export default function JobPipelinePage() {
   const offersCount    = candidates.filter((c) => c.column === "offers").length;
 
   const stats = [
-    { label: "Total Applied",  value: totalApplied },
-    { label: "New",            value: newCount },
-    { label: "Interviewing",   value: interviewCount },
-    { label: "Offers",         value: offersCount },
+    { label: "Total Applied", value: totalApplied },
+    { label: "New",           value: newCount },
+    { label: "Interviewing",  value: interviewCount },
+    { label: "Offers",        value: offersCount },
   ];
 
   const lastUpdated = candidates.length > 0
     ? relativeTime(candidates.reduce((latest, c) =>
         c.appliedAt > latest ? c.appliedAt : latest,
         candidates[0].appliedAt
-      ))
+      ), now)
     : "—";
 
-  // ─── Render ───────────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) return <SkeletonPipeline />;
 
@@ -425,22 +437,20 @@ export default function JobPipelinePage() {
       <GsapAnimations />
       <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 flex flex-col">
 
-        {/* Back + Job header */}
+        {/* Header */}
         <div data-gsap="fade-down" className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
           <div>
-            {/* Breadcrumb */}
             <Link
-              href="/dashboard/employer/jobs"
+              href="/dashboard/admin/jobs"
               className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-brand-blue mb-3 transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
-              Back to Jobs
+              Back to Pipeline
             </Link>
 
-            {/* Title + status */}
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-2xl font-black text-brand tracking-tight">{job.title}</h1>
               <span className={`flex items-center gap-1.5 text-xs font-bold capitalize ${statusColor(job.status)}`}>
                 <span className={`w-2 h-2 rounded-full ${statusDot(job.status)}`} />
@@ -448,8 +458,14 @@ export default function JobPipelinePage() {
               </span>
             </div>
 
-            {/* Meta */}
-            <div className="flex flex-wrap items-center gap-5 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-400">
+              <span className="flex items-center gap-1 text-sm text-slate-600 font-semibold">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                </svg>
+                {job.employer}
+              </span>
+              <span className="text-slate-200">·</span>
               <span className="flex items-center gap-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -479,13 +495,6 @@ export default function JobPipelinePage() {
               )}
             </div>
           </div>
-
-          <Link
-            href={`/dashboard/employer/jobs/${id}/edit`}
-            className="self-start bg-brand text-white text-sm font-semibold rounded-xl px-5 py-2.5 hover:bg-brand-blue transition-colors"
-          >
-            Edit Job
-          </Link>
         </div>
 
         {/* Stats */}
@@ -506,7 +515,7 @@ export default function JobPipelinePage() {
           ))}
         </div>
 
-        {/* Kanban board */}
+        {/* Kanban */}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -521,19 +530,20 @@ export default function JobPipelinePage() {
                 col={col}
                 candidates={candidates.filter((c) => c.column === col.key)}
                 isOver={overColumn === col.key}
+                now={now}
               />
             ))}
           </div>
 
           <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
             {activeCandidate && (
-              <CandidateCard candidate={activeCandidate} isDragging />
+              <CandidateCard candidate={activeCandidate} now={now} isDragging />
             )}
           </DragOverlay>
         </DndContext>
       </main>
 
-      {/* Status bar */}
+      {/* Footer status bar */}
       <footer className="border-t border-gray-100 bg-white px-6 py-3 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div className="flex items-center gap-6">
           <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">

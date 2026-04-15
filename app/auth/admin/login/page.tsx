@@ -1,9 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn } from "./actions";
+import SessionReasonBanner from "@/components/session/SessionReasonBanner";
 
 export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -54,6 +56,11 @@ export default function AdminLoginPage() {
               Restricted to authorised Edge Harbour administrators only.
             </p>
           </div>
+
+          {/* Session reason banner (idle / expired) */}
+          <Suspense fallback={null}>
+            <SessionReasonBanner />
+          </Suspense>
 
           {/* Error banner */}
           {error && (

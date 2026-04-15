@@ -245,6 +245,9 @@ function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, side
         )}
         <button
           onClick={async () => {
+            // Mark as intentional so SessionGuard's onAuthStateChange listener
+            // does not fire a duplicate "session expired" redirect.
+            try { localStorage.setItem("eh_logout", "intentional"); } catch {}
             const supabase = createClient();
             await supabase.auth.signOut();
             router.push(logoutHref ?? "/");

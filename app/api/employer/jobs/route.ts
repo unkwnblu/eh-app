@@ -30,23 +30,8 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Fetch application counts per job in one query
-  const jobIds = (jobs ?? []).map((j) => j.id);
-  const counts: Record<string, { total: number; interviewing: number }> = {};
-
-  if (jobIds.length > 0) {
-    const { data: apps } = await service
-      .from("job_applications")
-      .select("job_id, stage")
-      .in("job_id", jobIds);
-
-    for (const app of apps ?? []) {
-      if (!counts[app.job_id]) counts[app.job_id] = { total: 0, interviewing: 0 };
-      counts[app.job_id].total++;
-      if (app.stage === "interviewing") counts[app.job_id].interviewing++;
-    }
-  }
-
+  // Note: applicant pipeline is managed by Edge Harbour admins — employers no
+  // longer receive per-job applied/interviewing counts.
   const mapped = (jobs ?? []).map((j) => ({
     id:             j.id,
     title:          j.title,
@@ -59,8 +44,6 @@ export async function GET() {
     status:         j.status as "draft" | "review" | "live" | "closed",
     createdAt:      j.created_at,
     closesAt:       j.closes_at ?? null,
-    applied:        counts[j.id]?.total       ?? 0,
-    interviewing:   counts[j.id]?.interviewing ?? 0,
   }));
 
   return NextResponse.json({ jobs: mapped });

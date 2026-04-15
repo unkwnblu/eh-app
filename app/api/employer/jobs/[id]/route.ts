@@ -9,7 +9,9 @@ async function getEmployer() {
   return user;
 }
 
-// ─── GET — single job with full detail + pipeline candidates ─────────────────
+// ─── GET — single job detail (for edit form) ─────────────────────────────────
+// Note: applicant pipeline is managed by Edge Harbour admins — employers no
+// longer have access to candidate-level data.
 
 export async function GET(
   _request: NextRequest,
@@ -32,53 +34,6 @@ export async function GET(
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  // Fetch applications with candidate profile info
-  const { data: applications, error: appsError } = await service
-    .from("job_applications")
-    .select(`
-      id, stage, applied_at,
-      candidate:profiles!job_applications_candidate_id_fkey (
-        id, full_name
-      )
-    `)
-    .eq("job_id", id)
-    .order("applied_at", { ascending: true });
-
-  if (appsError) {
-    return NextResponse.json({ error: appsError.message }, { status: 500 });
-  }
-
-  // Fetch candidate compliance data
-  const candidateIds = (applications ?? []).map((a) => (a.candidate as unknown as { id: string }).id);
-  const complianceMap: Record<string, { share_code: string | null; verified_docs: Record<string, boolean> }> = {};
-
-  if (candidateIds.length > 0) {
-    const { data: candidates } = await service
-      .from("candidates")
-      .select("id, share_code, verified_docs")
-      .in("id", candidateIds);
-
-    for (const c of candidates ?? []) {
-      complianceMap[c.id] = { share_code: c.share_code, verified_docs: c.verified_docs ?? {} };
-    }
-  }
-
-  const pipeline = (applications ?? []).map((a) => {
-    const candidate = a.candidate as unknown as { id: string; full_name: string };
-    const compliance = complianceMap[candidate.id];
-    const rtwVerified = !!compliance?.share_code;
-    const dbsVerified = !!compliance?.verified_docs?.dbs;
-
-    return {
-      id:           a.id,
-      candidateId:  candidate.id,
-      name:         candidate.full_name,
-      stage:        a.stage as "new" | "interviewing" | "offers" | "rejected",
-      appliedAt:    a.applied_at,
-      compliance:   rtwVerified ? "rtw-verified" : dbsVerified ? "dbs-verified" : "in-pipeline",
-    };
-  });
-
   return NextResponse.json({
     job: {
       id:                     job.id,
@@ -97,11 +52,12 @@ export async function GET(
       createdAt:              job.created_at,
       closesAt:               job.closes_at,
     },
-    pipeline,
   });
 }
 
-// ─── PATCH — update job fields or status ─────────────────────────────────────
+// ─── PATCH — update editable job fields ──────────────────────────────────────
+// Employers can edit job content (title, salary, description, etc.) but cannot
+// move candidates through the pipeline — that belongs to the admin portal.
 
 export async function PATCH(
   request: NextRequest,
@@ -124,18 +80,14 @@ export async function PATCH(
 
   if (!existing) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
-  // Handle pipeline stage move
-  if (body.applicationId && body.stage) {
-    const { error } = await service
-      .from("job_applications")
-      .update({ stage: body.stage })
-      .eq("id", body.applicationId as string)
-      .eq("job_id", id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
+  // Reject any pipeline mutations — admins own the pipeline
+  if (body.applicationId || body.stage) {
+    return NextResponse.json(
+      { error: "Pipeline changes are managed by Edge Harbour administrators." },
+      { status: 403 },
+    );
   }
 
-  // Handle job field/status update
   const allowed = [
     "title", "sector", "employment_type", "location", "remote",
     "salary_min", "salary_max", "description", "responsibilities",

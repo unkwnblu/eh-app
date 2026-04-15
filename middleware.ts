@@ -45,11 +45,14 @@ export async function middleware(request: NextRequest) {
   const role = user?.app_metadata?.role as string | undefined;
   const isAdminOrModerator = role === "admin" || role === "moderator";
 
-  // Routes that require full admin (not moderator)
+  // UI routes restricted to full admin only (moderators cannot visit these pages).
+  // NOTE: /api/admin/* routes are NOT listed here — each API handler enforces its
+  // own role check internally (requireAdmin vs requireAdminOrModerator), and
+  // blocking all /api/admin/* at middleware level would prevent moderators from
+  // calling the APIs they legitimately need (verification, moderation, jobs, etc.).
   const isAdminOnly =
     pathname.startsWith("/dashboard/admin/users") ||
-    pathname.startsWith("/dashboard/admin/settings") ||
-    pathname.startsWith("/api/admin");
+    pathname.startsWith("/dashboard/admin/settings");
 
   // ── Admin / moderator route protection ────────────────────────────────────────
   if (isAdminDashboard || isAdminApi) {

@@ -78,6 +78,28 @@ export async function GET() {
     employerMap[e.id] = e.company_name ?? "Unknown Employer";
   }
 
+  // Fetch application counts per job (by stage)
+  const jobIds = jobs.map((j) => j.id);
+  const pipelineCounts: Record<string, { total: number; newCount: number; interviewing: number; offers: number; rejected: number }> = {};
+
+  if (jobIds.length > 0) {
+    const { data: apps } = await service
+      .from("job_applications")
+      .select("job_id, stage")
+      .in("job_id", jobIds);
+
+    for (const app of apps ?? []) {
+      if (!pipelineCounts[app.job_id]) {
+        pipelineCounts[app.job_id] = { total: 0, newCount: 0, interviewing: 0, offers: 0, rejected: 0 };
+      }
+      pipelineCounts[app.job_id].total++;
+      if (app.stage === "new")          pipelineCounts[app.job_id].newCount++;
+      if (app.stage === "interviewing") pipelineCounts[app.job_id].interviewing++;
+      if (app.stage === "offers")       pipelineCounts[app.job_id].offers++;
+      if (app.stage === "rejected")     pipelineCounts[app.job_id].rejected++;
+    }
+  }
+
   function initials(name: string) {
     return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
   }
@@ -118,9 +140,12 @@ export async function GET() {
       closed:   "rejected",
     };
 
+    const counts = pipelineCounts[j.id] ?? { total: 0, newCount: 0, interviewing: 0, offers: 0, rejected: 0 };
+
     return {
       id:               j.id,
       employer:         companyName,
+      employerId:       j.employer_id,
       initials:         initials(companyName),
       title:            j.title,
       sector:           j.sector,
@@ -133,6 +158,8 @@ export async function GET() {
       type:             j.employment_type,
       remote:           j.remote,
       posted:           relativeTime(j.created_at),
+      createdAt:        j.created_at,
+      closesAt:         j.closes_at ?? null,
       dbStatus:         j.status,
       status:           statusMap[j.status] ?? "pending",
       description:      j.description ?? "",
@@ -140,6 +167,11 @@ export async function GET() {
       flags:            compliance.flags,
       compliance:       compliance.score,
       complianceItems:  compliance.items,
+      applied:          counts.total,
+      newCount:         counts.newCount,
+      interviewing:     counts.interviewing,
+      offers:           counts.offers,
+      rejected:         counts.rejected,
     };
   });
 

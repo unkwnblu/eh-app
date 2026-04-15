@@ -26,8 +26,6 @@ type Job = {
   status:         JobStatus;
   createdAt:      string;
   closesAt:       string | null;
-  applied:        number;
-  interviewing:   number;
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -124,30 +122,20 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex items-center gap-8 shrink-0">
-        <div className="text-center">
-          <p className="text-xl font-black text-brand leading-none">{job.applied}</p>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">Applied</p>
+      {/* Pipeline note */}
+      {job.status === "live" && (
+        <div className="hidden md:flex flex-col items-end gap-1 shrink-0 max-w-[180px] text-right">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Managed by Edge Harbour
+          </p>
+          <p className="text-[10px] text-slate-400 leading-relaxed">
+            Our team handles interviews and offers on your behalf.
+          </p>
         </div>
-        {job.status !== "closed" && (
-          <div className="text-center">
-            <p className="text-xl font-black text-brand-blue leading-none">{job.interviewing}</p>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">Interviewing</p>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">
-        {job.status === "live" && (
-          <Link
-            href={`/dashboard/employer/jobs/${job.id}`}
-            className="bg-brand-blue text-white text-xs font-semibold rounded-xl px-4 py-2 hover:bg-brand-blue-dark transition-colors"
-          >
-            View Pipeline
-          </Link>
-        )}
         <Link
           href={`/dashboard/employer/jobs/${job.id}/edit`}
           aria-label="Edit job"
@@ -226,10 +214,10 @@ export default function JobManagementPage() {
     live:   jobs.filter((j) => j.status === "live").length,
     review: jobs.filter((j) => j.status === "review" || j.status === "draft").length,
     closed: jobs.filter((j) => j.status === "closed").length,
-  };
+  } as const;
 
-  const totalApplied      = jobs.filter((j) => j.status === "live").reduce((s, j) => s + j.applied, 0);
-  const totalInterviewing = jobs.filter((j) => j.status === "live").reduce((s, j) => s + j.interviewing, 0);
+  const totalJobs   = jobs.length;
+  const closedCount = counts.closed;
 
   return (
     <>
@@ -257,10 +245,10 @@ export default function JobManagementPage() {
         {!loading && !error && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-gsap="fade-up">
             {[
-              { label: "Live Postings",  value: counts.live,         icon: <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />, bg: "bg-brand-blue/10", color: "text-brand-blue", val: "text-brand" },
-              { label: "Under Review",   value: counts.review,       icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />, bg: "bg-amber-50", color: "text-amber-500", val: "text-amber-600" },
-              { label: "Total Applied",  value: totalApplied,        icon: <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />, bg: "bg-green-50", color: "text-green-500", val: "text-green-600" },
-              { label: "Interviewing",   value: totalInterviewing,   icon: <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.181 0-2.35-.009-3.519-.027a2.125 2.125 0 01-.857-.242m6.876-6.221a2.125 2.125 0 00-.857-.242 48.716 48.716 0 00-6.366-.195c-1.091 0-1.979.879-1.979 1.97v4.286c0 .952.54 1.755 1.337 2.082" />, bg: "bg-brand-blue/10", color: "text-brand-blue", val: "text-brand-blue" },
+              { label: "Live Postings",  value: counts.live,    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />, bg: "bg-brand-blue/10", color: "text-brand-blue", val: "text-brand" },
+              { label: "Under Review",   value: counts.review,  icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />, bg: "bg-amber-50", color: "text-amber-500", val: "text-amber-600" },
+              { label: "Closed",         value: closedCount,    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />, bg: "bg-slate-50",  color: "text-slate-400",  val: "text-slate-500" },
+              { label: "Total Posted",   value: totalJobs,      icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />, bg: "bg-green-50",  color: "text-green-500",  val: "text-green-600" },
             ].map((s) => (
               <div key={s.label} className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>

@@ -1,10 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { candidateLoginSchema, validate, type FieldErrors } from "@/lib/validation";
 import { signIn } from "./actions";
+import SessionReasonBanner from "@/components/session/SessionReasonBanner";
 
 export default function CandidateLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -55,6 +57,11 @@ export default function CandidateLoginPage() {
               Sign in to check your verification status, interview requests, and profile.
             </p>
           </div>
+
+          {/* Session reason banner (idle / expired) */}
+          <Suspense fallback={null}>
+            <SessionReasonBanner />
+          </Suspense>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
