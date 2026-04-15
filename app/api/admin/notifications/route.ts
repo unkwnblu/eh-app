@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { broadcastToAllCandidates } from "@/lib/notifications/candidate";
 
 // ─── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,12 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // ── Fan-out to candidate inboxes when sending now ─────────────────────────
+  // Only for "Candidates" or "All Users" audiences, and only for immediate sends.
+  if (isSendNow && (audience === "Candidates" || audience === "All Users")) {
+    await broadcastToAllCandidates(service, title.trim(), message.trim());
+  }
 
   return NextResponse.json(
     {

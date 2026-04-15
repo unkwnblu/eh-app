@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { insertCandidateNotification, NOTIF_COPY } from "@/lib/notifications/candidate";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,83 @@ function relativeTime(iso: string): string {
   if (days  === 1) return "1 day ago";
   if (days  < 30)  return `${days} days ago`;
   return formatDate(iso);
+}
+
+// ─── POST /api/candidate/applications ────────────────────────────────────────
+// Submit an application for a live job.
+
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+
+  const body = await request.json() as { jobId?: string };
+  if (!body.jobId) return NextResponse.json({ error: "jobId is required." }, { status: 400 });
+
+  const service = createServiceClient();
+
+  // Must be an active (verified) candidate
+  const { data: profile } = await service
+    .from("profiles")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.status !== "active") {
+    return NextResponse.json(
+      { error: "Your profile must be verified before you can apply for roles." },
+      { status: 403 },
+    );
+  }
+
+  // Verify the job is live
+  const { data: job } = await service
+    .from("jobs")
+    .select("id, title, employer_id, status")
+    .eq("id", body.jobId)
+    .single();
+
+  if (!job || job.status !== "live") {
+    return NextResponse.json(
+      { error: "This job is no longer available." },
+      { status: 404 },
+    );
+  }
+
+  const { data: employer } = await service
+    .from("employers")
+    .select("company_name")
+    .eq("id", job.employer_id)
+    .single();
+
+  const company = employer?.company_name ?? "the employer";
+
+  // Insert the application
+  const { data: application, error: insertError } = await service
+    .from("job_applications")
+    .insert({ job_id: body.jobId, candidate_id: user.id, stage: "new" })
+    .select("id, stage, applied_at")
+    .single();
+
+  if (insertError) {
+    if (insertError.code === "23505") {
+      return NextResponse.json(
+        { error: "You have already applied for this role." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
+
+  // Fire-and-forget notification
+  const copy = NOTIF_COPY.applicationSubmitted(job.title, company);
+  await insertCandidateNotification(
+    service, user.id, "application",
+    copy.title, copy.body,
+    { jobId: body.jobId, jobTitle: job.title, company },
+  );
+
+  return NextResponse.json({ application }, { status: 201 });
 }
 
 // ─── GET /api/candidate/applications ─────────────────────────────────────────

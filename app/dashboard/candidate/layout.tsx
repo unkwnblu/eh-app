@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useToast } from "@/components/ui/Toast";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
 import { createClient } from "@/lib/supabase/client";
 import SessionGuard from "@/components/session/SessionGuard";
@@ -49,6 +48,15 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    label: "Notifications",
+    href: "/dashboard/candidate/notifications",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+      </svg>
+    ),
+  },
+  {
     label: "Settings",
     href: "/dashboard/candidate/settings",
     icon: (
@@ -62,24 +70,15 @@ const NAV_ITEMS: NavItem[] = [
 
 // ─── Notifications ───────────────────────────────────────────────────────────────
 
-const NOTIF_DATA: NotifItem[] = [
-  { id: 1, type: "match",       title: "New Job Match Found",          body: "Senior Cloud Architect at Arcane Dynamics matches your profile.",  time: "5m ago",  read: false },
-  { id: 2, type: "application", title: "Application Status Update",    body: "Your application for Operations Manager moved to interview stage.", time: "2h ago",  read: false },
-  { id: 3, type: "compliance",  title: "Document Expiring Soon",       body: "Your DBS certificate expires in 14 days. Please renew it.",        time: "4h ago",  read: false },
-  { id: 4, type: "application", title: "Application Viewed",           body: "Heritage Care Homes viewed your profile and application.",          time: "1d ago",  read: true  },
-  { id: 5, type: "system",      title: "Profile 80% Complete",         body: "Add your work experience to improve your match rate.",              time: "2d ago",  read: true  },
-  { id: 6, type: "system",      title: "Platform Maintenance — Nov 2", body: "Scheduled downtime from 02:00–04:00 UTC on Nov 2.",                time: "3d ago",  read: true  },
-];
-
 function notifIcon(type: string) {
-  if (type === "match") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-  );
-  if (type === "application") return (
+  if (type === "application" || type === "interview" || type === "offer" || type === "rejection") return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
   );
-  if (type === "compliance") return (
+  if (type === "verification") return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+  );
+  if (type === "compliance") return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
   );
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
@@ -87,25 +86,16 @@ function notifIcon(type: string) {
 }
 
 function notifColor(type: string) {
-  if (type === "match")       return "bg-purple-500/15 text-purple-500 dark:text-purple-400";
-  if (type === "application") return "bg-brand-blue/15 text-brand-blue";
-  if (type === "compliance")  return "bg-amber-500/15 text-amber-500 dark:text-amber-400";
-  return "bg-green-500/15 text-green-500 dark:text-green-400";
+  if (type === "application")  return "bg-brand-blue/15 text-brand-blue";
+  if (type === "interview")    return "bg-purple-500/15 text-purple-500 dark:text-purple-400";
+  if (type === "offer")        return "bg-green-500/15 text-green-500 dark:text-green-400";
+  if (type === "rejection")    return "bg-red-500/15 text-red-500 dark:text-red-400";
+  if (type === "verification") return "bg-green-500/15 text-green-500 dark:text-green-400";
+  if (type === "compliance")   return "bg-amber-500/15 text-amber-500 dark:text-amber-400";
+  return "bg-slate-500/15 text-slate-500 dark:text-slate-400";
 }
 
 // ─── Layout ──────────────────────────────────────────────────────────────────────
-
-function NotifFooter() {
-  const { toast } = useToast();
-  return (
-    <button
-      onClick={() => toast("Full notifications page coming soon", "info")}
-      className="w-full text-center text-xs font-semibold text-brand-blue hover:underline py-1"
-    >
-      View all notifications
-    </button>
-  );
-}
 
 export default function CandidateDashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
@@ -116,6 +106,40 @@ export default function CandidateDashboardLayout({ children }: { children: React
   const [profileEmail,    setProfileEmail]    = useState("");
   const [profileStatus,   setProfileStatus]   = useState<string | null>(null);
   const [resubmissionNote, setResubmissionNote] = useState<string>("");
+
+  // ── Live notifications state ─────────────────────────────────────────────────
+  const [notifData, setNotifData] = useState<NotifItem[]>([]);
+
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/candidate/notifications");
+      if (!res.ok) return;
+      const data = await res.json() as { notifications: NotifItem[] };
+      setNotifData(data.notifications ?? []);
+    } catch {
+      // best-effort
+    }
+  }, []);
+
+  const handleMarkAllRead = useCallback(async () => {
+    try {
+      await fetch("/api/candidate/notifications", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ all: true }),
+      });
+    } catch {}
+  }, []);
+
+  const handleMarkOneRead = useCallback(async (id: string | number) => {
+    try {
+      await fetch("/api/candidate/notifications", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ id: String(id) }),
+      });
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -150,7 +174,10 @@ export default function CandidateDashboardLayout({ children }: { children: React
         setResubmissionNote(profile.resubmission_note ?? "");
       }
     });
-  }, []);
+
+    // Load notifications on mount
+    fetchNotifs();
+  }, [fetchNotifs]);
 
   const isResubmission = profileStatus === "resubmission";
   const isSuspended    = profileStatus === "suspended";
@@ -283,10 +310,19 @@ export default function CandidateDashboardLayout({ children }: { children: React
       profileSub={profileEmail}
       profileInitials={profileInitials}
       supportHref="/dashboard/candidate/support"
-      notifData={NOTIF_DATA}
+      notifData={notifData}
       notifIcon={notifIcon}
       notifColor={notifColor}
-      notifFooter={<NotifFooter />}
+      notifFooter={
+        <Link
+          href="/dashboard/candidate/notifications"
+          className="w-full text-center text-xs font-semibold text-brand-blue hover:underline py-1 block"
+        >
+          View all notifications
+        </Link>
+      }
+      onMarkAllRead={handleMarkAllRead}
+      onMarkOneRead={handleMarkOneRead}
       logoutHref="/auth/candidate/login"
     >
       {resubmissionBanner}

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { insertCandidateNotification, NOTIF_COPY } from "@/lib/notifications/candidate";
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
@@ -138,12 +139,67 @@ export async function PATCH(
     if (!validStages.includes(body.stage as string)) {
       return NextResponse.json({ error: "Invalid stage." }, { status: 400 });
     }
+
+    // Fetch application + candidate_id before updating (needed for notification)
+    const { data: appRow } = await service
+      .from("job_applications")
+      .select("candidate_id")
+      .eq("id", body.applicationId as string)
+      .eq("job_id", id)
+      .single();
+
     const { error } = await service
       .from("job_applications")
       .update({ stage: body.stage })
       .eq("id", body.applicationId as string)
       .eq("job_id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Fire notification for meaningful stage transitions
+    if (appRow?.candidate_id) {
+      const stage = body.stage as string;
+
+      // Look up job + employer for notification copy (best-effort)
+      const { data: jobRow } = await service
+        .from("jobs")
+        .select("title, employer_id")
+        .eq("id", id)
+        .single();
+
+      if (jobRow) {
+        const { data: empRow } = await service
+          .from("employers")
+          .select("company_name")
+          .eq("id", jobRow.employer_id)
+          .single();
+
+        const jobTitle = jobRow.title;
+        const company  = empRow?.company_name ?? "the employer";
+
+        let copy: { title: string; body: string } | null = null;
+        let notifType: "interview" | "offer" | "rejection" | null = null;
+
+        if (stage === "interviewing") {
+          copy = NOTIF_COPY.movedToInterview(jobTitle, company);
+          notifType = "interview";
+        } else if (stage === "offers") {
+          copy = NOTIF_COPY.offerReceived(jobTitle, company);
+          notifType = "offer";
+        } else if (stage === "rejected") {
+          copy = NOTIF_COPY.applicationRejected(jobTitle, company);
+          notifType = "rejection";
+        }
+
+        if (copy && notifType) {
+          await insertCandidateNotification(
+            service, appRow.candidate_id, notifType,
+            copy.title, copy.body,
+            { jobId: id, jobTitle, company },
+          );
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   }
 

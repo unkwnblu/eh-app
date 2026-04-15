@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
+import { insertCandidateNotification, NOTIF_COPY } from "@/lib/notifications/candidate";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -254,6 +255,25 @@ export async function PATCH(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // ── Fire candidate notification (best-effort) ─────────────────────────────
+  let copy: { title: string; body: string } | null = null;
+  let notifType: "verification" | "system" | null = null;
+
+  if (action === "approve") {
+    copy      = NOTIF_COPY.profileVerified();
+    notifType = "verification";
+  } else if (action === "request_info") {
+    copy      = NOTIF_COPY.resubmissionRequired(body.note?.trim());
+    notifType = "verification";
+  } else if (action === "reject") {
+    copy      = NOTIF_COPY.accountSuspended();
+    notifType = "system";
+  }
+
+  if (copy && notifType) {
+    await insertCandidateNotification(supabase, id, notifType, copy.title, copy.body);
   }
 
   return NextResponse.json({ success: true, status: newStatus });

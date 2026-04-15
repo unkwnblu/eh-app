@@ -16,7 +16,7 @@ export type NavItem = {
 };
 
 export type NotifItem = {
-  id: number;
+  id: string | number;
   type: string;
   title: string;
   body: string;
@@ -49,6 +49,10 @@ interface TopbarProps {
   notifIcon: (type: string) => React.ReactNode;
   notifColor: (type: string) => string;
   notifFooter?: React.ReactNode;
+  /** Called after all notifications are marked read — use to persist to the server */
+  onMarkAllRead?: () => void;
+  /** Called after a single notification is marked read — use to persist to the server */
+  onMarkOneRead?: (id: string | number) => void;
 }
 
 export interface DashboardLayoutProps {
@@ -72,6 +76,8 @@ export interface DashboardLayoutProps {
   notifIcon: (type: string) => React.ReactNode;
   notifColor: (type: string) => string;
   notifFooter?: React.ReactNode;
+  onMarkAllRead?: () => void;
+  onMarkOneRead?: (id: string | number) => void;
   // When true, mobile devices see a "desktop only" screen instead of the dashboard
   mobileBlocked?: boolean;
   // Where to redirect after logout (defaults to "/")
@@ -276,6 +282,8 @@ function Topbar({
   notifIcon,
   notifColor,
   notifFooter,
+  onMarkAllRead,
+  onMarkOneRead,
 }: TopbarProps) {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState(notifData);
@@ -286,10 +294,12 @@ function Topbar({
   function markAllRead() {
     setNotifs((p) => p.map((n) => ({ ...n, read: true })));
     toast("All notifications marked as read", "info");
+    onMarkAllRead?.();
   }
 
-  function markRead(id: number) {
+  function markRead(id: string | number) {
     setNotifs((p) => p.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    onMarkOneRead?.(id);
   }
 
   return (
@@ -454,6 +464,8 @@ export default function DashboardLayout({
   notifIcon,
   notifColor,
   notifFooter,
+  onMarkAllRead,
+  onMarkOneRead,
   mobileBlocked = false,
   logoutHref,
 }: DashboardLayoutProps) {
@@ -496,6 +508,8 @@ export default function DashboardLayout({
           notifIcon={notifIcon}
           notifColor={notifColor}
           notifFooter={notifFooter}
+          onMarkAllRead={onMarkAllRead}
+          onMarkOneRead={onMarkOneRead}
         />
         {children}
       </div>
