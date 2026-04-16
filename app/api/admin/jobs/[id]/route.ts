@@ -47,7 +47,7 @@ export async function GET(
   const { data: applications, error: appsError } = await service
     .from("job_applications")
     .select(`
-      id, stage, applied_at,
+      id, stage, applied_at, interview_date, interview_time, meeting_link,
       candidate:profiles!job_applications_candidate_id_fkey (
         id, full_name
       )
@@ -81,12 +81,15 @@ export async function GET(
     const dbsVerified = !!compliance?.verified_docs?.dbs;
 
     return {
-      id:          a.id,
-      candidateId: candidate.id,
-      name:        candidate.full_name,
-      stage:       a.stage as "new" | "interviewing" | "offers" | "rejected",
-      appliedAt:   a.applied_at,
-      compliance:  rtwVerified ? "rtw-verified" : dbsVerified ? "dbs-verified" : "in-pipeline",
+      id:            a.id,
+      candidateId:   candidate.id,
+      name:          candidate.full_name,
+      stage:         a.stage as "new" | "interviewing" | "offers" | "accepted" | "rejected",
+      appliedAt:     a.applied_at,
+      compliance:    rtwVerified ? "rtw-verified" : dbsVerified ? "dbs-verified" : "in-pipeline",
+      interviewDate: (a as Record<string, unknown>).interview_date as string | null ?? null,
+      interviewTime: (a as Record<string, unknown>).interview_time as string | null ?? null,
+      meetingLink:   (a as Record<string, unknown>).meeting_link   as string | null ?? null,
     };
   });
 
@@ -111,6 +114,7 @@ export async function GET(
       status:                 job.status,
       createdAt:              job.created_at,
       closesAt:               job.closes_at,
+      candidatesNeeded:       job.candidates_needed ?? 1,
     },
     pipeline,
   });
@@ -135,7 +139,7 @@ export async function PATCH(
 
   // ── Pipeline stage move ─────────────────────────────────────────────────────
   if (body.applicationId && body.stage) {
-    const validStages = ["new", "interviewing", "offers", "rejected"];
+    const validStages = ["new", "interviewing", "offers", "accepted", "rejected"];
     if (!validStages.includes(body.stage as string)) {
       return NextResponse.json({ error: "Invalid stage." }, { status: 400 });
     }
@@ -194,10 +198,67 @@ export async function PATCH(
           await insertCandidateNotification(
             service, appRow.candidate_id, notifType,
             copy.title, copy.body,
-            { jobId: id, jobTitle, company },
+            { jobId: id, applicationId: body.applicationId as string, jobTitle, company },
           );
         }
       }
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  // ── Schedule interview notification ─────────────────────────────────────────
+  if (body.applicationId && body.interviewDate && body.interviewTime) {
+    const { data: appRow } = await service
+      .from("job_applications")
+      .select("candidate_id, stage")
+      .eq("id", body.applicationId as string)
+      .eq("job_id", id)
+      .single();
+
+    if (!appRow) return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    if (appRow.stage !== "interviewing") {
+      return NextResponse.json({ error: "Candidate is not in the interviewing stage" }, { status: 400 });
+    }
+
+    // Persist schedule details on the application row
+    await service
+      .from("job_applications")
+      .update({
+        interview_date: body.interviewDate as string,
+        interview_time: body.interviewTime as string,
+        meeting_link:   (body.meetingLink as string) || null,
+      })
+      .eq("id", body.applicationId as string)
+      .eq("job_id", id);
+
+    const { data: jobRow } = await service
+      .from("jobs").select("title, employer_id").eq("id", id).single();
+
+    if (jobRow) {
+      const { data: empRow } = await service
+        .from("employers").select("company_name").eq("id", jobRow.employer_id).single();
+
+      const copy = NOTIF_COPY.interviewScheduled(
+        jobRow.title,
+        empRow?.company_name ?? "the employer",
+        body.interviewDate as string,
+        body.interviewTime as string,
+        (body.meetingLink as string) || undefined,
+      );
+
+      await insertCandidateNotification(
+        service, appRow.candidate_id, "interview",
+        copy.title, copy.body,
+        {
+          jobId:         id,
+          jobTitle:      jobRow.title,
+          company:       empRow?.company_name ?? "the employer",
+          interviewDate: body.interviewDate as string,
+          interviewTime: body.interviewTime as string,
+          meetingLink:   (body.meetingLink as string) || undefined,
+        },
+      );
     }
 
     return NextResponse.json({ success: true });

@@ -204,7 +204,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
   return (
     <>
-    <SessionGuard idleMinutes={20} logoutHref="/auth/admin/login" />
+    <SessionGuard idleMinutes={360} logoutHref="/auth/admin/login" />
     <DashboardLayout
       navItems={visibleNavItems}
       basePath="/dashboard/admin"

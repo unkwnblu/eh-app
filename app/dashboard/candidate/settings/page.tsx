@@ -9,6 +9,30 @@ import { createClient } from "@/lib/supabase/client";
 
 type Tab = "Profile" | "Experience" | "Account Settings";
 
+// Converts "YYYY-MM" → "Jan 2022". Falls back to the raw value for old text data.
+function fmtMonth(val: string | null | undefined): string {
+  if (!val) return "";
+  // Already YYYY-MM format
+  if (/^\d{4}-\d{2}$/.test(val)) {
+    const [y, m] = val.split("-");
+    return new Date(Number(y), Number(m) - 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  }
+  return val; // legacy plain-text value — just display as-is
+}
+
+// Converts old plain-text dates like "Jan 2022" → "2022-01" for the month input.
+// Returns empty string if conversion fails.
+function toMonthInput(val: string | null | undefined): string {
+  if (!val) return "";
+  if (/^\d{4}-\d{2}$/.test(val)) return val; // already correct
+  // Try parsing plain text like "Jan 2022" or "January 2022"
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  return "";
+}
+
 type Experience = {
   id: string;           // UUID from DB (empty string = unsaved new entry)
   title: string;
@@ -60,9 +84,9 @@ function ExperienceCard({
   onDelete: () => void;
   isEditing: boolean;
 }) {
-  const duration = exp.current
-    ? `${exp.startDate} — Present (3 years 2 months)`
-    : `${exp.startDate} — ${exp.endDate} (2 years 6 months)`;
+  const start = fmtMonth(exp.startDate);
+  const end   = exp.current ? "Present" : fmtMonth(exp.endDate);
+  const duration = start ? `${start} — ${end}` : end;
 
   return (
     <div className={`bg-white border rounded-2xl p-5 transition-all ${isEditing ? "border-brand-blue shadow-sm" : "border-gray-100"}`}>
@@ -130,6 +154,94 @@ function ExperienceCard({
   );
 }
 
+// ─── Month/Year picker (cross-browser) ────────────────────────────────────────
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 40 }, (_, i) => currentYear - i);
+
+function MonthYearPicker({
+  value,
+  onChange,
+  disabled,
+  min,
+}: {
+  value: string;        // "YYYY-MM" or ""
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  min?: string;         // "YYYY-MM"
+}) {
+  const [year,  setYear]  = useState(value ? value.split("-")[0] : "");
+  const [month, setMonth] = useState(value ? value.split("-")[1] : "");
+
+  // Sync outward whenever year+month both set
+  useEffect(() => {
+    if (year && month) {
+      onChange(`${year}-${month}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
+
+  // Sync inward when value changes externally
+  useEffect(() => {
+    if (value && /^\d{4}-\d{2}$/.test(value)) {
+      setYear(value.split("-")[0]);
+      setMonth(value.split("-")[1]);
+    } else if (!value) {
+      setYear("");
+      setMonth("");
+    }
+  }, [value]);
+
+  const minYear  = min ? parseInt(min.split("-")[0]) : undefined;
+  const minMonth = min ? parseInt(min.split("-")[1]) : undefined;
+
+  return (
+    <div className="flex gap-2">
+      {/* Month */}
+      <div className="relative flex-1">
+        <select
+          value={month}
+          disabled={disabled}
+          onChange={(e) => setMonth(e.target.value)}
+          className="w-full appearance-none px-3 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors disabled:opacity-50 pr-8"
+        >
+          <option value="">Month</option>
+          {MONTHS.map((m, i) => {
+            const mVal = String(i + 1).padStart(2, "0");
+            const disabled = !!(minYear && year && parseInt(year) === minYear && minMonth && (i + 1) < minMonth);
+            return (
+              <option key={m} value={mVal} disabled={disabled}>{m}</option>
+            );
+          })}
+        </select>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </div>
+      {/* Year */}
+      <div className="relative flex-1">
+        <select
+          value={year}
+          disabled={disabled}
+          onChange={(e) => setYear(e.target.value)}
+          className="w-full appearance-none px-3 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors disabled:opacity-50 pr-8"
+        >
+          <option value="">Year</option>
+          {YEARS.map((y) => (
+            <option key={y} value={String(y)} disabled={!!(minYear && y < minYear)}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 // ─── Edit panel ────────────────────────────────────────────────────────────────
 
 function EditPanel({
@@ -145,7 +257,11 @@ function EditPanel({
   onSave: (updated: Experience) => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState({ ...exp });
+  const [form, setForm] = useState({
+    ...exp,
+    startDate: toMonthInput(exp.startDate),
+    endDate:   toMonthInput(exp.endDate),
+  });
   const [skillInput, setSkillInput] = useState("");
 
   function update<K extends keyof Experience>(key: K, value: Experience[K]) {
@@ -214,21 +330,18 @@ function EditPanel({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-brand mb-1.5">Start Date</label>
-            <input
-              type="text"
+            <MonthYearPicker
               value={form.startDate}
-              onChange={(e) => update("startDate", e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+              onChange={(v) => update("startDate", v)}
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-brand mb-1.5">End Date</label>
-            <input
-              type="text"
-              value={form.current ? "Present" : form.endDate}
+            <MonthYearPicker
+              value={form.current ? "" : form.endDate}
+              onChange={(v) => update("endDate", v)}
               disabled={form.current}
-              onChange={(e) => update("endDate", e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors disabled:opacity-50"
+              min={form.startDate || undefined}
             />
             <label className="flex items-center gap-2 mt-2 cursor-pointer">
               <div
@@ -1351,7 +1464,7 @@ export default function CandidateSettingsPage() {
             </div>
 
             {/* Right panel */}
-            <div className="w-full lg:w-[300px] lg:shrink-0 space-y-4" data-gsap="fade-up">
+            <div className="w-full lg:w-[420px] lg:shrink-0 space-y-4" data-gsap="fade-up">
               {isAddingNew ? (
                 <EditPanel
                   exp={BLANK_EXP}

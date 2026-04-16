@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       required_certifications:  requiredCertifications ?? [],
       experience_level:         experienceLevel ?? "Mid-level",
       closes_at:                closesAt ?? null,
-      status:                   "review",
+      status:                   (body as Record<string, unknown>).status === "draft" ? "draft" : "review",
     })
     .select("id")
     .single();

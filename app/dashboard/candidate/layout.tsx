@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Legal",
+    label: "Legal & Compliance",
     href: "/dashboard/candidate/legal",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -300,7 +300,7 @@ export default function CandidateDashboardLayout({ children }: { children: React
 
   return (
     <>
-    <SessionGuard idleMinutes={60} logoutHref="/auth/candidate/login" />
+    <SessionGuard idleMinutes={360} logoutHref="/auth/candidate/login" />
     <DashboardLayout
       navItems={navItems}
       basePath="/dashboard/candidate"

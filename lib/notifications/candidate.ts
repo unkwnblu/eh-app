@@ -95,7 +95,12 @@ export const NOTIF_COPY = {
 
   movedToInterview: (jobTitle: string, company: string) => ({
     title: "Interview Invitation",
-    body:  `Great news! You've been shortlisted for an interview for **${jobTitle}** at ${company}. Our team will be in touch to arrange the details.`,
+    body:  `Great news! You've been shortlisted for an interview for **${jobTitle}** at ${company}. An interview date and time will be communicated to you shortly.`,
+  }),
+
+  interviewScheduled: (jobTitle: string, company: string, date: string, time: string, meetingLink?: string) => ({
+    title: "Interview Scheduled",
+    body:  `Your interview for **${jobTitle}** at ${company} has been scheduled for **${date}** at **${time}**.${meetingLink ? ` Join here: ${meetingLink}` : " Our team will be in touch with further details."}`,
   }),
 
   offerReceived: (jobTitle: string, company: string) => ({

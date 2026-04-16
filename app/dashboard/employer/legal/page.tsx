@@ -136,7 +136,7 @@ export default function LegalPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start gap-4" data-gsap="fade-down">
         <div className="flex-1">
-          <h1 className="text-[28px] font-black text-brand tracking-tight">Legal</h1>
+          <h1 className="text-[28px] font-black text-brand tracking-tight">Legal &amp; Compliance</h1>
           <p className="text-sm text-slate-400 mt-1">
             Compliance documents, contracts, and policies governing your recruitment activity.
           </p>

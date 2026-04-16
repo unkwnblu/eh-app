@@ -35,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Legal",
+    label: "Legal & Compliance",
     href: "/dashboard/employer/legal",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -101,7 +101,7 @@ function NotifFooter() {
 export default function EmployerDashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <SessionGuard idleMinutes={30} logoutHref="/auth/employer/login" />
+      <SessionGuard idleMinutes={360} logoutHref="/auth/employer/login" />
       <DashboardLayout
         navItems={NAV_ITEMS}
         basePath="/dashboard/employer"

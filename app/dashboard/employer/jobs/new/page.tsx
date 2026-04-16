@@ -1,23 +1,37 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 import { useToast } from "@/components/ui/Toast";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Temporary / Ad-hoc"];
-const CERTIFICATIONS   = ["Enhanced DBS Check", "Right to Work in UK", "GMC Registration", "NMC Pin", "Manual Handling"];
+const EMPLOYMENT_TYPES  = ["Full-time", "Part-time", "Contract", "Temporary / Ad-hoc"];
+const CERTIFICATIONS    = ["Enhanced DBS Check", "Right to Work in UK", "GMC Registration", "NMC Pin", "Manual Handling"];
 const EXPERIENCE_LEVELS = ["Junior", "Mid-level", "Senior"];
 
+// Annual salary hints (full-time / contract)
 const SALARY_HINTS: Record<string, string> = {
-  Healthcare:    "Average for UK Healthcare: £32k – £45k",
-  Hospitality:   "Average for UK Hospitality: £22k – £32k",
-  "Customer Care": "Average for UK Customer Care: £24k – £35k",
-  "Tech & Data": "Average for UK Tech & Data: £45k – £75k",
-  Logistics:     "Average for UK Logistics: £28k – £40k",
+  Healthcare:      "Market average: £32k – £45k / year",
+  Hospitality:     "Market average: £22k – £32k / year",
+  "Customer Care": "Market average: £24k – £35k / year",
+  "Tech & Data":   "Market average: £45k – £75k / year",
+  Logistics:       "Market average: £28k – £40k / year",
 };
+
+// Hourly rate hints (part-time / temporary)
+const HOURLY_HINTS: Record<string, string> = {
+  Healthcare:      "Market average: £14 – £22 / hr",
+  Hospitality:     "Market average: £11 – £16 / hr",
+  "Customer Care": "Market average: £11 – £15 / hr",
+  "Tech & Data":   "Market average: £25 – £50 / hr",
+  Logistics:       "Market average: £12 – £18 / hr",
+};
+
+// Employment types that bill hourly
+const HOURLY_TYPES = new Set(["Part-time", "Temporary / Ad-hoc"]);
 
 // ─── Field error helper ────────────────────────────────────────────────────────
 
@@ -29,9 +43,8 @@ function FieldError({ msg }: { msg?: string }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CreateJobPage() {
-  const router   = useRouter();
+  const router    = useRouter();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
 
   // Employer industries (fetched from profile)
   const [industries,        setIndustries]        = useState<string[]>([]);
@@ -43,16 +56,30 @@ export default function CreateJobPage() {
   const [employmentType,   setEmploymentType]   = useState("Full-time");
   const [location,         setLocation]         = useState("");
   const [remote,           setRemote]           = useState(false);
-  const [salaryMin,        setSalaryMin]        = useState("");
-  const [salaryMax,        setSalaryMax]        = useState("");
+  const [payMin,           setPayMin]           = useState("");
+  const [payMax,           setPayMax]           = useState("");
   const [description,      setDescription]      = useState("");
   const [responsibilities, setResponsibilities] = useState("");
   const [selectedCerts,    setSelectedCerts]    = useState<string[]>([]);
   const [experienceLevel,  setExperienceLevel]  = useState("Mid-level");
   const [closesAt,         setClosesAt]         = useState("");
 
+  // Action state
+  const [isPosting,     setIsPosting]     = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Whether this type bills per hour
+  const isHourly = HOURLY_TYPES.has(employmentType);
+
+  // When switching between hourly/annual types, clear pay fields to avoid confusion
+  useEffect(() => {
+    setPayMin("");
+    setPayMax("");
+    setErrors((p) => ({ ...p, pay: "" }));
+  }, [isHourly]);
 
   // Fetch employer's industries on mount
   useEffect(() => {
@@ -83,52 +110,70 @@ export default function CreateJobPage() {
 
   function validate() {
     const e: Record<string, string> = {};
-    if (!jobTitle.trim())   e.jobTitle  = "Job title is required.";
-    if (!sector)            e.sector    = "Please select a sector.";
-    if (!location.trim())   e.location  = "Location is required.";
-    if (salaryMin && salaryMax && Number(salaryMin) > Number(salaryMax)) {
-      e.salary = "Minimum salary cannot exceed maximum.";
+    if (!jobTitle.trim()) e.jobTitle  = "Job title is required.";
+    if (!sector)          e.sector    = "Please select a sector.";
+    if (!location.trim()) e.location  = "Location is required.";
+    if (payMin && payMax && Number(payMin) > Number(payMax)) {
+      e.pay = isHourly
+        ? "Minimum hourly rate cannot exceed maximum."
+        : "Minimum salary cannot exceed maximum.";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function handlePost() {
-    if (!validate()) return;
-    startTransition(async () => {
-      try {
-        const res = await fetch("/api/employer/jobs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title:                  jobTitle.trim(),
-            sector,
-            employmentType,
-            location:               location.trim(),
-            remote,
-            salaryMin:              salaryMin ? Number(salaryMin) : null,
-            salaryMax:              salaryMax ? Number(salaryMax) : null,
-            description:            description.trim() || null,
-            responsibilities:       responsibilities.trim() || null,
-            requiredCertifications: selectedCerts,
-            experienceLevel,
-            closesAt:               closesAt || null,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        toast("Job submitted for review", "success");
-        router.push("/dashboard/employer/jobs");
-      } catch (err) {
-        toast(err instanceof Error ? err.message : "Failed to post job", "error");
-      }
-    });
+  function buildPayload(status: "review" | "draft") {
+    return {
+      title:                  jobTitle.trim(),
+      sector,
+      employmentType,
+      location:               location.trim(),
+      remote,
+      salaryMin:              payMin ? Number(payMin) : null,
+      salaryMax:              payMax ? Number(payMax) : null,
+      description:            description.trim() || null,
+      responsibilities:       responsibilities.trim() || null,
+      requiredCertifications: selectedCerts,
+      experienceLevel,
+      closesAt:               closesAt || null,
+      status,
+    };
   }
+
+  async function submit(status: "review" | "draft") {
+    if (status === "review" && !validate()) return;
+
+    status === "draft" ? setIsSavingDraft(true) : setIsPosting(true);
+    try {
+      const res = await fetch("/api/employer/jobs", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(buildPayload(status)),
+      });
+      const data = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(data.error);
+      toast(
+        status === "draft" ? "Job saved as draft" : "Job submitted for review",
+        "success",
+      );
+      router.push("/dashboard/employer/jobs");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
+    } finally {
+      setIsPosting(false);
+      setIsSavingDraft(false);
+    }
+  }
+
+  const hint = sector
+    ? (isHourly ? HOURLY_HINTS[sector] : SALARY_HINTS[sector]) ?? null
+    : null;
 
   return (
     <>
+      <GsapAnimations />
       <main className="flex-1 px-8 py-8 pb-28">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-6" data-gsap="fade-down">
           <Link href="/dashboard/employer/jobs" className="p-1.5 rounded-lg hover:bg-gray-100 text-slate-400 transition-colors">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -137,7 +182,7 @@ export default function CreateJobPage() {
           <h1 className="text-[28px] font-black text-brand tracking-tight">Post New Job</h1>
         </div>
 
-        <div className="grid grid-cols-[1fr_300px] gap-6 items-start">
+        <div className="grid grid-cols-[1fr_300px] gap-6 items-start" data-gsap="fade-up">
           {/* ── Left column ── */}
           <div className="space-y-5">
 
@@ -200,7 +245,11 @@ export default function CreateJobPage() {
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Employment Type</label>
                     <div className="relative">
-                      <select value={employmentType} onChange={(e) => setEmploymentType(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors appearance-none bg-white">
+                      <select
+                        value={employmentType}
+                        onChange={(e) => setEmploymentType(e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors appearance-none bg-white"
+                      >
                         {EMPLOYMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
@@ -257,22 +306,76 @@ export default function CreateJobPage() {
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-4">
+
+                  {/* ── Pay range — switches between annual salary and hourly rate ── */}
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Salary Range (Annual)</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        {isHourly ? "Hourly Rate Range" : "Salary Range (Annual)"}
+                      </label>
+                      {/* Pill badge indicating pay period */}
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide ${isHourly ? "bg-amber-50 text-amber-600 border border-amber-200" : "bg-blue-50 text-brand-blue border border-blue-100"}`}>
+                        {isHourly ? (
+                          <>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Per Hour
+                          </>
+                        ) : (
+                          <>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+                            Per Year
+                          </>
+                        )}
+                      </span>
+                    </div>
+
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm font-semibold">£</span>
-                        <input type="number" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} placeholder="Min" className="w-full border border-gray-200 rounded-xl pl-7 pr-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors" />
+                        <input
+                          type="number"
+                          value={payMin}
+                          onChange={(e) => { setPayMin(e.target.value); if (errors.pay) setErrors((p) => ({ ...p, pay: "" })); }}
+                          placeholder={isHourly ? "e.g. 14.00" : "Min"}
+                          min="0"
+                          step={isHourly ? "0.50" : "1000"}
+                          className="w-full border border-gray-200 rounded-xl pl-7 pr-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors"
+                        />
                       </div>
                       <span className="text-slate-300 font-bold shrink-0">—</span>
                       <div className="relative flex-1">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm font-semibold">£</span>
-                        <input type="number" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} placeholder="Max" className="w-full border border-gray-200 rounded-xl pl-7 pr-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors" />
+                        <input
+                          type="number"
+                          value={payMax}
+                          onChange={(e) => { setPayMax(e.target.value); if (errors.pay) setErrors((p) => ({ ...p, pay: "" })); }}
+                          placeholder={isHourly ? "e.g. 22.00" : "Max"}
+                          min="0"
+                          step={isHourly ? "0.50" : "1000"}
+                          className="w-full border border-gray-200 rounded-xl pl-7 pr-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors"
+                        />
                       </div>
                     </div>
-                    {errors.salary && <FieldError msg={errors.salary} />}
-                    {sector && SALARY_HINTS[sector] && (
-                      <p className="text-[10px] text-slate-400 mt-1.5">{SALARY_HINTS[sector]}</p>
+
+                    {errors.pay && <FieldError msg={errors.pay} />}
+
+                    {hint && (
+                      <p className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
+                        {hint}
+                      </p>
+                    )}
+
+                    {isHourly && (
+                      <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-2.5">
+                        <p className="text-[10px] text-amber-700 font-semibold flex items-center gap-1.5 mb-0.5">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                          Hourly billing applies
+                        </p>
+                        <p className="text-[10px] text-amber-600 leading-relaxed">
+                          Candidates for {employmentType.toLowerCase()} roles are paid per hour worked. The rate shown will appear on the job listing.
+                        </p>
+                      </div>
                     )}
                   </div>
 
@@ -358,7 +461,7 @@ export default function CreateJobPage() {
         </div>
       </main>
 
-      {/* Sticky bottom bar */}
+      {/* ── Sticky bottom bar ── */}
       <div className="fixed bottom-0 left-[260px] right-0 z-30 bg-white border-t border-gray-100 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -366,20 +469,54 @@ export default function CreateJobPage() {
           </svg>
           {savedTime ? `Draft auto-saved at ${savedTime}` : "Saving…"}
         </div>
+
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/employer/jobs" className="border border-gray-200 text-brand text-sm font-semibold rounded-xl px-5 py-2.5 hover:border-brand-blue hover:text-brand-blue transition-colors">
+          <Link
+            href="/dashboard/employer/jobs"
+            className="border border-gray-200 text-brand text-sm font-semibold rounded-xl px-5 py-2.5 hover:border-brand-blue hover:text-brand-blue transition-colors"
+          >
             Cancel
           </Link>
+
+          {/* Save as Draft */}
           <button
-            onClick={handlePost}
-            disabled={isPending}
+            onClick={() => submit("draft")}
+            disabled={isSavingDraft || isPosting}
+            className="flex items-center gap-2 border border-gray-200 bg-white text-brand text-sm font-semibold rounded-xl px-5 py-2.5 hover:border-brand-blue hover:text-brand-blue transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingDraft ? (
+              <>
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                </svg>
+                Save as Draft
+              </>
+            )}
+          </button>
+
+          {/* Post Job Now */}
+          <button
+            onClick={() => submit("review")}
+            disabled={isPosting || isSavingDraft}
             className="flex items-center gap-2 bg-brand text-white text-sm font-bold rounded-xl px-6 py-2.5 hover:bg-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPending ? "Posting…" : "Post Job Now"}
-            {!isPending && (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-              </svg>
+            {isPosting ? (
+              <>
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Posting…
+              </>
+            ) : (
+              <>
+                Post Job Now
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+              </>
             )}
           </button>
         </div>

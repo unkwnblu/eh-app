@@ -374,7 +374,7 @@ export default function CandidateVerificationPage() {
         return;
       }
       setCandidates((prev) => prev.map((c) => c.id === id ? { ...c, status: "resubmission" as CardStatus } : c));
-      toast("Candidate notified — account restricted to Legal tab", "info");
+      toast("Candidate notified — account restricted to Legal & Compliance tab", "info");
       setReviewing(null);
     } catch (err) {
       toast(err instanceof Error ? err.message : "Failed to send request", "error");
@@ -606,7 +606,7 @@ export default function CandidateVerificationPage() {
               <div>
                 <h3 className="text-sm font-bold text-brand">Request More Information</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  The candidate&apos;s account will be restricted to the Legal tab until resolved.
+                  The candidate&apos;s account will be restricted to the Legal &amp; Compliance tab until resolved.
                 </p>
               </div>
               <button
@@ -623,8 +623,8 @@ export default function CandidateVerificationPage() {
               <p className="text-xs text-amber-700 font-semibold mb-0.5">What happens next</p>
               <ul className="text-[11px] text-amber-600 space-y-0.5 list-disc list-inside">
                 <li>Candidate can still log in</li>
-                <li>All tabs except Legal are locked</li>
-                <li>Your message is shown as a banner on their Legal page</li>
+                <li>All tabs except Legal &amp; Compliance are locked</li>
+                <li>Your message is shown as a banner on their Legal &amp; Compliance page</li>
                 <li>Access is restored when you approve their account</li>
               </ul>
             </div>

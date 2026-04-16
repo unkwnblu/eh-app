@@ -48,6 +48,7 @@ export async function GET(
       responsibilities:       job.responsibilities,
       requiredCertifications: job.required_certifications,
       experienceLevel:        job.experience_level,
+      candidatesNeeded:       job.candidates_needed ?? 1,
       status:                 job.status,
       createdAt:              job.created_at,
       closesAt:               job.closes_at,
@@ -92,6 +93,7 @@ export async function PATCH(
     "title", "sector", "employment_type", "location", "remote",
     "salary_min", "salary_max", "description", "responsibilities",
     "required_certifications", "experience_level", "status", "closes_at",
+    "candidates_needed",
   ];
 
   const updates: Record<string, unknown> = {};
@@ -102,6 +104,7 @@ export async function PATCH(
     requiredCertifications: "required_certifications",
     experienceLevel:        "experience_level",
     closesAt:               "closes_at",
+    candidatesNeeded:       "candidates_needed",
   };
 
   for (const [key, value] of Object.entries(body)) {

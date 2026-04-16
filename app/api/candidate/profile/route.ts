@@ -17,7 +17,7 @@ export async function GET() {
   // Fetch from candidates table
   const { data: candidate } = await service
     .from("candidates")
-    .select("first_name, last_name, phone, nationality, sector, job_types, locations, document_type, document_number, document_expiry, cv_file_name, dbs_file_name, dbs_level, skills")
+    .select("first_name, last_name, phone, nationality, sector, job_types, locations, document_type, document_number, document_expiry, cv_file_name, dbs_file_name, dbs_level, skills, bio")
     .eq("id", user.id)
     .single();
 
@@ -34,7 +34,7 @@ export async function GET() {
     fullName:      profile?.full_name ?? meta?.full_name ?? "",
     email:         user.email ?? "",
     phone:         candidate?.phone ?? "",
-    bio:           meta?.bio ?? "",
+    bio:           candidate?.bio ?? meta?.bio ?? "",
     nationality:   candidate?.nationality ?? "",
     sector:        candidate?.sector ?? "",
     jobTypes:      candidate?.job_types ?? [],
@@ -82,10 +82,10 @@ export async function PATCH(request: NextRequest) {
     .eq("id", user.id);
   if (profileError) errors.push(profileError.message);
 
-  // 3 — Update candidates table (phone + skills)
+  // 3 — Update candidates table (phone, bio + skills)
   const { error: candidateError } = await service
     .from("candidates")
-    .update({ phone, skills: skills ?? [] })
+    .update({ phone, bio: bio ?? "", skills: skills ?? [] })
     .eq("id", user.id);
   if (candidateError) errors.push(candidateError.message);
 
