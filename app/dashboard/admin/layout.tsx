@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
 import { createClient } from "@/lib/supabase/client";
@@ -86,14 +86,7 @@ const NAV_ITEMS: NavItem[] = [
 
 // ─── Notifications ───────────────────────────────────────────────────────────────
 
-const NOTIF_DATA: NotifItem[] = [
-  { id: 1, type: "verification", title: "6 Candidates Awaiting Review",   body: "New verification submissions require your attention.",           time: "10m ago", read: false },
-  { id: 2, type: "moderation",   title: "Job Flagged for Review",         body: "BlueSky Hospitality listing has 2 compliance flags.",            time: "45m ago", read: false },
-  { id: 3, type: "user",         title: "Suspended User Appeal",          body: "David Vane has submitted an account reactivation request.",      time: "2h ago",  read: false },
-  { id: 4, type: "system",       title: "Security Score Dropped",         body: "Platform security score fell from 97% to 94%. Review settings.", time: "5h ago",  read: true  },
-  { id: 5, type: "verification", title: "Employer Verification Pending",  body: "Swift Logistics UK has been pending review for 3 days.",         time: "1d ago",  read: true  },
-  { id: 6, type: "system",       title: "Scheduled Maintenance Reminder", body: "Platform maintenance is scheduled for Nov 2, 02:00 UTC.",        time: "2d ago",  read: true  },
-];
+const READ_KEY = "admin_inbox_read_ids";
 
 function notifIcon(type: string) {
   if (type === "verification") return (
@@ -163,10 +156,11 @@ function SidebarUserCard({ name, sub, initials, imageUrl }: {
 const MODERATOR_HIDDEN = new Set(["/dashboard/admin/users", "/dashboard/admin/settings"]);
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
-  const [profileName, setProfileName] = useState("Admin");
+  const [profileName,     setProfileName]     = useState("Admin");
   const [profileInitials, setProfileInitials] = useState("A");
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
-  const [role, setRole] = useState<string>("admin");
+  const [role,            setRole]            = useState<string>("admin");
+  const [notifData,       setNotifData]       = useState<NotifItem[]>([]);
 
   const profileSub = role === "moderator" ? "Moderator" : "System Controller";
 
@@ -174,6 +168,50 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     role === "moderator"
       ? NAV_ITEMS.filter((item) => !MODERATOR_HIDDEN.has(item.href))
       : NAV_ITEMS;
+
+  // Load read IDs from localStorage
+  const getReadIds = useCallback((): Set<string> => {
+    try {
+      const raw = localStorage.getItem(READ_KEY);
+      return new Set(raw ? JSON.parse(raw) as string[] : []);
+    } catch { return new Set(); }
+  }, []);
+
+  const saveReadIds = useCallback((ids: Set<string>) => {
+    try { localStorage.setItem(READ_KEY, JSON.stringify([...ids])); } catch {}
+  }, []);
+
+  // Fetch live inbox items
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const res  = await fetch("/api/admin/inbox");
+      if (!res.ok) return;
+      const data = await res.json() as { items: (NotifItem & { href?: string })[] };
+      const readIds = getReadIds();
+      setNotifData(
+        (data.items ?? []).map((item) => ({
+          ...item,
+          read: readIds.has(String(item.id)),
+        })),
+      );
+    } catch { /* best-effort */ }
+  }, [getReadIds]);
+
+  const handleMarkOneRead = useCallback((id: string | number) => {
+    const readIds = getReadIds();
+    readIds.add(String(id));
+    saveReadIds(readIds);
+    setNotifData((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  }, [getReadIds, saveReadIds]);
+
+  const handleMarkAllRead = useCallback(() => {
+    setNotifData((prev) => {
+      const readIds = getReadIds();
+      prev.forEach((n) => readIds.add(String(n.id)));
+      saveReadIds(readIds);
+      return prev.map((n) => ({ ...n, read: true }));
+    });
+  }, [getReadIds, saveReadIds]);
 
   useEffect(() => {
     async function loadUser() {
@@ -191,7 +229,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       }
     }
     loadUser();
-  }, []);
+    fetchNotifs();
+  }, [fetchNotifs]);
 
   const sidebarBottom = (
     <SidebarUserCard
@@ -216,15 +255,17 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       profileImageUrl={profileImageUrl}
       logoSub="Admin Portal"
       sidebarBottom={sidebarBottom}
-      notifData={NOTIF_DATA}
+      notifData={notifData}
       notifIcon={notifIcon}
       notifColor={notifColor}
+      onMarkAllRead={handleMarkAllRead}
+      onMarkOneRead={handleMarkOneRead}
       notifFooter={
         <Link
           href="/dashboard/admin/notifications"
           className="block w-full text-center text-xs font-semibold text-brand-blue hover:underline py-1"
         >
-          View all notifications
+          Notification centre
         </Link>
       }
       mobileBlocked

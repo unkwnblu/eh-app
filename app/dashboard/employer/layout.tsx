@@ -1,7 +1,9 @@
 "use client";
 
-import { useToast } from "@/components/ui/Toast";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
+import { createClient } from "@/lib/supabase/client";
 import SessionGuard from "@/components/session/SessionGuard";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────────
@@ -55,50 +57,134 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-// ─── Notifications ───────────────────────────────────────────────────────────────
-
-const NOTIF_DATA: NotifItem[] = [
-  { id: 1, type: "application", title: "New Application Received",     body: "Sarah Chen applied for Senior Cloud Architect.",     time: "2m ago",  read: false },
-  { id: 2, type: "compliance",  title: "Compliance Document Expiring", body: "Employer liability insurance expires in 7 days.",    time: "1h ago",  read: false },
-  { id: 3, type: "system",      title: "Job Posting Approved",         body: "Your listing for Operations Manager is now live.",   time: "3h ago",  read: false },
-  { id: 4, type: "application", title: "Interview Reminder",           body: "You have 2 interviews scheduled for tomorrow.",      time: "5h ago",  read: true  },
-  { id: 5, type: "system",      title: "Platform Maintenance — Nov 2", body: "Scheduled downtime from 02:00–04:00 UTC on Nov 2.", time: "1d ago",  read: true  },
-  { id: 6, type: "compliance",  title: "DBS Check Required",           body: "3 candidates require DBS verification before start.", time: "2d ago", read: true  },
-];
+// ─── Notification icon / colour helpers ──────────────────────────────────────────
 
 function notifIcon(type: string) {
   if (type === "application") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
   );
   if (type === "compliance") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+    </svg>
   );
+  if (type === "shift") return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+  // system
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+    </svg>
   );
 }
 
 function notifColor(type: string) {
   if (type === "application") return "bg-brand-blue/15 text-brand-blue";
   if (type === "compliance")  return "bg-amber-500/15 text-amber-500 dark:text-amber-400";
-  return "bg-green-500/15 text-green-500 dark:text-green-400";
+  if (type === "shift")       return "bg-green-500/15 text-green-500 dark:text-green-400";
+  return "bg-purple-500/15 text-purple-500 dark:text-purple-400";
+}
+
+// ─── Read state (localStorage) ───────────────────────────────────────────────────
+
+const READ_KEY = "employer_inbox_read_ids";
+
+function getReadIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(READ_KEY);
+    return new Set(raw ? JSON.parse(raw) as string[] : []);
+  } catch { return new Set(); }
+}
+
+function saveReadIds(ids: Set<string>) {
+  try { localStorage.setItem(READ_KEY, JSON.stringify([...ids])); } catch {}
 }
 
 // ─── Layout ──────────────────────────────────────────────────────────────────────
 
-function NotifFooter() {
-  const { toast } = useToast();
-  return (
-    <button
-      onClick={() => toast("Full notifications page coming soon", "info")}
-      className="w-full text-center text-xs font-semibold text-brand-blue hover:underline py-1"
-    >
-      View all notifications
-    </button>
-  );
-}
-
 export default function EmployerDashboardLayout({ children }: { children: React.ReactNode }) {
+  const [profileName,     setProfileName]     = useState("Employer");
+  const [profileSub,      setProfileSub]      = useState("Company");
+  const [profileInitials, setProfileInitials] = useState("E");
+  const [notifData,       setNotifData]       = useState<NotifItem[]>([]);
+
+  // Fetch real employer profile
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Get full name from profiles or user_metadata
+        const fullName =
+          user.user_metadata?.full_name?.trim() ||
+          `${user.user_metadata?.first_name ?? ""} ${user.user_metadata?.last_name ?? ""}`.trim() ||
+          user.email?.split("@")[0] ||
+          "Employer";
+
+        // Get company name from employers table
+        const { data: employer } = await supabase
+          .from("employers")
+          .select("company_name")
+          .eq("id", user.id)
+          .single();
+
+        const company   = employer?.company_name ?? user.email ?? "Company";
+        const initials  = fullName
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase() || "E";
+
+        setProfileName(fullName);
+        setProfileSub(company);
+        setProfileInitials(initials);
+      } catch { /* best-effort */ }
+    }
+    loadProfile();
+  }, []);
+
+  // Fetch live inbox notifications
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const res  = await fetch("/api/employer/inbox");
+      if (!res.ok) return;
+      const data = await res.json() as { items: NotifItem[] };
+      const readIds = getReadIds();
+      setNotifData(
+        (data.items ?? []).map((item) => ({
+          ...item,
+          read: readIds.has(String(item.id)),
+        })),
+      );
+    } catch { /* best-effort */ }
+  }, []);
+
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
+
+  const handleMarkOneRead = useCallback((id: string | number) => {
+    const readIds = getReadIds();
+    readIds.add(String(id));
+    saveReadIds(readIds);
+    setNotifData((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  }, []);
+
+  const handleMarkAllRead = useCallback(() => {
+    setNotifData((prev) => {
+      const readIds = getReadIds();
+      prev.forEach((n) => readIds.add(String(n.id)));
+      saveReadIds(readIds);
+      return prev.map((n) => ({ ...n, read: true }));
+    });
+  }, []);
+
   return (
     <>
       <SessionGuard idleMinutes={360} logoutHref="/auth/employer/login" />
@@ -107,14 +193,23 @@ export default function EmployerDashboardLayout({ children }: { children: React.
         basePath="/dashboard/employer"
         searchPlaceholder="Search candidates, jobs, or shifts..."
         profileHref="/dashboard/employer/profile"
-        profileName="John Doe"
-        profileSub="Company Name"
-        profileInitials="JD"
+        profileName={profileName}
+        profileSub={profileSub}
+        profileInitials={profileInitials}
         supportHref="/dashboard/employer/support"
-        notifData={NOTIF_DATA}
+        notifData={notifData}
         notifIcon={notifIcon}
         notifColor={notifColor}
-        notifFooter={<NotifFooter />}
+        onMarkAllRead={handleMarkAllRead}
+        onMarkOneRead={handleMarkOneRead}
+        notifFooter={
+          <Link
+            href="/dashboard/employer/jobs"
+            className="w-full text-center text-xs font-semibold text-brand-blue hover:underline py-1 block"
+          >
+            View all activity
+          </Link>
+        }
         mobileBlocked
         logoutHref="/auth/employer/login"
       >
