@@ -23,27 +23,44 @@ export async function GET() {
     .from("jobs")
     .select(`
       id, title, sector, employment_type, location, remote,
-      salary_min, salary_max, status, created_at, closes_at
+      salary_min, salary_max, status, created_at, closes_at, candidates_needed
     `)
     .eq("employer_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Note: applicant pipeline is managed by Edge Harbour admins — employers no
-  // longer receive per-job applied/interviewing counts.
+  // Fetch accepted-offer counts per job in one query
+  const jobIds = (jobs ?? []).map((j) => j.id as string);
+  const hiredMap: Record<string, number> = {};
+
+  if (jobIds.length > 0) {
+    const { data: accepted } = await service
+      .from("job_applications")
+      .select("job_id")
+      .in("job_id", jobIds)
+      .eq("stage", "accepted");
+
+    for (const row of accepted ?? []) {
+      const jid = row.job_id as string;
+      hiredMap[jid] = (hiredMap[jid] ?? 0) + 1;
+    }
+  }
+
   const mapped = (jobs ?? []).map((j) => ({
-    id:             j.id,
-    title:          j.title,
-    sector:         j.sector,
-    employmentType: j.employment_type,
-    location:       j.location,
-    remote:         j.remote,
-    salaryMin:      j.salary_min,
-    salaryMax:      j.salary_max,
-    status:         j.status as "draft" | "review" | "live" | "closed",
-    createdAt:      j.created_at,
-    closesAt:       j.closes_at ?? null,
+    id:               j.id,
+    title:            j.title,
+    sector:           j.sector,
+    employmentType:   j.employment_type,
+    location:         j.location,
+    remote:           j.remote,
+    salaryMin:        j.salary_min,
+    salaryMax:        j.salary_max,
+    status:           j.status as "draft" | "review" | "live" | "closed",
+    createdAt:        j.created_at,
+    closesAt:         j.closes_at ?? null,
+    candidatesNeeded: (j.candidates_needed as number) ?? 1,
+    hiredCount:       hiredMap[j.id as string] ?? 0,
   }));
 
   return NextResponse.json({ jobs: mapped });

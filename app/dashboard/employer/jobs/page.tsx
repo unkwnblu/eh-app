@@ -15,17 +15,19 @@ type JobStatus = "draft" | "review" | "live" | "closed";
 type TabKey    = "live" | "review" | "closed";
 
 type Job = {
-  id:             string;
-  title:          string;
-  sector:         string;
-  employmentType: string;
-  location:       string;
-  remote:         boolean;
-  salaryMin:      number | null;
-  salaryMax:      number | null;
-  status:         JobStatus;
-  createdAt:      string;
-  closesAt:       string | null;
+  id:               string;
+  title:            string;
+  sector:           string;
+  employmentType:   string;
+  location:         string;
+  remote:           boolean;
+  salaryMin:        number | null;
+  salaryMax:        number | null;
+  status:           JobStatus;
+  createdAt:        string;
+  closesAt:         string | null;
+  candidatesNeeded: number;
+  hiredCount:       number;
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -122,15 +124,46 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
         </div>
       </div>
 
-      {/* Pipeline note */}
+      {/* Hiring progress + managed note */}
       {job.status === "live" && (
-        <div className="hidden md:flex flex-col items-end gap-1 shrink-0 max-w-[180px] text-right">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            Managed by Edge Harbour
-          </p>
-          <p className="text-[10px] text-slate-400 leading-relaxed">
-            Our team handles interviews and offers on your behalf.
-          </p>
+        <div className="hidden md:flex items-center gap-5 shrink-0">
+          {/* Hired / Needed progress */}
+          <div className="flex flex-col gap-2 min-w-[120px]">
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Hired</p>
+              <p className="text-[9px] font-bold text-slate-500">
+                {job.hiredCount} / {job.candidatesNeeded}
+              </p>
+            </div>
+            {/* Progress bar */}
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  job.hiredCount >= job.candidatesNeeded ? "bg-green-500" : "bg-brand-blue"
+                }`}
+                style={{ width: `${Math.min(100, (job.hiredCount / job.candidatesNeeded) * 100)}%` }}
+              />
+            </div>
+            {/* Label */}
+            <p className="text-[10px] font-semibold text-slate-400 leading-none">
+              {job.hiredCount >= job.candidatesNeeded
+                ? "✓ All positions filled"
+                : `${job.candidatesNeeded - job.hiredCount} position${job.candidatesNeeded - job.hiredCount !== 1 ? "s" : ""} remaining`}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="w-px h-10 bg-gray-100" />
+
+          {/* Managed by note */}
+          <div className="flex flex-col items-end gap-1 max-w-[160px] text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Managed by Edge Harbour
+            </p>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Our team handles interviews and offers on your behalf.
+            </p>
+          </div>
         </div>
       )}
 

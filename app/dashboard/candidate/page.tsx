@@ -6,7 +6,7 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type DbStage = "new" | "interviewing" | "offers" | "rejected";
+type DbStage = "new" | "interviewing" | "offers" | "accepted" | "rejected";
 
 interface LatestApp {
   id:        string;
@@ -32,11 +32,22 @@ interface ProfileCheck {
   done:  boolean;
 }
 
+interface NextShift {
+  assignmentId:   string;
+  jobTitle:       string;
+  date:           string;
+  startTime:      string;
+  endTime:        string;
+  isRecurring:    boolean;
+  recurrenceType: string | null;
+}
+
 interface DashboardData {
   firstName:        string;
   candidateStatus:  string;
   sector:           string | null;
-  stats:            { totalApplied: number; new: number; interviewing: number; offers: number };
+  stats:            { totalApplied: number; new: number; interviewing: number; offers: number; accepted: number };
+  shifts:           { pending: number; confirmed: number; nextShift: NextShift | null };
   latestApplication: LatestApp | null;
   recommendedJobs:  RecommendedJob[];
   profile:          { completeness: number; checks: ProfileCheck[] };
@@ -52,48 +63,65 @@ const TIMELINE = [
 ];
 
 const STAGE_TO_IDX: Record<string, number> = {
-  new: 0, interviewing: 2, offers: 3, rejected: -1,
+  new: 0, interviewing: 2, offers: 3, accepted: 4, rejected: -1,
 };
 
 // ─── Application timeline ─────────────────────────────────────────────────────
 
 function ApplicationTimeline({ stage }: { stage: DbStage }) {
-  const currentIdx = STAGE_TO_IDX[stage] ?? 0;
-  const fillPct    = currentIdx <= 0 ? "0%" : `${(currentIdx / (TIMELINE.length - 1)) * 100}%`;
+  const accepted   = stage === "accepted";
+  const rejected   = stage === "rejected";
+  const currentIdx = accepted ? TIMELINE.length : (STAGE_TO_IDX[stage] ?? 0);
+  const fillPct    = accepted ? "100%" : currentIdx <= 0 ? "0%" : `${(currentIdx / (TIMELINE.length - 1)) * 100}%`;
 
   return (
-    <div className="relative flex items-start justify-between pt-2 pb-4">
-      <div className="absolute top-[18px] left-0 right-0 h-0.5 bg-gray-200" />
-      <div className="absolute top-[18px] left-0 h-0.5 bg-brand-blue transition-all" style={{ width: fillPct }} />
+    <div>
+      <div className="relative flex items-start justify-between pt-2 pb-4">
+        <div className="absolute top-[18px] left-0 right-0 h-0.5 bg-gray-200" />
+        <div className={`absolute top-[18px] left-0 h-0.5 transition-all ${accepted ? "bg-green-500" : rejected ? "bg-gray-200" : "bg-brand-blue"}`} style={{ width: fillPct }} />
 
-      {TIMELINE.map((step, idx) => {
-        const done   = idx < currentIdx;
-        const active = idx === currentIdx;
-        return (
-          <div key={step.key} className="relative flex flex-col items-center z-10" style={{ width: `${100 / TIMELINE.length}%` }}>
-            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${
-              done   ? "bg-brand-blue border-brand-blue" :
-              active ? "bg-white border-brand-blue shadow-md shadow-brand-blue/20" :
-                       "bg-white border-gray-200"
-            }`}>
-              {done ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-              ) : active ? (
-                <div className="w-2.5 h-2.5 bg-brand-blue rounded-full" />
-              ) : (
-                <div className="w-2.5 h-2.5 bg-gray-200 rounded-full" />
-              )}
+        {TIMELINE.map((step, idx) => {
+          const done   = accepted || (!rejected && idx < currentIdx);
+          const active = !accepted && !rejected && idx === currentIdx;
+          return (
+            <div key={step.key} className="relative flex flex-col items-center z-10" style={{ width: `${100 / TIMELINE.length}%` }}>
+              <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${
+                done && accepted ? "bg-green-500 border-green-500" :
+                done             ? "bg-brand-blue border-brand-blue" :
+                active           ? "bg-white border-brand-blue shadow-md shadow-brand-blue/20" :
+                                   "bg-white border-gray-200"
+              }`}>
+                {done ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                ) : active ? (
+                  <div className="w-2.5 h-2.5 bg-brand-blue rounded-full" />
+                ) : (
+                  <div className="w-2.5 h-2.5 bg-gray-200 rounded-full" />
+                )}
+              </div>
+              <p className={`mt-2 text-xs font-bold text-center ${
+                done && accepted ? "text-green-600" :
+                active           ? "text-brand-blue" :
+                done             ? "text-brand" : "text-slate-400"
+              }`}>
+                {step.label}
+              </p>
             </div>
-            <p className={`mt-2 text-xs font-bold text-center ${
-              active ? "text-brand-blue" : done ? "text-brand" : "text-slate-400"
-            }`}>
-              {step.label}
-            </p>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      {accepted && (
+        <div className="flex items-center gap-2 mt-1 px-1">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-bold rounded-xl">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            Offer Accepted — Welcome to the team!
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -177,6 +205,7 @@ export default function CandidateDashboardPage() {
           </div>
           <div className="space-y-4">
             <div className="bg-white border border-gray-100 rounded-2xl p-5 h-52" />
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 h-44" />
             <div className="bg-brand-blue rounded-2xl p-6 h-64" />
           </div>
         </div>
@@ -196,7 +225,7 @@ export default function CandidateDashboardPage() {
     );
   }
 
-  const { firstName, candidateStatus, stats, latestApplication, recommendedJobs, profile: profileData } = data;
+  const { firstName, candidateStatus, stats, shifts, latestApplication, recommendedJobs, profile: profileData } = data;
 
   return (
     <>
@@ -209,7 +238,14 @@ export default function CandidateDashboardPage() {
             Welcome back, {firstName}!
           </h1>
           <div className="flex items-center gap-1.5 mt-1.5 text-sm text-slate-500">
-            {stats.interviewing > 0 ? (
+            {stats.accepted > 0 ? (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-500 shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <span className="font-bold text-green-600">Offer accepted</span>{" "}— welcome to the team!
+              </>
+            ) : stats.interviewing > 0 ? (
               <>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-blue shrink-0">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
@@ -239,6 +275,24 @@ export default function CandidateDashboardPage() {
               <span className="text-slate-400">Start applying to jobs to track your progress here.</span>
             )}
           </div>
+
+          {/* Pending shift offers banner */}
+          {shifts.pending > 0 && (
+            <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4 mt-4">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-blue shrink-0 mt-0.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5m-9-6h.008v.008H12V9zm0 3.75h.008v.008H12v-.008zm0 3.75h.008v.008H12v-.008z" />
+              </svg>
+              <div>
+                <p className="text-sm font-bold text-brand-blue">
+                  You have {shifts.pending} pending shift offer{shifts.pending !== 1 ? "s" : ""}
+                </p>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  Respond to confirm your availability.{" "}
+                  <Link href="/dashboard/candidate/notifications" className="font-bold underline">View now →</Link>
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Resubmission banner */}
           {candidateStatus === "resubmission" && (
@@ -395,6 +449,16 @@ export default function CandidateDashboardPage() {
                       </svg>
                     ),
                   },
+                  {
+                    label: "Accepted",
+                    value: stats.accepted,
+                    bg: "bg-green-50",
+                    icon: (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    ),
+                  },
                 ].map((stat) => (
                   <div key={stat.label} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
                     <div className="flex items-center gap-3">
@@ -407,6 +471,54 @@ export default function CandidateDashboardPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* My Shifts */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-5" data-gsap="fade-up">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-brand">My Shifts</h2>
+                <Link href="/dashboard/candidate/notifications" className="text-xs font-semibold text-brand-blue hover:underline">
+                  View All
+                </Link>
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-amber-50 gap-1">
+                  <span className="text-2xl font-black text-amber-600">{shifts.pending}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500 text-center leading-tight">Pending</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-green-50 gap-1">
+                  <span className="text-2xl font-black text-green-600">{shifts.confirmed}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-green-500 text-center leading-tight">Confirmed</span>
+                </div>
+              </div>
+
+              {/* Next upcoming shift */}
+              {shifts.nextShift ? (
+                <div className="bg-[#F7F8FA] border border-gray-100 rounded-xl p-3.5">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-brand-blue shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-blue">Next Shift</p>
+                    {shifts.nextShift.isRecurring && (
+                      <span className="ml-auto px-1.5 py-0.5 bg-blue-100 text-brand-blue text-[9px] font-bold rounded-full uppercase tracking-wide">Recurring</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-brand truncate">{shifts.nextShift.jobTitle}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {new Date(shifts.nextShift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                  </p>
+                  <p className="text-xs font-semibold text-brand-blue mt-1">
+                    {shifts.nextShift.startTime} – {shifts.nextShift.endTime}
+                  </p>
+                </div>
+              ) : shifts.confirmed === 0 && shifts.pending === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-2">No shifts assigned yet.</p>
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-2">No upcoming shifts scheduled.</p>
+              )}
             </div>
 
             {/* Profile Completeness */}

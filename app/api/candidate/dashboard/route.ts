@@ -33,7 +33,7 @@ export async function GET() {
   const service = createServiceClient();
 
   // ── Parallel queries ────────────────────────────────────────────────────────
-  const [profileRes, candidateRes, applicationsRes, legalDocsRes] = await Promise.all([
+  const [profileRes, candidateRes, applicationsRes, legalDocsRes, shiftAssignmentsRes] = await Promise.all([
     service.from("profiles").select("full_name, status").eq("id", user.id).single(),
     service
       .from("candidates")
@@ -49,12 +49,18 @@ export async function GET() {
       .from("candidate_legal_documents")
       .select("id")
       .eq("candidate_id", user.id),
+    service
+      .from("shift_assignments")
+      .select("id, shift_id, status")
+      .eq("candidate_id", user.id)
+      .in("status", ["pending", "confirmed"]),
   ]);
 
   const profile = profileRes.data;
   const candidate = candidateRes.data;
   const applications = applicationsRes.data ?? [];
   const legalDocs = legalDocsRes.data ?? [];
+  const shiftAssignments = shiftAssignmentsRes.data ?? [];
 
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "there";
   const candidateStatus = profile?.status ?? "pending";
@@ -65,6 +71,7 @@ export async function GET() {
   const newCount = applications.filter((a) => a.stage === "new").length;
   const interviewCount = applications.filter((a) => a.stage === "interviewing").length;
   const offersCount = applications.filter((a) => a.stage === "offers").length;
+  const acceptedCount = applications.filter((a) => a.stage === "accepted").length;
 
   // ── Latest application with job details ─────────────────────────────────────
   let latestApplication: {
@@ -154,6 +161,56 @@ export async function GET() {
     }
   }
 
+  // ── Shift stats ─────────────────────────────────────────────────────────────
+  const pendingShiftCount   = shiftAssignments.filter((a) => a.status === "pending").length;
+  const confirmedShiftCount = shiftAssignments.filter((a) => a.status === "confirmed").length;
+
+  let nextShift: {
+    assignmentId: string;
+    jobTitle:     string;
+    date:         string;
+    startTime:    string;
+    endTime:      string;
+    isRecurring:  boolean;
+    recurrenceType: string | null;
+  } | null = null;
+
+  const confirmedIds = shiftAssignments
+    .filter((a) => a.status === "confirmed")
+    .map((a) => a.shift_id as string);
+
+  if (confirmedIds.length > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: upcomingShifts } = await service
+      .from("shifts")
+      .select("id, date, start_time, end_time, job_id, is_recurring, recurrence_type")
+      .in("id", confirmedIds)
+      .gte("date", today)
+      .order("date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .limit(1);
+
+    if (upcomingShifts && upcomingShifts.length > 0) {
+      const s = upcomingShifts[0];
+      const assignment = shiftAssignments.find((a) => a.shift_id === s.id);
+      const { data: shiftJob } = await service
+        .from("jobs")
+        .select("title")
+        .eq("id", s.job_id)
+        .single();
+
+      nextShift = {
+        assignmentId: assignment?.id ?? "",
+        jobTitle:     shiftJob?.title ?? "Unknown Role",
+        date:         s.date as string,
+        startTime:    (s.start_time as string).slice(0, 5),
+        endTime:      (s.end_time as string).slice(0, 5),
+        isRecurring:  (s.is_recurring as boolean) ?? false,
+        recurrenceType: (s.recurrence_type as string | null) ?? null,
+      };
+    }
+  }
+
   // ── Profile completeness ────────────────────────────────────────────────────
   const checks = [
     { label: "Full name",       done: !!(profile?.full_name && profile.full_name.trim()) },
@@ -174,6 +231,12 @@ export async function GET() {
       new: newCount,
       interviewing: interviewCount,
       offers: offersCount,
+      accepted: acceptedCount,
+    },
+    shifts: {
+      pending:   pendingShiftCount,
+      confirmed: confirmedShiftCount,
+      nextShift,
     },
     latestApplication,
     recommendedJobs,

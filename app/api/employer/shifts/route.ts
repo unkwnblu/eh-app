@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
   const { data: shifts, error: shiftsError } = await service
     .from("shifts")
-    .select("id, date, start_time, end_time, department, location, staff_needed, hourly_rate, experience_level, required_certifications, status, notes")
+    .select("id, date, start_time, end_time, break_minutes, department, location, staff_needed, hourly_rate, experience_level, required_certifications, status, notes, is_recurring, recurrence_type, recurrence_days, recurrence_end_date")
     .eq("job_id", jobId)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -99,10 +99,12 @@ export async function GET(request: NextRequest) {
   }[]> = {};
 
   if (shiftIds.length > 0) {
+    // Employers only see confirmed assignments — pending/declined are internal
     const { data: assignments } = await service
       .from("shift_assignments")
       .select("id, shift_id, candidate_id, status, assigned_at")
-      .in("shift_id", shiftIds);
+      .in("shift_id", shiftIds)
+      .eq("status", "confirmed");
 
     if (assignments && assignments.length > 0) {
       const candidateIds = [...new Set(assignments.map((a) => a.candidate_id as string))];
@@ -136,14 +138,19 @@ export async function GET(request: NextRequest) {
     date:                   s.date,
     startTime:              s.start_time,
     endTime:                s.end_time,
+    breakMinutes:           (s.break_minutes as number) ?? 0,
     department:             s.department ?? null,
     location:               s.location ?? null,
-    staffNeeded:            s.staff_needed,
+    staffNeeded:            (s.staff_needed as number) ?? 1,
     hourlyRate:             s.hourly_rate ?? null,
     experienceLevel:        s.experience_level,
     requiredCertifications: s.required_certifications ?? [],
     status:                 s.status,
     notes:                  s.notes ?? null,
+    isRecurring:            (s.is_recurring as boolean) ?? false,
+    recurrenceType:         (s.recurrence_type as "daily" | "weekly" | null) ?? null,
+    recurrenceDays:         (s.recurrence_days as number[] | null) ?? null,
+    recurrenceEndDate:      (s.recurrence_end_date as string | null) ?? null,
     assignments:            assignmentMap[s.id as string] ?? [],
   }));
 
@@ -171,11 +178,18 @@ export async function POST(request: NextRequest) {
     jobId, date, startTime, endTime,
     department, location, staffNeeded,
     hourlyRate, experienceLevel, requiredCertifications, notes,
+    breakMinutes,
+    isRecurring, recurrenceType, recurrenceDays, recurrenceEndDate,
   } = body as {
     jobId: string; date: string; startTime: string; endTime: string;
     department?: string; location?: string; staffNeeded?: number;
     hourlyRate?: number | null; experienceLevel?: string;
     requiredCertifications?: string[]; notes?: string;
+    breakMinutes?: number;
+    isRecurring?: boolean;
+    recurrenceType?: "daily" | "weekly";
+    recurrenceDays?: number[];
+    recurrenceEndDate?: string | null;
   };
 
   if (!jobId || !date || !startTime || !endTime) {
@@ -205,11 +219,16 @@ export async function POST(request: NextRequest) {
       department:              department ?? null,
       location:                location ?? null,
       staff_needed:            staffNeeded ?? 1,
+      break_minutes:           breakMinutes ?? 0,
       hourly_rate:             hourlyRate ?? null,
       experience_level:        experienceLevel ?? "Mid-level",
       required_certifications: requiredCertifications ?? [],
       notes:                   notes ?? null,
       status:                  "open",
+      is_recurring:            isRecurring ?? false,
+      recurrence_type:         isRecurring ? (recurrenceType ?? null) : null,
+      recurrence_days:         isRecurring && recurrenceType === "weekly" ? (recurrenceDays ?? null) : null,
+      recurrence_end_date:     isRecurring ? (recurrenceEndDate ?? null) : null,
     })
     .select("id")
     .single();

@@ -85,6 +85,27 @@ type JobDetail = {
   candidatesNeeded: number;
 };
 
+type ShiftAssignment = {
+  id:            string;
+  candidateId:   string;
+  candidateName: string;
+  status:        "pending" | "confirmed" | "declined" | "cancelled";
+  assignedAt:    string;
+};
+
+type AdminShift = {
+  id:           string;
+  date:         string;
+  startTime:    string;
+  endTime:      string;
+  breakMinutes: number;
+  department:   string | null;
+  location:     string | null;
+  staffNeeded:  number;
+  status:       "open" | "filled" | "cancelled";
+  assignments:  ShiftAssignment[];
+};
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
@@ -1063,6 +1084,109 @@ function KanbanColumn({ col, candidates, isOver, isLocked, now, onCardClick, onS
   );
 }
 
+// ─── Assign Shift Modal ────────────────────────────────────────────────────────
+
+type AssignShiftModalProps = {
+  shift:      AdminShift;
+  jobId:      string;
+  candidates: Candidate[];
+  onClose:    () => void;
+  onAssigned: () => void;
+};
+
+function AssignShiftModal({ shift, jobId: _jobId, candidates, onClose, onAssigned }: AssignShiftModalProps) {
+  const [selectedId, setSelectedId] = useState("");
+  const [assigning,  setAssigning]  = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+
+  const alreadyAssigned = new Set(
+    shift.assignments
+      .filter((a) => a.status !== "declined" && a.status !== "cancelled")
+      .map((a) => a.candidateId)
+  );
+  const available = candidates.filter((c) => !alreadyAssigned.has(c.candidateId));
+
+  async function assign() {
+    if (!selectedId) { setError("Please select a candidate"); return; }
+    setAssigning(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/shifts/${shift.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId: selectedId }),
+      });
+      if (!res.ok) {
+        const d = await res.json() as { error?: string };
+        throw new Error(d.error ?? "Failed to assign");
+      }
+      onAssigned();
+    } catch (e) {
+      setError((e as Error).message);
+      setAssigning(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-black text-brand">Assign Candidate to Shift</h3>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-gray-100 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        {/* Shift summary */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 text-xs text-brand-blue font-semibold">
+          {new Date(shift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+          {" · "}{shift.startTime.slice(0,5)} – {shift.endTime.slice(0,5)}
+          {shift.department && ` · ${shift.department}`}
+        </div>
+        {/* Candidate picker */}
+        <div className="mb-4">
+          <label className="block text-xs font-bold text-slate-500 mb-2">Select Candidate</label>
+          {available.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">All pipeline candidates are already assigned to this shift.</p>
+          ) : (
+            <div className="relative">
+              <select
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand outline-none focus:border-brand-blue appearance-none bg-white"
+              >
+                <option value="" disabled>Select a candidate…</option>
+                {(["accepted","interviewing","offers","new"] as ColumnKey[]).map((stage) => {
+                  const group = available.filter((c) => c.column === stage);
+                  if (group.length === 0) return null;
+                  return (
+                    <optgroup key={stage} label={stage.charAt(0).toUpperCase() + stage.slice(1)}>
+                      {group.map((c) => (
+                        <option key={c.candidateId} value={c.candidateId}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+            </div>
+          )}
+        </div>
+        {error && <p className="text-xs text-red-500 font-semibold mb-3">{error}</p>}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-slate-500 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+          <button
+            onClick={assign}
+            disabled={assigning || available.length === 0}
+            className="flex-1 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors disabled:opacity-50"
+          >
+            {assigning ? "Assigning…" : "Assign & Notify"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminJobPipelineDetailPage() {
@@ -1082,6 +1206,14 @@ export default function AdminJobPipelineDetailPage() {
 
   // Candidate profile modal
   const [modalCandidateId, setModalCandidateId] = useState<string | null>(null);
+
+  // Shifts tab
+  type PageView = "pipeline" | "shifts";
+  const [pageView,      setPageView]      = useState<PageView>("pipeline");
+  const [shifts,        setShifts]        = useState<AdminShift[]>([]);
+  const [loadingShifts, setLoadingShifts] = useState(false);
+  const [assigningTo,   setAssigningTo]   = useState<AdminShift | null>(null);
+  const [rescinding,    setRescinding]    = useState<string | null>(null); // assignmentId being rescinded
 
   // Schedule interview modal
   const [scheduleFor, setScheduleFor] = useState<{
@@ -1151,6 +1283,53 @@ export default function AdminJobPipelineDetailPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadShifts = useCallback(async () => {
+    setLoadingShifts(true);
+    try {
+      const res = await fetch(`/api/admin/shifts?jobId=${id}`);
+      if (!res.ok) throw new Error("Failed to load shifts");
+      const data = await res.json() as { shifts: AdminShift[] };
+      setShifts(data.shifts ?? []);
+    } catch {
+      // silent — user can retry by switching tabs
+    } finally {
+      setLoadingShifts(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (pageView === "shifts") loadShifts();
+  }, [pageView, loadShifts]);
+
+  async function rescindAssignment(shiftId: string, assignmentId: string) {
+    setRescinding(assignmentId);
+    // Optimistic update — mark as cancelled immediately
+    setShifts((prev) => prev.map((s) =>
+      s.id !== shiftId ? s : {
+        ...s,
+        assignments: s.assignments.map((a) =>
+          a.id !== assignmentId ? a : { ...a, status: "cancelled" as const }
+        ),
+      }
+    ));
+    try {
+      const res = await fetch(`/api/admin/shifts/${shiftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error ?? "Failed to rescind");
+      }
+    } catch {
+      // Revert optimistic update on failure
+      loadShifts();
+    } finally {
+      setRescinding(null);
+    }
+  }
 
   // ─── Drag helpers ────────────────────────────────────────────────────────────
 
@@ -1361,25 +1540,45 @@ export default function AdminJobPipelineDetailPage() {
 
           {/* Refresh button */}
           <button
-            onClick={load}
-            disabled={loading}
-            title="Refresh pipeline"
+            onClick={() => pageView === "shifts" ? loadShifts() : load()}
+            disabled={pageView === "shifts" ? loadingShifts : loading}
+            title={pageView === "shifts" ? "Refresh shifts" : "Refresh pipeline"}
             className="p-3 bg-white border border-gray-100 rounded-2xl text-slate-400 hover:text-brand-blue hover:border-brand-blue/30 transition-colors disabled:opacity-40 shrink-0 self-start"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={loading ? "animate-spin" : ""}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={(pageView === "shifts" ? loadingShifts : loading) ? "animate-spin" : ""}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
           </button>
         </div>
 
+        {/* View tabs */}
+        <div className="flex items-center gap-1 border-b border-gray-100 mb-6" data-gsap="fade-down">
+          {([
+            { key: "pipeline", label: "Candidate Pipeline" },
+            { key: "shifts",   label: "Shift Management" },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setPageView(t.key)}
+              className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors -mb-px ${
+                pageView === t.key
+                  ? "border-brand-blue text-brand-blue"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         {/* Save feedback */}
-        {saving && (
+        {pageView === "pipeline" && saving && (
           <div className="flex items-center gap-2 mb-4 px-4 py-2.5 bg-brand-blue/5 border border-brand-blue/20 rounded-xl w-fit text-xs font-semibold text-brand-blue">
             <span className="w-3.5 h-3.5 rounded-full border-2 border-brand-blue border-t-transparent animate-spin shrink-0" />
             Saving…
           </div>
         )}
-        {saveError && (
+        {pageView === "pipeline" && saveError && (
           <div className="flex items-center justify-between mb-4 px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl text-xs font-semibold text-red-600">
             <span className="flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
@@ -1393,79 +1592,191 @@ export default function AdminJobPipelineDetailPage() {
           </div>
         )}
 
-        {/* Stats */}
-        <div data-gsap="fade-up" className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">{stat.label}</p>
-              <div className="flex items-end justify-between">
-                <p className="text-3xl font-black text-brand leading-none">{stat.value}</p>
+        {pageView === "pipeline" && (
+          <>
+            {/* Stats */}
+            <div data-gsap="fade-up" className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {stats.map((stat) => (
+                <div key={stat.label} className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">{stat.label}</p>
+                  <div className="flex items-end justify-between">
+                    <p className="text-3xl font-black text-brand leading-none">{stat.value}</p>
+                  </div>
+                  <div className="mt-3 h-0.5 bg-brand-blue/20 rounded-full">
+                    <div
+                      className="h-full bg-brand-blue rounded-full transition-all"
+                      style={{ width: totalApplied > 0 ? `${(stat.value / totalApplied) * 100}%` : "0%" }}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Accepted / Candidates Needed */}
+              <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Accepted / Needed</p>
+                <div className="flex items-end justify-between">
+                  <p className="text-3xl font-black text-brand leading-none">{acceptedCount}</p>
+                  <p className="text-sm font-bold text-slate-400 leading-none mb-1">of {job.candidatesNeeded}</p>
+                </div>
+                <div className="mt-3 h-0.5 bg-green-100 rounded-full">
+                  <div
+                    className="h-full bg-green-500 rounded-full transition-all"
+                    style={{ width: job.candidatesNeeded > 0 ? `${Math.min((acceptedCount / job.candidatesNeeded) * 100, 100)}%` : "0%" }}
+                  />
+                </div>
               </div>
-              <div className="mt-3 h-0.5 bg-brand-blue/20 rounded-full">
-                <div
-                  className="h-full bg-brand-blue rounded-full transition-all"
-                  style={{ width: totalApplied > 0 ? `${(stat.value / totalApplied) * 100}%` : "0%" }}
-                />
+            </div>
+
+            {/* Kanban */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
+            >
+              <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+                {COLUMNS.map((col) => (
+                  <KanbanColumn
+                    key={col.key}
+                    col={col}
+                    candidates={candidates.filter((c) => c.column === col.key)}
+                    isOver={overColumn === col.key}
+                    isLocked={col.key === "accepted" || (dragFromCol !== null && !isValidMove(dragFromCol, col.key))}
+                    now={now}
+                    onCardClick={(candidateId) => setModalCandidateId(candidateId)}
+                    onScheduleInterview={(applicationId, candidateName) => {
+                      const c = candidates.find((x) => x.id === applicationId);
+                      setScheduleFor({
+                        applicationId,
+                        candidateName,
+                        existingDate: c?.interviewDate ?? null,
+                        existingTime: c?.interviewTime ?? null,
+                        existingLink: c?.meetingLink   ?? null,
+                      });
+                    }}
+                    acceptedCount={col.key === "accepted" ? acceptedCount : undefined}
+                    candidatesNeeded={col.key === "accepted" ? job.candidatesNeeded : undefined}
+                  />
+                ))}
               </div>
-            </div>
-          ))}
 
-          {/* Accepted / Candidates Needed */}
-          <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Accepted / Needed</p>
-            <div className="flex items-end justify-between">
-              <p className="text-3xl font-black text-brand leading-none">{acceptedCount}</p>
-              <p className="text-sm font-bold text-slate-400 leading-none mb-1">of {job.candidatesNeeded}</p>
-            </div>
-            <div className="mt-3 h-0.5 bg-green-100 rounded-full">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: job.candidatesNeeded > 0 ? `${Math.min((acceptedCount / job.candidatesNeeded) * 100, 100)}%` : "0%" }}
-              />
-            </div>
-          </div>
-        </div>
+              <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
+                {activeCandidate && (
+                  <CandidateCard candidate={activeCandidate} now={now} isDragging />
+                )}
+              </DragOverlay>
+            </DndContext>
+          </>
+        )}
 
-        {/* Kanban */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={onDragStart}
-          onDragOver={onDragOver}
-          onDragEnd={onDragEnd}
-        >
-          <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-            {COLUMNS.map((col) => (
-              <KanbanColumn
-                key={col.key}
-                col={col}
-                candidates={candidates.filter((c) => c.column === col.key)}
-                isOver={overColumn === col.key}
-                isLocked={col.key === "accepted" || (dragFromCol !== null && !isValidMove(dragFromCol, col.key))}
-                now={now}
-                onCardClick={(candidateId) => setModalCandidateId(candidateId)}
-                onScheduleInterview={(applicationId, candidateName) => {
-                  const c = candidates.find((x) => x.id === applicationId);
-                  setScheduleFor({
-                    applicationId,
-                    candidateName,
-                    existingDate: c?.interviewDate ?? null,
-                    existingTime: c?.interviewTime ?? null,
-                    existingLink: c?.meetingLink   ?? null,
-                  });
-                }}
-                acceptedCount={col.key === "accepted" ? acceptedCount : undefined}
-                candidatesNeeded={col.key === "accepted" ? job.candidatesNeeded : undefined}
-              />
-            ))}
-          </div>
-
-          <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
-            {activeCandidate && (
-              <CandidateCard candidate={activeCandidate} now={now} isDragging />
+        {pageView === "shifts" && (
+          <div data-gsap="fade-up">
+            {loadingShifts ? (
+              <div className="space-y-3">
+                {[1,2,3].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
+              </div>
+            ) : shifts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-blue">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                </div>
+                <p className="text-sm font-bold text-brand">No shifts posted yet</p>
+                <p className="text-xs text-slate-400">The employer hasn&apos;t created any shifts for this job.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {shifts.map((shift) => {
+                  const confirmedCount = shift.assignments.filter((a) => a.status === "confirmed").length;
+                  const pendingCount   = shift.assignments.filter((a) => a.status === "pending").length;
+                  const date = new Date(shift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+                  const paidHours = Math.max(0, (
+                    (() => {
+                      const [sh, sm] = shift.startTime.split(":").map(Number);
+                      const [eh, em] = shift.endTime.split(":").map(Number);
+                      return ((eh * 60 + em) - (sh * 60 + sm) - (shift.breakMinutes ?? 0)) / 60;
+                    })()
+                  ));
+                  return (
+                    <div key={shift.id} className="bg-white border border-gray-100 rounded-2xl p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-1">
+                            <p className="text-sm font-bold text-brand">{date} · {shift.department ?? "General"}</p>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              shift.status === "open" ? "bg-blue-50 text-blue-600" :
+                              shift.status === "filled" ? "bg-green-50 text-green-600" :
+                              "bg-gray-100 text-slate-400"
+                            }`}>{shift.status}</span>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            {shift.startTime.slice(0,5)} – {shift.endTime.slice(0,5)} · {paidHours.toFixed(1)} paid hrs
+                            {shift.breakMinutes > 0 && ` · ${shift.breakMinutes}m break`}
+                            {shift.location && ` · ${shift.location}`}
+                          </p>
+                          {/* Assignments */}
+                          {shift.assignments.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {shift.assignments.map((a) => (
+                                <div key={a.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                  a.status === "confirmed" ? "bg-green-50 text-green-700 border border-green-100" :
+                                  a.status === "pending"   ? "bg-amber-50 text-amber-700 border border-amber-100" :
+                                  "bg-gray-50 text-slate-400 border border-gray-100 line-through"
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    a.status === "confirmed" ? "bg-green-500" :
+                                    a.status === "pending"   ? "bg-amber-400" : "bg-gray-300"
+                                  }`} />
+                                  {a.candidateName}
+                                  <span className="text-[9px] opacity-70 uppercase tracking-wide">{a.status}</span>
+                                  {a.status === "pending" && (
+                                    <button
+                                      title="Rescind shift offer"
+                                      disabled={rescinding === a.id}
+                                      onClick={() => rescindAssignment(shift.id, a.id)}
+                                      className="ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-colors disabled:opacity-40"
+                                    >
+                                      {rescinding === a.id ? (
+                                        <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
+                                      ) : (
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-brand">{confirmedCount}/{shift.staffNeeded}</p>
+                            <p className="text-[10px] text-slate-400">confirmed</p>
+                            {pendingCount > 0 && <p className="text-[10px] text-amber-500">{pendingCount} pending</p>}
+                          </div>
+                          {shift.status !== "cancelled" && confirmedCount < shift.staffNeeded && (
+                            <button
+                              onClick={() => setAssigningTo(shift)}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                              </svg>
+                              Assign
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </DragOverlay>
-        </DndContext>
+          </div>
+        )}
+
       </main>
 
       {/* Candidate profile modal */}
@@ -1487,6 +1798,17 @@ export default function AdminJobPipelineDetailPage() {
           existingLink={scheduleFor.existingLink}
           onClose={() => setScheduleFor(null)}
           onSent={() => { setScheduleFor(null); load(); }}
+        />
+      )}
+
+      {/* Assign shift modal */}
+      {assigningTo && (
+        <AssignShiftModal
+          shift={assigningTo}
+          jobId={id}
+          candidates={candidates}
+          onClose={() => setAssigningTo(null)}
+          onAssigned={() => { setAssigningTo(null); loadShifts(); }}
         />
       )}
 

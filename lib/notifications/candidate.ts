@@ -16,7 +16,8 @@ export type CandidateNotifType =
   | "rejection"     // not progressed
   | "verification"  // profile approved / rejected / resubmission requested
   | "system"        // admin broadcast
-  | "compliance";   // document warning / expiry
+  | "compliance"    // document warning / expiry
+  | "shift";        // shift assigned by admin — awaiting candidate confirmation
 
 export interface NotifMetadata {
   jobId?:    string;

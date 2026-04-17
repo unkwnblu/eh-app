@@ -35,12 +35,16 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: "Shift not found" }, { status: 404 });
 
   const fieldMap: Record<string, string> = {
-    status:      "status",
-    department:  "department",
-    location:    "location",
-    staffNeeded: "staff_needed",
-    hourlyRate:  "hourly_rate",
-    notes:       "notes",
+    status:       "status",
+    date:         "date",
+    startTime:    "start_time",
+    endTime:      "end_time",
+    breakMinutes: "break_minutes",
+    department:   "department",
+    location:     "location",
+    staffNeeded:  "staff_needed",
+    hourlyRate:   "hourly_rate",
+    notes:        "notes",
   };
 
   const allowed = Object.keys(fieldMap);

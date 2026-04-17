@@ -23,6 +23,7 @@ type Shift = {
   date: string;
   startTime: string;
   endTime: string;
+  breakMinutes: number;
   department: string | null;
   location: string | null;
   staffNeeded: number;
@@ -30,6 +31,10 @@ type Shift = {
   experienceLevel: string;
   status: ShiftStatus;
   assignments: Assignment[];
+  isRecurring: boolean;
+  recurrenceType: "daily" | "weekly" | null;
+  recurrenceDays: number[] | null;
+  recurrenceEndDate: string | null;
 };
 
 type JobDetail = {
@@ -52,26 +57,49 @@ function formatDate(d: string): string {
   return date.toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function hoursWorked(start: string, end: string): number {
+function hoursWorked(start: string, end: string, breakMins = 0): number {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
-  const diff = (eh * 60 + em) - (sh * 60 + (sm || 0));
+  const diff = (eh * 60 + em) - (sh * 60 + (sm || 0)) - breakMins;
   return Math.max(0, diff / 60);
+}
+
+// ─── Recurrence label ──────────────────────────────────────────────────────────
+
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function recurrenceLabel(shift: Shift): string | null {
+  if (!shift.isRecurring) return null;
+  if (shift.recurrenceType === "daily") return "Every day";
+  if (shift.recurrenceType === "weekly" && shift.recurrenceDays?.length) {
+    const sorted = [...shift.recurrenceDays].sort((a, b) => a - b);
+    // Detect Mon–Fri shortcut
+    if (sorted.join() === "1,2,3,4,5") return "Every weekday (Mon–Fri)";
+    if (sorted.join() === "0,1,2,3,4,5,6") return "Every day";
+    return "Every " + sorted.map((d) => DOW[d]).join(", ");
+  }
+  return "Recurring";
 }
 
 // ─── Status Badge ──────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: ShiftStatus }) {
-  const styles: Record<ShiftStatus, string> = {
-    open:      "bg-blue-50 text-blue-600",
-    filled:    "bg-green-50 text-green-600",
-    cancelled: "bg-gray-100 text-slate-400",
-  };
-  return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase ${styles[status]}`}>
-      {status}
-    </span>
-  );
+function StatusBadge({ status, confirmed, needed }: { status: ShiftStatus; confirmed: number; needed: number }) {
+  if (status === "cancelled") {
+    return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase bg-gray-100 text-slate-400">Cancelled</span>;
+  }
+  if (status === "filled") {
+    return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase bg-green-50 text-green-600">Filled</span>;
+  }
+  if (confirmed > 0) {
+    // Partially staffed — show progress
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        {confirmed}/{needed} Staffed
+      </span>
+    );
+  }
+  return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase bg-blue-50 text-blue-600">Open</span>;
 }
 
 // ─── Loading Skeleton ──────────────────────────────────────────────────────────
@@ -104,6 +132,8 @@ export default function ManageShiftsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [actioningId,  setActioningId]  = useState<string | null>(null);
+  const [openMenuId,   setOpenMenuId]   = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
@@ -154,8 +184,48 @@ export default function ManageShiftsPage() {
     }
   }
 
+  async function reopenShift(shiftId: string) {
+    setActioningId(shiftId);
+    setOpenMenuId(null);
+    setShifts((prev) => prev.map((s) => s.id === shiftId ? { ...s, status: "open" as ShiftStatus } : s));
+    try {
+      const res = await fetch(`/api/employer/shifts/${shiftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "open" }),
+      });
+      if (!res.ok) throw new Error("Failed to reopen");
+      toast("Shift reopened.", "success");
+    } catch {
+      setShifts((prev) => prev.map((s) => s.id === shiftId ? { ...s, status: "cancelled" as ShiftStatus } : s));
+      toast("Failed to reopen shift.", "error");
+    } finally {
+      setActioningId(null);
+    }
+  }
+
+  async function deleteShift(shiftId: string) {
+    setActioningId(shiftId);
+    setOpenMenuId(null);
+    setShifts((prev) => prev.filter((s) => s.id !== shiftId));
+    try {
+      const res = await fetch(`/api/employer/shifts/${shiftId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      toast("Shift deleted.", "info");
+    } catch {
+      // Reload to restore deleted shift on failure
+      fetchData();
+      toast("Failed to delete shift.", "error");
+    } finally {
+      setActioningId(null);
+    }
+  }
+
   // ── Derived stats ───────────────────────────────────────────────────────────
-  const filledCount = shifts.filter((s) => s.status === "filled").length;
+  const filledCount = shifts.filter((s) => {
+    const confirmed = s.assignments.filter((a) => a.status === "confirmed").length;
+    return s.status !== "cancelled" && confirmed > 0 && confirmed >= (s.staffNeeded || 1);
+  }).length;
   const fillRate = shifts.length > 0 ? Math.round((filledCount / shifts.length) * 100) : 0;
   const totalStaffNeeded = shifts.reduce((sum, s) => sum + s.staffNeeded, 0);
   const confirmedAssignments = shifts.reduce(
@@ -354,8 +424,13 @@ export default function ManageShiftsPage() {
                 {/* Rows */}
                 <div className="divide-y divide-gray-50">
                   {shifts.map((shift) => {
-                    const hrs = hoursWorked(shift.startTime, shift.endTime);
-                    const confirmedList = shift.assignments.filter((a) => a.status === "confirmed");
+                    const hrs = hoursWorked(shift.startTime, shift.endTime, shift.breakMinutes);
+                    const confirmedList   = shift.assignments.filter((a) => a.status === "confirmed");
+                    // Derive status from confirmed count so the UI is always accurate
+                    // even if the DB field hasn't been updated yet
+                    const effectiveStatus: ShiftStatus =
+                      shift.status === "cancelled" ? "cancelled" :
+                      confirmedList.length > 0 && confirmedList.length >= (shift.staffNeeded || 1) ? "filled" : "open";
                     return (
                       <div
                         key={shift.id}
@@ -363,14 +438,35 @@ export default function ManageShiftsPage() {
                       >
                         {/* Schedule */}
                         <div>
-                          <p className="text-sm font-bold text-brand">
-                            {formatDate(shift.date)} • {shift.department ?? "General"}
-                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-brand">
+                              {shift.isRecurring
+                                ? `From ${formatDate(shift.date)} • ${shift.department ?? "General"}`
+                                : `${formatDate(shift.date)} • ${shift.department ?? "General"}`
+                              }
+                            </p>
+                            {shift.isRecurring && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-blue/10 text-brand-blue text-[10px] font-bold rounded-full">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                {recurrenceLabel(shift)}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1 mt-0.5 text-xs text-slate-400">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            {formatTime(shift.startTime)} – {formatTime(shift.endTime)} ({hrs % 1 === 0 ? hrs.toFixed(0) : hrs.toFixed(1)} hrs)
+                            {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
+                            {" · "}
+                            {hrs % 1 === 0 ? hrs.toFixed(0) : hrs.toFixed(1)} paid hrs
+                            {shift.breakMinutes > 0 && (
+                              <span className="ml-1 text-slate-300">({shift.breakMinutes}m break)</span>
+                            )}
+                            {shift.isRecurring && shift.recurrenceEndDate && (
+                              <span className="ml-1 text-slate-300">· until {formatDate(shift.recurrenceEndDate)}</span>
+                            )}
                           </div>
                         </div>
 
@@ -412,23 +508,63 @@ export default function ManageShiftsPage() {
                         )}
 
                         {/* Status */}
-                        <StatusBadge status={shift.status} />
+                        <StatusBadge status={effectiveStatus} confirmed={confirmedList.length} needed={shift.staffNeeded || 1} />
 
                         {/* Actions */}
-                        {shift.status === "open" ? (
+                        {effectiveStatus === "open" ? (
                           <button
                             disabled={cancellingId === shift.id}
                             onClick={() => cancelShift(shift.id)}
                             className="px-4 py-1.5 bg-red-50 text-red-500 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors whitespace-nowrap disabled:opacity-50"
                           >
-                            CANCEL
+                            {cancellingId === shift.id ? "…" : "CANCEL"}
                           </button>
                         ) : (
-                          <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded-lg transition-colors">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                              <path fillRule="evenodd" d="M4.5 12a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
+                          <div className="relative">
+                            <button
+                              disabled={actioningId === shift.id}
+                              onClick={() => setOpenMenuId((prev) => prev === shift.id ? null : shift.id)}
+                              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40"
+                            >
+                              {actioningId === shift.id ? (
+                                <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-transparent animate-spin inline-block" />
+                              ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.5 12a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm6 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+
+                            {openMenuId === shift.id && (
+                              <>
+                                {/* Backdrop */}
+                                <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
+                                {/* Dropdown */}
+                                <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden min-w-[160px]">
+                                  {effectiveStatus === "cancelled" && (
+                                    <button
+                                      onClick={() => reopenShift(shift.id)}
+                                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-green-600 hover:bg-green-50 transition-colors text-left"
+                                    >
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                      </svg>
+                                      Reopen Shift
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => deleteShift(shift.id)}
+                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors text-left"
+                                  >
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                    Delete Shift
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     );

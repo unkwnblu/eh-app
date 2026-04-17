@@ -12,6 +12,12 @@ type Day = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturda
 
 const DAYS: Day[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+// JS getDay() mapping: Sun=0 Mon=1 … Sat=6
+const DAY_NUM: Record<Day, number> = {
+  Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4,
+  Friday: 5, Saturday: 6, Sunday: 0,
+};
+
 const CANDIDATE_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
 const CERTIFICATES = [
@@ -48,6 +54,28 @@ function timeToMinutes(t: string): number {
   return hours * 60 + parseInt(m);
 }
 
+/** Returns the next calendar date (YYYY-MM-DD) for a given JS weekday number. */
+function nextDateForDay(dayNum: number): string {
+  const today    = new Date();
+  const todayDay = today.getDay();
+  let diff       = dayNum - todayDay;
+  if (diff < 0) diff += 7;          // already passed — roll to next week
+  const target = new Date(today);
+  target.setDate(today.getDate() + diff);
+  return target.toISOString().split("T")[0];
+}
+
+/** Converts "08:00 AM" / "17:00" to the "HH:MM" 24-hour form the API expects. */
+function to24h(t: string): string {
+  if (!t.includes(" ")) return t.slice(0, 5); // already 24-h "HH:MM"
+  const [time, period] = t.split(" ");
+  const [hStr, mStr]   = time.split(":");
+  let h = parseInt(hStr);
+  if (period === "PM" && h !== 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+  return `${String(h).padStart(2, "0")}:${mStr}`;
+}
+
 function formatSalary(min: number | null, max: number | null): string {
   if (!min && !max) return "Salary not set";
   const fmt = (n: number) => n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${n}`;
@@ -76,17 +104,20 @@ export default function EditJobPage() {
 
   // ── Load state ─────────────────────────────────────────────────────────────
   const [job,      setJob]      = useState<JobDetail | null>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [loadErr,  setLoadErr]  = useState<string | null>(null);
-  const [saving,   setSaving]   = useState(false);
+  const [loading,      setLoading]      = useState(true);
+  const [loadErr,      setLoadErr]      = useState<string | null>(null);
+  const [saving,       setSaving]       = useState(false);
+  const [addingShift,  setAddingShift]  = useState(false);
+  const [closingJob,   setClosingJob]   = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [shiftTitle,    setShiftTitle]    = useState("");
   const [candidates,    setCandidates]    = useState("1");
   const [hourlyRate,    setHourlyRate]    = useState("");
   const [selectedDays,  setSelectedDays]  = useState<Day[]>(["Wednesday", "Thursday", "Friday"]);
-  const [startTime,     setStartTime]     = useState("08:00 AM");
-  const [endTime,       setEndTime]       = useState("05:00 PM");
+  const [startTime,     setStartTime]     = useState("08:00");
+  const [endTime,       setEndTime]       = useState("17:00");
   const [selectedCerts, setSelectedCerts] = useState<string[]>([]);
 
   // ── Load job ───────────────────────────────────────────────────────────────
@@ -176,6 +207,69 @@ export default function EditJobPage() {
       toast((err as Error).message, "error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // ── Add Shifts ─────────────────────────────────────────────────────────────
+
+  async function handleAddShift() {
+    if (selectedDays.length === 0) { toast("Select at least one day.", "error"); return; }
+
+    setAddingShift(true);
+    const start24 = to24h(startTime);
+    const end24   = to24h(endTime);
+    let created   = 0;
+    let failed    = 0;
+
+    try {
+      await Promise.all(
+        selectedDays.map(async (day) => {
+          const date = nextDateForDay(DAY_NUM[day]);
+          const res  = await fetch("/api/employer/shifts", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+              jobId:       id,
+              date,
+              startTime:   start24 + ":00",
+              endTime:     end24   + ":00",
+              staffNeeded: 1,
+            }),
+          });
+          if (res.ok) created++; else failed++;
+        })
+      );
+
+      if (created > 0) toast(`${created} shift${created !== 1 ? "s" : ""} added successfully.`, "success");
+      if (failed  > 0) toast(`${failed} shift${failed  !== 1 ? "s" : ""} failed to save.`,    "error");
+    } catch {
+      toast("Failed to add shifts.", "error");
+    } finally {
+      setAddingShift(false);
+    }
+  }
+
+  // ── Close Job ──────────────────────────────────────────────────────────────
+
+  async function handleCloseJob() {
+    setClosingJob(true);
+    try {
+      const res = await fetch(`/api/employer/jobs/${id}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ status: "closed" }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Failed to close job");
+      }
+      toast("Job closed successfully.", "info");
+      router.push("/dashboard/employer/jobs");
+    } catch (err) {
+      toast((err as Error).message, "error");
+    } finally {
+      setClosingJob(false);
+      setConfirmClose(false);
     }
   }
 
@@ -269,6 +363,40 @@ export default function EditJobPage() {
               </span>
             </div>
           </div>
+
+          {/* Close Job button — only while job is live or under review */}
+          {(job.status === "live" || job.status === "review") && (
+            <div className="shrink-0">
+              {!confirmClose ? (
+                <button
+                  onClick={() => setConfirmClose(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-red-200 text-red-500 text-sm font-semibold rounded-xl hover:bg-red-50 transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Close Job
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
+                  <p className="text-xs font-semibold text-red-600">Close this job posting?</p>
+                  <button
+                    onClick={handleCloseJob}
+                    disabled={closingJob}
+                    className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {closingJob ? "Closing…" : "Yes, close"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmClose(false)}
+                    className="px-3 py-1 border border-red-200 text-red-400 text-xs font-semibold rounded-lg hover:bg-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
@@ -415,7 +543,7 @@ export default function EditJobPage() {
                 <div>
                   <label className="block text-xs font-semibold text-brand mb-1.5">Start Time</label>
                   <input
-                    type="text"
+                    type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors"
@@ -424,7 +552,7 @@ export default function EditJobPage() {
                 <div>
                   <label className="block text-xs font-semibold text-brand mb-1.5">End Time</label>
                   <input
-                    type="text"
+                    type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors"
@@ -433,10 +561,23 @@ export default function EditJobPage() {
               </div>
 
               <button
-                onClick={() => toast("Shift scheduling coming soon", "info")}
-                className="w-full mt-4 bg-brand-blue text-white text-sm font-semibold rounded-xl py-3 hover:bg-brand-blue-dark transition-colors"
+                onClick={handleAddShift}
+                disabled={addingShift || selectedDays.length === 0}
+                className="w-full mt-4 bg-brand-blue text-white text-sm font-semibold rounded-xl py-3 hover:bg-brand-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Add Shift
+                {addingShift ? (
+                  <>
+                    <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    Adding {selectedDays.length} shift{selectedDays.length !== 1 ? "s" : ""}…
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Add {selectedDays.length > 0 ? `${selectedDays.length} ` : ""}Shift{selectedDays.length !== 1 ? "s" : ""}
+                  </>
+                )}
               </button>
             </div>
 

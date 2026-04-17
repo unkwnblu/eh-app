@@ -6,7 +6,7 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type DbStage = "new" | "interviewing" | "offers" | "rejected";
+type DbStage = "new" | "interviewing" | "offers" | "accepted" | "rejected";
 
 type Application = {
   id:           string;
@@ -44,14 +44,16 @@ const STAGE_TO_IDX: Record<DbStage, number> = {
   new:          0,
   interviewing: 2,
   offers:       3,
+  accepted:     4, // all steps complete
   rejected:     -1, // handled separately
 };
 
 const STAGE_STATUS: Record<DbStage, { label: string; style: string }> = {
-  new:          { label: "Applied",          style: "bg-gray-100 text-slate-500"   },
-  interviewing: { label: "Interviewing",     style: "bg-blue-100 text-brand-blue"  },
-  offers:       { label: "Decision Pending", style: "bg-amber-100 text-amber-700"  },
-  rejected:     { label: "Not Progressed",   style: "bg-red-50 text-red-500"       },
+  new:          { label: "Applied",          style: "bg-gray-100 text-slate-500"        },
+  interviewing: { label: "Interviewing",     style: "bg-blue-100 text-brand-blue"       },
+  offers:       { label: "Decision Pending", style: "bg-amber-100 text-amber-700"       },
+  accepted:     { label: "Offer Accepted",   style: "bg-green-100 text-green-700"       },
+  rejected:     { label: "Not Progressed",   style: "bg-red-50 text-red-500"            },
 };
 
 // ─── Sector icon ───────────────────────────────────────────────────────────────
@@ -110,6 +112,27 @@ function MiniTimeline({ stage }: { stage: DbStage }) {
             <div key={step.key} className="relative flex flex-col items-center z-10">
               <div className="w-3.5 h-3.5 rounded-full border-2 bg-white border-gray-200" />
               <span className="mt-1.5 text-[10px] font-medium text-slate-400 whitespace-nowrap">{step.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (stage === "accepted") {
+    return (
+      <div className="flex-1 min-w-0">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Application Progress</p>
+        <div className="relative flex items-center justify-between">
+          <div className="absolute top-[7px] left-0 right-0 h-0.5 bg-green-500" />
+          {TIMELINE.map((step) => (
+            <div key={step.key} className="relative flex flex-col items-center z-10">
+              <div className="w-3.5 h-3.5 rounded-full border-2 bg-green-500 border-green-500">
+                <svg viewBox="0 0 14 14" fill="none" className="w-full h-full p-0.5">
+                  <path d="M2.5 7l3 3 6-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span className="mt-1.5 text-[10px] font-semibold text-green-600 whitespace-nowrap">{step.label}</span>
             </div>
           ))}
         </div>
