@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ export default function SupportPage() {
 
   return (
         <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
+          <GsapAnimations />
 
           {/* Page header */}
           <div data-gsap="fade-down">

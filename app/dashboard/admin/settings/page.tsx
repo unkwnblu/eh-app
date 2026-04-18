@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 import { useToast } from "@/components/ui/Toast";
 
 // ─── Toggle ────────────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ export default function AdminSettingsPage() {
 
   return (
     <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
+      <GsapAnimations />
 
       {/* Header */}
       <div data-gsap="fade-down">

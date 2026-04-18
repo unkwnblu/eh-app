@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import GsapAnimations from "@/components/landing/GsapAnimations";
 import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -408,6 +409,7 @@ export default function CandidateVerificationPage() {
 
   return (
     <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-6">
+      <GsapAnimations />
 
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4" data-gsap="fade-down">
