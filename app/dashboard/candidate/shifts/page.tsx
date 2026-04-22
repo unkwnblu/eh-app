@@ -8,19 +8,16 @@ import GsapAnimations from "@/components/landing/GsapAnimations";
 type AssignmentStatus = "pending" | "confirmed" | "declined";
 
 type ShiftAssignment = {
-  assignmentId:     string;
-  status:           AssignmentStatus;
-  assignedAt:       string;
-  shiftId:          string;
-  date:             string;        // YYYY-MM-DD (start date / single date)
-  startTime:        string;        // HH:MM
-  endTime:          string;        // HH:MM
-  jobTitle:         string;
-  isRecurring:      boolean;
-  recurrenceType:   "daily" | "weekly" | null;
-  recurrenceDays:   number[] | null;
-  recurrenceEndDate: string | null;
-  shiftStatus:      string;
+  assignmentId: string;
+  status:       AssignmentStatus;
+  assignedAt:   string;
+  shiftId:      string;
+  date:         string;   // YYYY-MM-DD — every occurrence is its own row
+  startTime:    string;   // HH:MM
+  endTime:      string;   // HH:MM
+  jobTitle:     string;
+  isRecurring:  boolean;  // true = part of a recurring series (display badge only)
+  shiftStatus:  string;
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -32,38 +29,21 @@ function isoDate(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-/** Expand a recurring shift into all dates for a given month */
+/** Format a JS Date as YYYY-MM-DD using LOCAL date parts (never UTC, avoids BST-off-by-one) */
+function localDate(d: Date): string {
+  return isoDate(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/**
+ * Return the date(s) for a shift that fall within the given month.
+ * Since every occurrence is now its own DB row, each shift has exactly
+ * one date — we just check whether it belongs to this month.
+ */
 function expandShiftDates(s: ShiftAssignment, year: number, month: number): string[] {
-  if (!s.isRecurring) return [s.date];
-  const endDate = s.recurrenceEndDate ?? (() => {
-    const d = new Date(s.date + "T00:00:00");
-    d.setMonth(d.getMonth() + 3);
-    return d.toISOString().slice(0, 10);
-  })();
-  // Clamp to the requested month
   const monthStart = isoDate(year, month, 1);
   const lastDay    = new Date(year, month + 1, 0).getDate();
   const monthEnd   = isoDate(year, month, lastDay);
-  const start = s.date > monthStart ? s.date : monthStart;
-  const end   = endDate < monthEnd   ? endDate : monthEnd;
-  if (start > end) return [];
-
-  const dates: string[] = [];
-  const cur = new Date(start + "T00:00:00");
-  const fin = new Date(end   + "T00:00:00");
-  let safety = 0;
-  while (cur <= fin && safety < 200) {
-    const dow = cur.getDay();
-    if (
-      s.recurrenceType === "daily" ||
-      (s.recurrenceType === "weekly" && s.recurrenceDays?.includes(dow))
-    ) {
-      dates.push(cur.toISOString().slice(0, 10));
-    }
-    cur.setDate(cur.getDate() + 1);
-    safety++;
-  }
-  return dates;
+  return s.date >= monthStart && s.date <= monthEnd ? [s.date] : [];
 }
 
 // Status config
@@ -77,7 +57,7 @@ const STATUS_CFG: Record<AssignmentStatus, { label: string; dot: string; badge: 
 
 function ShiftCard({ s, date }: { s: ShiftAssignment; date: string }) {
   const cfg = STATUS_CFG[s.status];
-  const isPast = date < new Date().toISOString().slice(0, 10);
+  const isPast = date < localDate(new Date());
   return (
     <div className={`bg-white border rounded-2xl p-4 transition-all ${isPast ? "opacity-60" : "hover:shadow-md"} ${s.status === "confirmed" ? "border-green-100" : s.status === "pending" ? "border-amber-100" : "border-gray-100"}`}>
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -112,7 +92,7 @@ function ShiftCard({ s, date }: { s: ShiftAssignment; date: string }) {
 
 export default function CandidateShiftsPage() {
   const today    = new Date();
-  const todayISO = today.toISOString().slice(0, 10);
+  const todayISO = localDate(today);
 
   const [shifts,       setShifts]       = useState<ShiftAssignment[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -177,33 +157,14 @@ export default function CandidateShiftsPage() {
   const confirmedCount = shifts.filter((s) => s.status === "confirmed").length;
 
   // All upcoming confirmed shifts (for list view)
+  // Every shift (recurring or not) is its own DB row with a specific date.
+  // Just filter out declined and sort chronologically.
   const allUpcoming = useMemo(() => {
-    const result: { date: string; shift: ShiftAssignment }[] = [];
-    for (const s of shifts) {
-      if (s.status === "declined") continue;
-      if (!s.isRecurring) {
-        result.push({ date: s.date, shift: s });
-      } else {
-        // Expand next 90 days for list view
-        const end = s.recurrenceEndDate ?? (() => {
-          const d = new Date(); d.setDate(d.getDate() + 90);
-          return d.toISOString().slice(0, 10);
-        })();
-        const cur = new Date(Math.max(new Date(s.date).getTime(), new Date(todayISO).getTime()));
-        const fin = new Date(end);
-        let safety = 0;
-        while (cur <= fin && safety < 120) {
-          const dow = cur.getDay();
-          if (s.recurrenceType === "daily" || (s.recurrenceType === "weekly" && s.recurrenceDays?.includes(dow))) {
-            result.push({ date: cur.toISOString().slice(0, 10), shift: s });
-          }
-          cur.setDate(cur.getDate() + 1);
-          safety++;
-        }
-      }
-    }
-    return result.sort((a, b) => a.date.localeCompare(b.date));
-  }, [shifts, todayISO]);
+    return shifts
+      .filter((s) => s.status !== "declined")
+      .map((s) => ({ date: s.date, shift: s }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [shifts]);
 
   return (
     <>

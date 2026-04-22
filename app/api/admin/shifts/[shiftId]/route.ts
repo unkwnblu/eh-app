@@ -124,10 +124,14 @@ export async function POST(
   const isRecurring = shift.is_recurring as boolean;
 
   // Build human-readable schedule description
-  const DOW_NAMES   = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  // Extract values before the nested function so TypeScript can narrow them
+  // independently of the outer `shift` variable (which it can't narrow in closures).
+  const recurrenceType = shift.recurrence_type as string | null;
+  const recurrenceDays = shift.recurrence_days as number[] | null;
+  const DOW_NAMES      = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   function recurrenceDesc(): string {
-    const type = shift.recurrence_type as string | null;
-    const days = shift.recurrence_days as number[] | null;
+    const type = recurrenceType;
+    const days = recurrenceDays;
     if (type === "daily") return "every day";
     if (type === "weekly" && days?.length) {
       const sorted = [...days].sort((a, b) => a - b);
@@ -176,7 +180,7 @@ export async function POST(
 }
 
 // ─── PATCH /api/admin/shifts/[shiftId] ───────────────────────────────────────
-// Rescinds a pending assignment (sets status → "cancelled").
+// Cancels an assignment (pending → rescinded, confirmed → removed).
 // Body: { assignmentId: string }
 
 export async function PATCH(
@@ -213,11 +217,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
   }
 
-  if (assignment.status !== "pending") {
-    return NextResponse.json(
-      { error: "Only pending assignments can be rescinded" },
-      { status: 409 },
-    );
+  // Allow cancelling both pending and confirmed assignments.
+  // Already-cancelled assignments are a no-op.
+  if (assignment.status === "cancelled") {
+    return NextResponse.json({ error: "Assignment is already cancelled" }, { status: 409 });
   }
 
   const { error: updateError } = await service

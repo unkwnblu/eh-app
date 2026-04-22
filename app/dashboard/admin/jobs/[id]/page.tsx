@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import GsapAnimations from "@/components/landing/GsapAnimations";
@@ -94,16 +94,17 @@ type ShiftAssignment = {
 };
 
 type AdminShift = {
-  id:           string;
-  date:         string;
-  startTime:    string;
-  endTime:      string;
-  breakMinutes: number;
-  department:   string | null;
-  location:     string | null;
-  staffNeeded:  number;
-  status:       "open" | "filled" | "cancelled";
-  assignments:  ShiftAssignment[];
+  id:               string;
+  date:             string;
+  startTime:        string;
+  endTime:          string;
+  breakMinutes:     number;
+  department:       string | null;
+  location:         string | null;
+  staffNeeded:      number;
+  status:           "open" | "filled" | "cancelled";
+  recurringGroupId: string | null;
+  assignments:      ShiftAssignment[];
 };
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -1084,6 +1085,773 @@ function KanbanColumn({ col, candidates, isOver, isLocked, now, onCardClick, onS
   );
 }
 
+// ─── Add Shift Modal ──────────────────────────────────────────────────────────
+
+type RepeatType = "daily" | "weekly";
+
+const WEEK_DAYS = [
+  { label: "Mon", dow: 1 }, { label: "Tue", dow: 2 }, { label: "Wed", dow: 3 },
+  { label: "Thu", dow: 4 }, { label: "Fri", dow: 5 }, { label: "Sat", dow: 6 },
+  { label: "Sun", dow: 0 },
+];
+
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function generateDates(start: string, end: string, type: RepeatType, days: number[]): string[] {
+  if (!start || !end) return [];
+  const dates: string[] = [];
+  const cur = new Date(start + "T00:00:00");
+  const fin = new Date(end   + "T00:00:00");
+  let safety = 0;
+  while (cur <= fin && safety < 500) {
+    const dow = cur.getDay();
+    if (type === "daily" || (type === "weekly" && days.includes(dow))) {
+      dates.push(localDateStr(cur));
+    }
+    cur.setDate(cur.getDate() + 1);
+    safety++;
+  }
+  return dates;
+}
+
+function AddShiftModal({ jobId, onClose, onAdded }: { jobId: string; onClose: () => void; onAdded: () => void }) {
+  // Basic fields
+  const [date,       setDate]       = useState("");
+  const [startTime,  setStartTime]  = useState("08:00");
+  const [endTime,    setEndTime]    = useState("16:00");
+  const [breakMins,  setBreakMins]  = useState(30);
+  const [department, setDepartment] = useState("");
+  const [location,   setLocation]   = useState("");
+  const [staffCount, setStaffCount] = useState(1);
+  // Recurring
+  const [recurring,   setRecurring]   = useState(false);
+  const [repeatType,  setRepeatType]  = useState<RepeatType>("weekly");
+  const [weekDays,    setWeekDays]    = useState<number[]>([]);
+  const [endDate,     setEndDate]     = useState("");
+  // UI
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false); // recurring confirmation step
+
+  const recurringDates = useMemo(() => {
+    if (!recurring || !date) return [];
+    if (repeatType === "weekly" && weekDays.length === 0) return [];
+    const resolvedEnd = endDate || (() => {
+      const d = new Date(date + "T00:00:00");
+      d.setMonth(d.getMonth() + 3);
+      return localDateStr(d);
+    })();
+    return generateDates(date, resolvedEnd, repeatType, weekDays);
+  }, [recurring, date, endDate, repeatType, weekDays]);
+
+  function toggleDay(dow: number) {
+    setWeekDays((prev) => prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]);
+  }
+
+  async function submit() {
+    if (!date)      { setError("Please select a start date."); return; }
+    if (!startTime) { setError("Please enter a start time."); return; }
+    if (!endTime)   { setError("Please enter an end time."); return; }
+    if (recurring) {
+      if (repeatType === "weekly" && weekDays.length === 0) { setError("Select at least one day."); return; }
+      if (recurringDates.length === 0) { setError("No shifts in this date range."); return; }
+      // Show confirmation step for recurring before committing
+      if (!confirming) { setConfirming(true); return; }
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/shifts", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId,
+          ...(recurring
+            ? { dates: recurringDates, isRecurring: true }
+            : { date,                  isRecurring: false }
+          ),
+          startTime:    startTime.length === 5 ? startTime + ":00" : startTime,
+          endTime:      endTime.length === 5   ? endTime   + ":00" : endTime,
+          breakMinutes: breakMins,
+          department:   department.trim() || null,
+          location:     location.trim()   || null,
+          staffNeeded:  staffCount,
+        }),
+      });
+      const d = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(d.error ?? "Failed to create shift");
+      onAdded();
+    } catch (e) {
+      setError((e as Error).message);
+      setSaving(false);
+    }
+  }
+
+  const submitLabel = saving
+    ? "Creating…"
+    : confirming
+      ? `Confirm & Create ${recurringDates.length} Shifts`
+      : recurring && recurringDates.length > 1
+        ? `Add ${recurringDates.length} Shifts`
+        : "Add Shift";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-black text-brand">Add Shift</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Create a new shift for this job</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-gray-100 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* One-time / Recurring toggle */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          {(["one-time", "recurring"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => { setRecurring(mode === "recurring"); setConfirming(false); }}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all capitalize ${
+                (mode === "recurring") === recurring
+                  ? "bg-white text-brand shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+
+        {/* Start date */}
+        <div>
+          <label className="block text-xs font-bold text-slate-500 mb-1.5">
+            {recurring ? "Start Date" : "Date"} <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+          />
+        </div>
+
+        {/* Recurring options */}
+        {recurring && (
+          <div className="space-y-3 bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+            {/* Repeat type */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1.5">Repeat</label>
+              <div className="flex gap-2">
+                {(["daily", "weekly"] as RepeatType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setRepeatType(t)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
+                      repeatType === t
+                        ? "bg-brand-blue text-white border-brand-blue"
+                        : "bg-white text-slate-500 border-gray-200 hover:border-brand-blue/40"
+                    }`}
+                  >
+                    {t === "daily" ? "Every day" : "Specific days"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Day picker */}
+            {repeatType === "weekly" && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">Days</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {WEEK_DAYS.map(({ label, dow }) => (
+                    <button
+                      key={dow}
+                      type="button"
+                      onClick={() => toggleDay(dow)}
+                      className={`w-10 h-10 rounded-lg text-xs font-bold border transition-all ${
+                        weekDays.includes(dow)
+                          ? "bg-brand-blue text-white border-brand-blue"
+                          : "bg-white text-slate-500 border-gray-200 hover:border-brand-blue/40"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* End date */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                End Date <span className="text-slate-400 font-normal">(optional — defaults to 3 months)</span>
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                min={date || undefined}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand outline-none focus:border-brand-blue transition-colors bg-white"
+              />
+            </div>
+
+            {/* Preview count */}
+            {recurringDates.length > 0 ? (
+              <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-600 shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <p className="text-xs font-bold text-green-700">
+                  {recurringDates.length} shift{recurringDates.length !== 1 ? "s" : ""} will be created
+                  <span className="font-normal text-green-600"> · {recurringDates[0]} → {recurringDates[recurringDates.length - 1]}</span>
+                </p>
+              </div>
+            ) : date ? (
+              <p className="text-xs text-slate-400 italic">
+                {repeatType === "weekly" && weekDays.length === 0 ? "Select at least one day." : "No shifts in this range."}
+              </p>
+            ) : null}
+          </div>
+        )}
+
+        {/* Times */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">Start Time <span className="text-red-400">*</span></label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">End Time <span className="text-red-400">*</span></label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Break */}
+        <div>
+          <label className="block text-xs font-bold text-slate-500 mb-1.5">Break</label>
+          <div className="flex items-center gap-2">
+            {([0, 15, 30, 45, 60] as const).map((mins) => (
+              <button
+                key={mins}
+                type="button"
+                onClick={() => setBreakMins(mins)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                  breakMins === mins
+                    ? "bg-brand-blue text-white border-brand-blue"
+                    : "bg-white text-slate-500 border-gray-200 hover:border-brand-blue/40"
+                }`}
+              >
+                {mins === 0 ? "None" : `${mins}m`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Department + Location */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">Department</label>
+            <input
+              type="text"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              placeholder="e.g. Ward 5"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand placeholder:text-slate-300 outline-none focus:border-brand-blue transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">Location</label>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. St Thomas'"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand placeholder:text-slate-300 outline-none focus:border-brand-blue transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Staff needed */}
+        <div>
+          <label className="block text-xs font-bold text-slate-500 mb-1.5">Staff Needed</label>
+          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden w-fit">
+            <button
+              type="button"
+              onClick={() => setStaffCount((n) => Math.max(1, n - 1))}
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:bg-gray-50 hover:text-brand transition-colors border-r border-gray-200"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
+            </button>
+            <span className="w-12 text-center text-sm font-bold text-brand">{staffCount}</span>
+            <button
+              type="button"
+              onClick={() => setStaffCount((n) => n + 1)}
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:bg-gray-50 hover:text-brand transition-colors border-l border-gray-200"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </button>
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
+
+        {/* Recurring confirmation banner */}
+        {confirming && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-amber-600 shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <p className="text-xs font-bold text-amber-700">Confirm — this will create {recurringDates.length} shifts</p>
+            </div>
+            <p className="text-[11px] text-amber-600 pl-5">
+              {recurringDates[0]} → {recurringDates[recurringDates.length - 1]}
+              {" · "}{repeatType === "daily" ? "Every day" : WEEK_DAYS.filter((d) => weekDays.includes(d.dow)).map((d) => d.label).join(", ")}
+            </p>
+            <p className="text-[11px] text-amber-600 pl-5">Click <strong>Confirm &amp; Create</strong> below to proceed.</p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-1">
+          <button
+            onClick={() => { if (confirming) { setConfirming(false); } else { onClose(); } }}
+            className="flex-1 py-2.5 border border-gray-200 text-slate-500 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            {confirming ? "Go Back" : "Cancel"}
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving}
+            className={`flex-1 py-2.5 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 ${
+              confirming ? "bg-amber-500 hover:bg-amber-600" : "bg-brand-blue hover:bg-brand-blue-dark"
+            }`}
+          >
+            {submitLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Remove Confirmed Assignment Modal ───────────────────────────────────────
+
+function RemoveConfirmModal({
+  candidateName,
+  onCancel,
+  onConfirm,
+  removing,
+}: {
+  candidateName: string;
+  onCancel:  () => void;
+  onConfirm: () => void;
+  removing:  boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
+        style={{ animation: "slideUp 0.2s cubic-bezier(0.16,1,0.3,1) both" }}
+      >
+        {/* Icon */}
+        <div className="w-11 h-11 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+          </svg>
+        </div>
+        <h3 className="text-sm font-black text-brand mb-1">Remove Candidate?</h3>
+        <p className="text-xs text-slate-500 mb-5">
+          <span className="font-semibold text-brand">{candidateName}</span> has already confirmed this shift.
+          Removing them will reopen the slot and notify them their assignment has been cancelled.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={removing}
+            className="flex-1 py-2.5 border border-gray-200 text-slate-500 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40"
+          >
+            Keep
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={removing}
+            className="flex-1 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {removing && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+            {removing ? "Removing…" : "Yes, Remove"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Recurring Group Card ─────────────────────────────────────────────────────
+
+function RecurringGroupCard({
+  groupShifts,
+  onAssign,
+  onAssignAll,
+  rescinding,
+  onRescind,
+  onRemoveConfirmed,
+}: {
+  groupShifts:       AdminShift[];
+  onAssign:          (shift: AdminShift) => void;
+  onAssignAll:       (openShifts: AdminShift[]) => void;
+  rescinding:        string | null;
+  onRescind:         (shiftId: string, assignmentId: string) => void;
+  onRemoveConfirmed: (shiftId: string, assignmentId: string, candidateName: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Derive display values from the group
+  const sorted   = [...groupShifts].sort((a, b) => a.date.localeCompare(b.date));
+  const first    = sorted[0];
+  const last     = sorted[sorted.length - 1];
+  const count    = sorted.length;
+
+  const fmtDate  = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+  // Unique day-of-week names
+  const dayNames = [...new Set(
+    sorted.map((s) => new Date(s.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short" }))
+  )].join(", ");
+
+  const paidHours = (() => {
+    const [sh, sm] = first.startTime.split(":").map(Number);
+    const [eh, em] = first.endTime.split(":").map(Number);
+    return Math.max(0, ((eh * 60 + em) - (sh * 60 + sm) - (first.breakMinutes ?? 0)) / 60);
+  })();
+
+  const totalConfirmed = groupShifts.reduce((n, s) => n + s.assignments.filter((a) => a.status === "confirmed").length, 0);
+  const totalPending   = groupShifts.reduce((n, s) => n + s.assignments.filter((a) => a.status === "pending").length, 0);
+  const openShifts     = groupShifts.filter((s) => s.status !== "cancelled" && s.assignments.filter((a) => a.status === "confirmed").length < s.staffNeeded).length;
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+      {/* Group header */}
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              {/* Recurring badge */}
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Recurring · {count} shifts
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400">{first.department ?? "General"}</span>
+            </div>
+
+            <p className="text-sm font-bold text-brand">
+              {fmtDate(first.date)} → {fmtDate(last.date)}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {dayNames} · {first.startTime.slice(0,5)}–{first.endTime.slice(0,5)} · {paidHours.toFixed(1)} paid hrs
+              {first.breakMinutes > 0 && ` · ${first.breakMinutes}m break`}
+              {first.location && ` · ${first.location}`}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="text-right mr-1">
+              <p className="text-xs font-bold text-brand">{totalConfirmed} confirmed</p>
+              {totalPending > 0 && <p className="text-[10px] text-amber-500">{totalPending} pending</p>}
+              <p className="text-[10px] text-slate-400">{openShifts} open slot{openShifts !== 1 ? "s" : ""}</p>
+            </div>
+
+            {/* Assign all open shifts to one candidate */}
+            {openShifts > 0 && (
+              <button
+                onClick={() => {
+                  const open = sorted.filter(
+                    (s) => s.status !== "cancelled" &&
+                           s.assignments.filter((a) => a.status === "confirmed").length < s.staffNeeded
+                  );
+                  onAssignAll(open);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                Assign All
+              </button>
+            )}
+
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 border border-gray-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition-colors"
+            >
+              {expanded ? "Collapse" : "Expand"}
+              <svg
+                width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded individual shifts */}
+      {expanded && (
+        <div className="border-t border-gray-100 divide-y divide-gray-50">
+          {sorted.map((shift) => {
+            const confirmedCount = shift.assignments.filter((a) => a.status === "confirmed").length;
+            const pendingCount   = shift.assignments.filter((a) => a.status === "pending").length;
+            const dateStr = new Date(shift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+            return (
+              <div key={shift.id} className="px-5 py-3 flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-bold text-brand">{dateStr}</p>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                      shift.status === "open"   ? "bg-blue-50 text-blue-600" :
+                      shift.status === "filled" ? "bg-green-50 text-green-600" :
+                      "bg-gray-100 text-slate-400"
+                    }`}>{shift.status}</span>
+                  </div>
+                  {shift.assignments.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {shift.assignments.map((a) => (
+                        <div key={a.id} className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold ${
+                          a.status === "confirmed" ? "bg-green-50 text-green-700 border border-green-100" :
+                          a.status === "pending"   ? "bg-amber-50 text-amber-700 border border-amber-100" :
+                          "bg-gray-50 text-slate-400 border border-gray-100 line-through"
+                        }`}>
+                          <span className={`w-1 h-1 rounded-full ${a.status === "confirmed" ? "bg-green-500" : a.status === "pending" ? "bg-amber-400" : "bg-gray-300"}`} />
+                          {a.candidateName}
+                          {a.status === "pending" && (
+                            <button
+                              title="Rescind"
+                              disabled={rescinding === a.id}
+                              onClick={() => onRescind(shift.id, a.id)}
+                              className="ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-colors disabled:opacity-40"
+                            >
+                              {rescinding === a.id
+                                ? <svg className="animate-spin" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
+                                : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                              }
+                            </button>
+                          )}
+                          {a.status === "confirmed" && (
+                            <button
+                              title="Remove from shift"
+                              onClick={() => onRemoveConfirmed(shift.id, a.id, a.candidateName)}
+                              className="ml-0.5 p-0.5 rounded hover:bg-red-100 text-green-700 hover:text-red-600 transition-colors"
+                            >
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <p className="text-[10px] font-bold text-brand">{confirmedCount}/{shift.staffNeeded}</p>
+                  {pendingCount > 0 && <p className="text-[10px] text-amber-500">{pendingCount}p</p>}
+                  {shift.status !== "cancelled" && confirmedCount < shift.staffNeeded && (
+                    <button
+                      onClick={() => onAssign(shift)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-brand-blue text-white text-[11px] font-bold rounded-lg hover:bg-brand-blue-dark transition-colors"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                      Assign
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Assign Group Modal ───────────────────────────────────────────────────────
+// Assigns one candidate to ALL open/unfilled shifts in a recurring group.
+
+function AssignGroupModal({
+  groupShifts,
+  candidates,
+  onClose,
+  onAssigned,
+}: {
+  groupShifts: AdminShift[];
+  candidates:  Candidate[];
+  onClose:     () => void;
+  onAssigned:  () => void;
+}) {
+  const [selectedId, setSelectedId] = useState("");
+  const [assigning,  setAssigning]  = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+
+  // Only unfilled shifts that need more staff
+  const openShifts = groupShifts.filter(
+    (s) => s.status !== "cancelled" &&
+           s.assignments.filter((a) => a.status === "confirmed").length < s.staffNeeded
+  );
+
+  const sorted  = [...openShifts].sort((a, b) => a.date.localeCompare(b.date));
+  const first   = sorted[0];
+  const last    = sorted[sorted.length - 1];
+  const fmtDate = (d: string) =>
+    new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+  // Candidates not already confirmed/pending on ANY shift in the group
+  const alreadyAssignedIds = new Set(
+    groupShifts.flatMap((s) =>
+      s.assignments
+        .filter((a) => a.status !== "declined" && a.status !== "cancelled")
+        .map((a) => a.candidateId)
+    )
+  );
+  const available = candidates.filter((c) => !alreadyAssignedIds.has(c.candidateId));
+
+  async function assignAll() {
+    if (!selectedId) { setError("Please select a candidate"); return; }
+    setAssigning(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/admin/shifts/assign-group", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          shiftIds:    sorted.map((s) => s.id),
+          candidateId: selectedId,
+        }),
+      });
+
+      const data = await res.json() as { error?: string; assigned?: number };
+
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to assign shifts");
+      }
+
+      onAssigned();
+    } catch (e) {
+      setError((e as Error).message);
+      setAssigning(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-base font-black text-brand">Assign All Shifts</h3>
+          <button onClick={onClose} disabled={assigning} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 mb-5">The selected candidate will be offered every open shift in this recurring group.</p>
+
+        {/* Group summary */}
+        <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-purple-600">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+            <span className="text-xs font-bold text-purple-700">{sorted.length} open shift{sorted.length !== 1 ? "s" : ""}</span>
+          </div>
+          <p className="text-xs font-semibold text-purple-800">
+            {first ? `${fmtDate(first.date)} → ${fmtDate(last.date)}` : "—"}
+          </p>
+          {first && (
+            <p className="text-[11px] text-purple-600 mt-0.5">
+              {first.startTime.slice(0,5)}–{first.endTime.slice(0,5)}
+              {first.department && ` · ${first.department}`}
+            </p>
+          )}
+        </div>
+
+        {/* Candidate picker */}
+        {!assigning && (
+          <div className="mb-4">
+            <label className="block text-xs font-bold text-slate-500 mb-2">Select Candidate</label>
+            {available.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No available pipeline candidates to assign.</p>
+            ) : (
+              <div className="relative">
+                <select
+                  value={selectedId}
+                  onChange={(e) => setSelectedId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-brand outline-none focus:border-brand-blue appearance-none bg-white"
+                >
+                  <option value="" disabled>Select a candidate…</option>
+                  {(["accepted","interviewing","offers","new"] as ColumnKey[]).map((stage) => {
+                    const group = available.filter((c) => c.column === stage);
+                    if (group.length === 0) return null;
+                    return (
+                      <optgroup key={stage} label={stage.charAt(0).toUpperCase() + stage.slice(1)}>
+                        {group.map((c) => (
+                          <option key={c.candidateId} value={c.candidateId}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && <p className="text-xs text-red-500 font-semibold mb-3">{error}</p>}
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={assigning}
+            className="flex-1 py-2.5 border border-gray-200 text-slate-500 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={assignAll}
+            disabled={assigning || available.length === 0 || sorted.length === 0}
+            className="flex-1 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors disabled:opacity-50"
+          >
+            {assigning ? "Assigning…" : `Assign to All ${sorted.length} Shifts`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Assign Shift Modal ────────────────────────────────────────────────────────
 
 type AssignShiftModalProps = {
@@ -1212,8 +1980,42 @@ export default function AdminJobPipelineDetailPage() {
   const [pageView,      setPageView]      = useState<PageView>("pipeline");
   const [shifts,        setShifts]        = useState<AdminShift[]>([]);
   const [loadingShifts, setLoadingShifts] = useState(false);
-  const [assigningTo,   setAssigningTo]   = useState<AdminShift | null>(null);
-  const [rescinding,    setRescinding]    = useState<string | null>(null); // assignmentId being rescinded
+  const [assigningTo,    setAssigningTo]    = useState<AdminShift | null>(null);
+  const [assigningGroup, setAssigningGroup] = useState<AdminShift[] | null>(null); // recurring group "assign all"
+  const [addingShift,    setAddingShift]    = useState(false);
+  const [rescinding,     setRescinding]     = useState<string | null>(null); // pending assignment being rescinded
+  const [confirmRemove,  setConfirmRemove]  = useState<{
+    assignmentId:  string;
+    shiftId:       string;
+    candidateName: string;
+  } | null>(null);
+  const [removing, setRemoving] = useState(false);
+
+  // Group recurring shifts so each group renders as one tile
+  type GroupedItem =
+    | { type: "single"; shift: AdminShift }
+    | { type: "group";  groupId: string; shifts: AdminShift[] };
+
+  const groupedShiftItems = useMemo<GroupedItem[]>(() => {
+    const items: GroupedItem[] = [];
+    const seenGroups = new Set<string>();
+    for (const shift of shifts) {
+      if (!shift.recurringGroupId) {
+        items.push({ type: "single", shift });
+      } else if (!seenGroups.has(shift.recurringGroupId)) {
+        seenGroups.add(shift.recurringGroupId);
+        items.push({
+          type:    "group",
+          groupId: shift.recurringGroupId,
+          shifts:  shifts.filter((s) => s.recurringGroupId === shift.recurringGroupId),
+        });
+      }
+    }
+    return items;
+  }, [shifts]);
+
+  // Tile count (groups count as 1)
+  const shiftTileCount = groupedShiftItems.length;
 
   // Schedule interview modal
   const [scheduleFor, setScheduleFor] = useState<{
@@ -1287,7 +2089,9 @@ export default function AdminJobPipelineDetailPage() {
   const loadShifts = useCallback(async () => {
     setLoadingShifts(true);
     try {
-      const res = await fetch(`/api/admin/shifts?jobId=${id}`);
+      // cache: 'no-store' prevents the browser from returning a stale cached
+      // response when the refresh button is clicked manually.
+      const res = await fetch(`/api/admin/shifts?jobId=${id}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load shifts");
       const data = await res.json() as { shifts: AdminShift[] };
       setShifts(data.shifts ?? []);
@@ -1328,6 +2132,36 @@ export default function AdminJobPipelineDetailPage() {
       loadShifts();
     } finally {
       setRescinding(null);
+    }
+  }
+
+  async function removeConfirmedAssignment(shiftId: string, assignmentId: string) {
+    setRemoving(true);
+    // Optimistic update
+    setShifts((prev) => prev.map((s) =>
+      s.id !== shiftId ? s : {
+        ...s,
+        status: "open" as const,
+        assignments: s.assignments.map((a) =>
+          a.id !== assignmentId ? a : { ...a, status: "cancelled" as const }
+        ),
+      }
+    ));
+    try {
+      const res = await fetch(`/api/admin/shifts/${shiftId}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ assignmentId }),
+      });
+      if (!res.ok) {
+        const d = await res.json() as { error?: string };
+        throw new Error(d.error ?? "Failed to remove");
+      }
+    } catch {
+      loadShifts(); // revert on failure
+    } finally {
+      setRemoving(false);
+      setConfirmRemove(null);
     }
   }
 
@@ -1672,6 +2506,22 @@ export default function AdminJobPipelineDetailPage() {
 
         {pageView === "shifts" && (
           <div data-gsap="fade-up">
+            {/* Shifts header with Add button */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                {shiftTileCount} {shiftTileCount !== 1 ? "shifts" : "shift"}{shifts.length !== shiftTileCount ? ` (${shifts.length} occurrences)` : ""}
+              </p>
+              <button
+                onClick={() => setAddingShift(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Add Shift
+              </button>
+            </div>
+
             {loadingShifts ? (
               <div className="space-y-3">
                 {[1,2,3].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
@@ -1688,17 +2538,34 @@ export default function AdminJobPipelineDetailPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {shifts.map((shift) => {
+                {groupedShiftItems.map((item) => {
+                  // ── Recurring group tile ──────────────────────────────────
+                  if (item.type === "group") {
+                    return (
+                      <RecurringGroupCard
+                        key={item.groupId}
+                        groupShifts={item.shifts}
+                        onAssign={(shift) => setAssigningTo(shift)}
+                        onAssignAll={(openShifts) => setAssigningGroup(openShifts)}
+                        rescinding={rescinding}
+                        onRescind={rescindAssignment}
+                        onRemoveConfirmed={(shiftId, assignmentId, candidateName) =>
+                          setConfirmRemove({ shiftId, assignmentId, candidateName })
+                        }
+                      />
+                    );
+                  }
+
+                  // ── One-time shift tile ───────────────────────────────────
+                  const shift = item.shift;
                   const confirmedCount = shift.assignments.filter((a) => a.status === "confirmed").length;
                   const pendingCount   = shift.assignments.filter((a) => a.status === "pending").length;
                   const date = new Date(shift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-                  const paidHours = Math.max(0, (
-                    (() => {
-                      const [sh, sm] = shift.startTime.split(":").map(Number);
-                      const [eh, em] = shift.endTime.split(":").map(Number);
-                      return ((eh * 60 + em) - (sh * 60 + sm) - (shift.breakMinutes ?? 0)) / 60;
-                    })()
-                  ));
+                  const paidHours = Math.max(0, (() => {
+                    const [sh, sm] = shift.startTime.split(":").map(Number);
+                    const [eh, em] = shift.endTime.split(":").map(Number);
+                    return ((eh * 60 + em) - (sh * 60 + sm) - (shift.breakMinutes ?? 0)) / 60;
+                  })());
                   return (
                     <div key={shift.id} className="bg-white border border-gray-100 rounded-2xl p-5">
                       <div className="flex items-start justify-between gap-4">
@@ -1706,7 +2573,7 @@ export default function AdminJobPipelineDetailPage() {
                           <div className="flex items-center gap-3 mb-1">
                             <p className="text-sm font-bold text-brand">{date} · {shift.department ?? "General"}</p>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              shift.status === "open" ? "bg-blue-50 text-blue-600" :
+                              shift.status === "open"   ? "bg-blue-50 text-blue-600" :
                               shift.status === "filled" ? "bg-green-50 text-green-600" :
                               "bg-gray-100 text-slate-400"
                             }`}>{shift.status}</span>
@@ -1743,6 +2610,15 @@ export default function AdminJobPipelineDetailPage() {
                                       ) : (
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                       )}
+                                    </button>
+                                  )}
+                                  {a.status === "confirmed" && (
+                                    <button
+                                      title="Remove from shift"
+                                      onClick={() => setConfirmRemove({ assignmentId: a.id, shiftId: shift.id, candidateName: a.candidateName })}
+                                      className="ml-0.5 p-0.5 rounded hover:bg-red-100 text-green-700 hover:text-red-600 transition-colors"
+                                    >
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                   )}
                                 </div>
@@ -1801,7 +2677,36 @@ export default function AdminJobPipelineDetailPage() {
         />
       )}
 
-      {/* Assign shift modal */}
+      {/* Remove confirmed assignment confirmation */}
+      {confirmRemove && (
+        <RemoveConfirmModal
+          candidateName={confirmRemove.candidateName}
+          removing={removing}
+          onCancel={() => setConfirmRemove(null)}
+          onConfirm={() => removeConfirmedAssignment(confirmRemove.shiftId, confirmRemove.assignmentId)}
+        />
+      )}
+
+      {/* Add shift modal */}
+      {addingShift && (
+        <AddShiftModal
+          jobId={id}
+          onClose={() => setAddingShift(false)}
+          onAdded={() => { setAddingShift(false); loadShifts(); }}
+        />
+      )}
+
+      {/* Assign ALL shifts in a recurring group modal */}
+      {assigningGroup && (
+        <AssignGroupModal
+          groupShifts={assigningGroup}
+          candidates={candidates}
+          onClose={() => setAssigningGroup(null)}
+          onAssigned={() => { setAssigningGroup(null); loadShifts(); }}
+        />
+      )}
+
+      {/* Assign single shift modal */}
       {assigningTo && (
         <AssignShiftModal
           shift={assigningTo}

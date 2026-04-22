@@ -18,6 +18,11 @@ type RepeatType = "daily" | "weekly";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+/** Format a JS Date as YYYY-MM-DD using LOCAL date parts (never UTC, avoids BST-off-by-one) */
+function localDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function timeToMinutes(t: string): number {
   const upper = t.toUpperCase();
   const isPM = upper.includes("PM");
@@ -47,7 +52,7 @@ function generateRecurringDates(
   while (cur <= end && safety < 500) {
     const dow = cur.getDay();
     if (repeatType === "daily" || (repeatType === "weekly" && weekDays.includes(dow))) {
-      dates.push(cur.toISOString().slice(0, 10));
+      dates.push(localDate(cur));
     }
     cur.setDate(cur.getDate() + 1);
     safety++;
@@ -165,7 +170,7 @@ export default function PostNewShiftPage() {
     const resolvedEnd = endDate || (() => {
       const d = new Date(date + "T00:00:00");
       d.setMonth(d.getMonth() + 3);
-      return d.toISOString().slice(0, 10);
+      return localDate(d);
     })();
     return generateRecurringDates(date, resolvedEnd, repeatType, weekDays);
   }, [recurring, date, endDate, repeatType, weekDays]);
@@ -194,18 +199,20 @@ export default function PostNewShiftPage() {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobId:              selectedJobId,
-          date,                               // start date (or the single date for one-time)
-          startTime:          startTime.length === 5 ? startTime + ":00" : startTime,
-          endTime:            endTime.length === 5 ? endTime + ":00" : endTime,
-          department:         department.trim() || null,
-          location:           location.trim() || null,
-          staffNeeded:        staffCount,
-          breakMinutes:       breakMins,
-          isRecurring:        recurring,
-          recurrenceType:     recurring ? repeatType : undefined,
-          recurrenceDays:     recurring && repeatType === "weekly" ? weekDays : undefined,
-          recurrenceEndDate:  recurring && endDate ? endDate : null,
+          jobId:        selectedJobId,
+          // For recurring shifts send the full expanded date list so each
+          // occurrence becomes its own DB row (readable by Flutter + web alike).
+          // For one-time shifts send a single-element array via `date`.
+          ...(recurring
+            ? { dates: recurringDates, isRecurring: true }
+            : { date, isRecurring: false }
+          ),
+          startTime:    startTime.length === 5 ? startTime + ":00" : startTime,
+          endTime:      endTime.length === 5 ? endTime + ":00" : endTime,
+          department:   department.trim() || null,
+          location:     location.trim() || null,
+          staffNeeded:  staffCount,
+          breakMinutes: breakMins,
         }),
       });
 

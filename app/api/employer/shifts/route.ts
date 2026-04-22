@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
   const { data: shifts, error: shiftsError } = await service
     .from("shifts")
-    .select("id, date, start_time, end_time, break_minutes, department, location, staff_needed, hourly_rate, experience_level, required_certifications, status, notes, is_recurring, recurrence_type, recurrence_days, recurrence_end_date")
+    .select("id, date, start_time, end_time, break_minutes, department, location, staff_needed, hourly_rate, experience_level, required_certifications, status, notes, is_recurring")
     .eq("job_id", jobId)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -147,11 +147,8 @@ export async function GET(request: NextRequest) {
     requiredCertifications: s.required_certifications ?? [],
     status:                 s.status,
     notes:                  s.notes ?? null,
-    isRecurring:            (s.is_recurring as boolean) ?? false,
-    recurrenceType:         (s.recurrence_type as "daily" | "weekly" | null) ?? null,
-    recurrenceDays:         (s.recurrence_days as number[] | null) ?? null,
-    recurrenceEndDate:      (s.recurrence_end_date as string | null) ?? null,
-    assignments:            assignmentMap[s.id as string] ?? [],
+    isRecurring:  (s.is_recurring as boolean) ?? false,
+    assignments:  assignmentMap[s.id as string] ?? [],
   }));
 
   return NextResponse.json({
@@ -167,7 +164,12 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// ─── POST — create a shift ────────────────────────────────────────────────────
+// ─── POST — create a shift (or batch of recurring shifts) ────────────────────
+//
+// For one-time shifts, send { date: "YYYY-MM-DD", ... }
+// For recurring shifts, send { dates: ["YYYY-MM-DD", ...], isRecurring: true, ... }
+// Each date becomes its own row in the shifts table so every client (web + Flutter)
+// can query individual occurrences without needing expansion logic.
 
 export async function POST(request: NextRequest) {
   const user = await getEmployer();
@@ -175,30 +177,49 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json() as Record<string, unknown>;
   const {
-    jobId, date, startTime, endTime,
+    jobId, date, dates, startTime, endTime,
     department, location, staffNeeded,
     hourlyRate, experienceLevel, requiredCertifications, notes,
-    breakMinutes,
-    isRecurring, recurrenceType, recurrenceDays, recurrenceEndDate,
+    breakMinutes, isRecurring,
   } = body as {
-    jobId: string; date: string; startTime: string; endTime: string;
-    department?: string; location?: string; staffNeeded?: number;
-    hourlyRate?: number | null; experienceLevel?: string;
-    requiredCertifications?: string[]; notes?: string;
+    jobId:       string;
+    date?:       string;        // single date (one-time shift)
+    dates?:      string[];      // all expanded dates (recurring)
+    startTime:   string;
+    endTime:     string;
+    department?: string;
+    location?:   string;
+    staffNeeded?: number;
+    hourlyRate?:  number | null;
+    experienceLevel?: string;
+    requiredCertifications?: string[];
+    notes?:      string;
     breakMinutes?: number;
     isRecurring?: boolean;
-    recurrenceType?: "daily" | "weekly";
-    recurrenceDays?: number[];
-    recurrenceEndDate?: string | null;
   };
 
-  if (!jobId || !date || !startTime || !endTime) {
-    return NextResponse.json({ error: "jobId, date, startTime, and endTime are required." }, { status: 400 });
+  // Build the list of dates to insert
+  const allDates: string[] = isRecurring && dates && dates.length > 0
+    ? dates
+    : date
+      ? [date]
+      : [];
+
+  if (!jobId || allDates.length === 0 || !startTime || !endTime) {
+    return NextResponse.json(
+      { error: "jobId, date(s), startTime, and endTime are required." },
+      { status: 400 },
+    );
+  }
+
+  // Guard: max 500 occurrences per batch
+  if (allDates.length > 500) {
+    return NextResponse.json({ error: "Too many dates — maximum 500 per batch." }, { status: 400 });
   }
 
   const service = createServiceClient();
 
-  // Verify job belongs to employer
+  // Verify job belongs to this employer
   const { data: job } = await service
     .from("jobs")
     .select("id")
@@ -208,32 +229,40 @@ export async function POST(request: NextRequest) {
 
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
-  const { data: shift, error } = await service
+  // All rows in a recurring batch share one group ID so the UI can collapse them to one tile
+  const groupId = isRecurring && allDates.length > 1
+    ? crypto.randomUUID()
+    : null;
+
+  // Build one row per date
+  const rows = allDates.map((d) => ({
+    job_id:                  jobId,
+    employer_id:             user.id,
+    date:                    d,
+    start_time:              startTime,
+    end_time:                endTime,
+    department:              department ?? null,
+    location:                location ?? null,
+    staff_needed:            staffNeeded ?? 1,
+    break_minutes:           breakMinutes ?? 0,
+    hourly_rate:             hourlyRate ?? null,
+    experience_level:        experienceLevel ?? "Mid-level",
+    required_certifications: requiredCertifications ?? [],
+    notes:                   notes ?? null,
+    status:                  "open",
+    is_recurring:            isRecurring ?? false,
+    recurring_group_id:      groupId,
+  }));
+
+  const { data: shifts, error } = await service
     .from("shifts")
-    .insert({
-      job_id:                  jobId,
-      employer_id:             user.id,
-      date,
-      start_time:              startTime,
-      end_time:                endTime,
-      department:              department ?? null,
-      location:                location ?? null,
-      staff_needed:            staffNeeded ?? 1,
-      break_minutes:           breakMinutes ?? 0,
-      hourly_rate:             hourlyRate ?? null,
-      experience_level:        experienceLevel ?? "Mid-level",
-      required_certifications: requiredCertifications ?? [],
-      notes:                   notes ?? null,
-      status:                  "open",
-      is_recurring:            isRecurring ?? false,
-      recurrence_type:         isRecurring ? (recurrenceType ?? null) : null,
-      recurrence_days:         isRecurring && recurrenceType === "weekly" ? (recurrenceDays ?? null) : null,
-      recurrence_end_date:     isRecurring ? (recurrenceEndDate ?? null) : null,
-    })
-    .select("id")
-    .single();
+    .insert(rows)
+    .select("id, date");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ shift }, { status: 201 });
+  return NextResponse.json(
+    { shifts, count: shifts?.length ?? 0 },
+    { status: 201 },
+  );
 }

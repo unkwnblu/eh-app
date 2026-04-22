@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   // 1. Fetch all shifts for the job
   const { data: shifts, error: shiftsError } = await service
     .from("shifts")
-    .select("id, date, start_time, end_time, break_minutes, department, location, staff_needed, status")
+    .select("id, date, start_time, end_time, break_minutes, department, location, staff_needed, status, recurring_group_id")
     .eq("job_id", jobId)
     .order("date", { ascending: true });
 
@@ -93,17 +93,96 @@ export async function GET(request: NextRequest) {
 
   // 5. Build response
   const mapped = shifts.map((s) => ({
-    id:           s.id,
-    date:         s.date,
-    startTime:    s.start_time,
-    endTime:      s.end_time,
-    breakMinutes: s.break_minutes,
-    department:   s.department,
-    location:     s.location,
-    staffNeeded:  s.staff_needed,
-    status:       s.status,
-    assignments:  assignmentsByShift[s.id] ?? [],
+    id:               s.id,
+    date:             s.date,
+    startTime:        s.start_time,
+    endTime:          s.end_time,
+    breakMinutes:     s.break_minutes,
+    department:       s.department,
+    location:         s.location,
+    staffNeeded:      s.staff_needed,
+    status:           s.status,
+    recurringGroupId: (s.recurring_group_id as string | null) ?? null,
+    assignments:      assignmentsByShift[s.id] ?? [],
   }));
 
-  return NextResponse.json({ shifts: mapped });
+  return NextResponse.json({ shifts: mapped }, {
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+// ─── POST /api/admin/shifts ───────────────────────────────────────────────────
+// Admin creates one or more shifts for any job.
+// Body: { jobId, date?, dates?, startTime, endTime, department?, location?,
+//         staffNeeded?, breakMinutes? }
+
+export async function POST(request: NextRequest) {
+  const admin = await getAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+
+  const body = await request.json() as {
+    jobId:        string;
+    date?:        string;
+    dates?:       string[];
+    startTime:    string;
+    endTime:      string;
+    department?:  string;
+    location?:    string;
+    staffNeeded?: number;
+    breakMinutes?: number;
+    isRecurring?: boolean;
+  };
+
+  const { jobId, date, dates, startTime, endTime, department, location, staffNeeded, breakMinutes, isRecurring } = body;
+
+  const allDates: string[] = isRecurring && dates && dates.length > 0
+    ? dates
+    : date ? [date] : [];
+
+  if (!jobId || allDates.length === 0 || !startTime || !endTime) {
+    return NextResponse.json({ error: "jobId, date(s), startTime and endTime are required." }, { status: 400 });
+  }
+  if (allDates.length > 500) {
+    return NextResponse.json({ error: "Maximum 500 dates per batch." }, { status: 400 });
+  }
+
+  const service = createServiceClient();
+
+  // Pull employer_id from the job (admin can post for any job)
+  const { data: job } = await service
+    .from("jobs")
+    .select("id, employer_id")
+    .eq("id", jobId)
+    .single();
+
+  if (!job) return NextResponse.json({ error: "Job not found." }, { status: 404 });
+
+  // All rows in a recurring batch share one group ID so the UI can show them as one tile
+  const groupId = isRecurring && allDates.length > 1
+    ? crypto.randomUUID()
+    : null;
+
+  const rows = allDates.map((d) => ({
+    job_id:              jobId,
+    employer_id:         job.employer_id,
+    date:                d,
+    start_time:          startTime,
+    end_time:            endTime,
+    department:          department ?? null,
+    location:            location ?? null,
+    staff_needed:        staffNeeded ?? 1,
+    break_minutes:       breakMinutes ?? 0,
+    status:              "open",
+    is_recurring:        isRecurring ?? false,
+    recurring_group_id:  groupId,
+  }));
+
+  const { data: shifts, error } = await service
+    .from("shifts")
+    .insert(rows)
+    .select("id, date");
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ shifts, count: shifts?.length ?? 0 }, { status: 201 });
 }

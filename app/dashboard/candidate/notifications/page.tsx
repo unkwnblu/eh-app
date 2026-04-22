@@ -276,7 +276,19 @@ function NotificationsInner() {
   // ── Accept / Decline shift ─────────────────────────────────────────────────
 
   const handleShiftAction = async (notif: Notification, action: "accept" | "decline") => {
-    const assignmentId = notif.metadata?.assignmentId as string | undefined;
+    let assignmentId = notif.metadata?.assignmentId as string | undefined;
+
+    // For recurring-group notifications the assignmentId may be missing or empty.
+    // Fall back to fetching the candidate's first pending assignment from the shifts API.
+    if (!assignmentId) {
+      try {
+        const res  = await fetch("/api/candidate/shifts", { cache: "no-store" });
+        const data = await res.json() as { shifts?: { assignmentId: string; status: string }[] };
+        const pending = (data.shifts ?? []).find((s) => s.status === "pending");
+        if (pending) assignmentId = pending.assignmentId;
+      } catch {}
+    }
+
     if (!assignmentId) {
       toast("Unable to process — shift assignment reference is missing.", "error");
       return;
@@ -486,11 +498,13 @@ function NotificationsInner() {
 
                   // Shift action detection
                   const isShiftReceipt  = ["Shift Confirmed", "Shift Declined"].includes(n.title);
+                  // A shift notification is actionable when it has either a direct assignmentId
+                  // (single shift) or a recurringGroupId (bulk assign) — and hasn't been acted on yet.
                   const isPendingShift  =
                     n.type === "shift" &&
                     !n.metadata?.acted &&
                     !isShiftReceipt &&
-                    !!n.metadata?.assignmentId;
+                    !!(n.metadata?.assignmentId || n.metadata?.recurringGroupId);
 
                   const isAccepting   = actioning[`${n.id}-accept`];
                   const isDeclining   = actioning[`${n.id}-decline`];
