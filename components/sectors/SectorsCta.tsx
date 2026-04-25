@@ -21,13 +21,13 @@ export default function SectorsCta() {
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <Link
-              href="/employers/register"
+              href="/auth/employer"
               className="inline-flex items-center gap-2 bg-brand-blue text-white font-semibold text-sm rounded-full px-8 py-3.5 hover:bg-brand-blue-dark transition-colors"
             >
               I&apos;m an Employer
             </Link>
             <Link
-              href="/candidates/register"
+              href="/auth/candidate/register"
               className="inline-flex items-center gap-2 border border-white/30 text-white font-semibold text-sm rounded-full px-8 py-3.5 hover:border-white/60 transition-colors"
             >
               I&apos;m a Candidate

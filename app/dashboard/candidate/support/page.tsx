@@ -98,16 +98,32 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CandidateSupportPage() {
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
+  const [subject,   setSubject]   = useState("");
+  const [message,   setMessage]   = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitted(true);
-    setSubject("");
-    setMessage("");
-    setTimeout(() => setSubmitted(false), 4000);
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/candidate/support", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ subject, message }),
+      });
+      const json = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Failed to send");
+      setSubmitted(true);
+      setSubject("");
+      setMessage("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -204,11 +220,22 @@ export default function CandidateSupportPage() {
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-slate-600 placeholder:text-slate-300 outline-none focus:border-brand-blue transition-colors resize-none"
                   />
                 </div>
+                {error && (
+                  <p className="text-xs text-red-500 font-semibold -mt-1">{error}</p>
+                )}
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-brand-blue text-white rounded-xl text-sm font-bold hover:bg-brand-blue-dark transition-colors"
+                  disabled={submitting}
+                  className="w-full py-2.5 bg-brand-blue text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
                 >
-                  Send Message
+                  {submitting ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                      </svg>
+                      Sending…
+                    </>
+                  ) : "Send Message"}
                 </button>
               </form>
             )}

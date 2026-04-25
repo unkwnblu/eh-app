@@ -14,11 +14,24 @@ export const metadata: Metadata = {
   title: "Edge Harbour – Compliance-First Recruitment",
   description:
     "The UK's trusted recruitment platform for Healthcare, Hospitality, Customer Service, and Tech. Hire pre-vetted, role-ready candidates faster.",
+  keywords: [
+    "compliance-first recruitment UK",
+    "pre-vetted candidates UK",
+    "right to work verification",
+    "UK recruitment platform",
+    "hire healthcare workers UK",
+    "hospitality recruitment agency",
+    "tech recruitment UK",
+    "ATS with compliance",
+    "Edge Harbour",
+    "DBS checked candidates",
+  ],
   openGraph: {
     title: "Edge Harbour – Compliance-First Recruitment",
     description:
       "The UK's trusted recruitment platform for Healthcare, Hospitality, Customer Service, and Tech. Hire pre-vetted, role-ready candidates faster.",
     url: "/",
+    type: "website",
   },
   twitter: {
     title: "Edge Harbour – Compliance-First Recruitment",

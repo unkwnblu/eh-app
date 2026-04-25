@@ -9,6 +9,62 @@ import AtsPreview from "@/components/employers/AtsPreview";
 import EmployerStats from "@/components/employers/EmployerStats";
 import EmployerCta from "@/components/employers/EmployerCta";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://edgeharbour.com";
+
+// ─── JSON-LD ──────────────────────────────────────────────────────────────────
+
+const serviceJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "@id": `${siteUrl}/employers#service`,
+  name: "Edge Harbour – Managed Recruitment for UK Employers",
+  description:
+    "Post a vacancy, and Edge Harbour handles the rest — sourcing, verifying, and interviewing candidates on your behalf. Receive a shortlist of RTW-verified, DBS-checked, interview-ready candidates.",
+  provider: { "@id": `${siteUrl}/#organization` },
+  serviceType: "Managed Recruitment & Staffing",
+  areaServed: { "@type": "Country", name: "United Kingdom" },
+  audience: {
+    "@type": "BusinessAudience",
+    audienceType: "UK employers in Healthcare, Hospitality, Customer Service, and Technology",
+  },
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: "Employer services",
+    itemListElement: [
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "Job posting & candidate sourcing",
+        },
+      },
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "RTW, DBS & credential verification",
+        },
+      },
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "Candidate interviewing & shortlisting",
+        },
+      },
+    ],
+  },
+  breadcrumb: {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "For Employers", item: `${siteUrl}/employers` },
+    ],
+  },
+};
+
+// ─── Metadata ─────────────────────────────────────────────────────────────────
+
 export const metadata: Metadata = {
   title: "Hire Compliant, Pre-Vetted Candidates in the UK",
   description:
@@ -16,19 +72,22 @@ export const metadata: Metadata = {
   keywords: [
     "hire candidates UK",
     "UK recruitment platform",
-    "compliance hiring",
-    "right to work verification",
-    "ATS UK",
-    "healthcare recruitment",
-    "hospitality recruitment",
-    "employer recruitment software",
-    "pre-vetted candidates",
+    "compliance hiring UK",
+    "right to work verification employer",
+    "ATS UK small business",
+    "healthcare employer recruitment",
+    "hospitality staff recruitment UK",
+    "employer recruitment software UK",
+    "pre-vetted candidates UK",
+    "DBS checked staff UK",
+    "RTW verified candidates",
   ],
   openGraph: {
     title: "Hire Compliant, Pre-Vetted Candidates – Edge Harbour",
     description:
       "Post vacancies, get matched with RTW-verified candidates, and manage your entire hiring pipeline — all in one compliance-first ATS.",
     url: "/employers",
+    type: "website",
   },
   twitter: {
     title: "Hire Compliant, Pre-Vetted Candidates – Edge Harbour",
@@ -38,9 +97,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/employers" },
 };
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function EmployersPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
       <Navbar />
       <main id="main-content" className="flex flex-col flex-1">
         <EmployersHero />

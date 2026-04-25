@@ -69,7 +69,7 @@ export default function EmployerSection() {
             </ul>
 
             <Button
-              href="/employers/register"
+              href="/auth/employer"
               variant="primary"
               className="mt-10"
               icon={

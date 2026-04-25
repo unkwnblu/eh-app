@@ -21,7 +21,7 @@ export default function CandidateCta() {
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
           <Link
-            href="/candidates/register"
+            href="/auth/candidate/register"
             className="inline-flex items-center gap-2 bg-brand-blue text-white font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-brand-blue-dark transition-colors"
           >
             <svg

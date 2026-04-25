@@ -100,7 +100,7 @@ export default function CandidatesHero() {
           {/* CTAs */}
           <div data-hero="ctas" className="flex flex-col sm:flex-row items-center gap-3">
             <Button
-              href="/candidates/register"
+              href="/auth/candidate/register"
               variant="primary"
               icon={
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

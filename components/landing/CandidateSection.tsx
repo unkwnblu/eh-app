@@ -72,7 +72,7 @@ export default function CandidateSection() {
             </ul>
 
             <Button
-              href="/candidates/register"
+              href="/auth/candidate/register"
               variant="secondary"
               className="mt-10"
               icon={

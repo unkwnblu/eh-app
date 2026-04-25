@@ -3,10 +3,49 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://edgeharbour.com";
+
+const localBusinessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "@id": `${siteUrl}/#organization`,
+  name: "Edge Harbour",
+  url: siteUrl,
+  logo: `${siteUrl}/eh-logo.png`,
+  image: `${siteUrl}/og-image.png`,
+  description:
+    "The UK's compliance-first recruitment platform connecting employers with pre-vetted, Right-to-Work verified candidates.",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "124 City Road",
+    addressLocality: "London",
+    postalCode: "EC1V 2NX",
+    addressCountry: "GB",
+  },
+  telephone: "+44-800-123-4567",
+  email: "support@edgeharbour.co.uk",
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      opens: "09:00",
+      closes: "18:00",
+    },
+  ],
+  areaServed: { "@type": "Country", name: "United Kingdom" },
+  priceRange: "££",
+};
+
 export const metadata: Metadata = {
   title: "Contact Us",
   description:
     "Get in touch with the Edge Harbour team. Questions about recruitment, compliance, or your account — we're here to help.",
+  keywords: [
+    "contact Edge Harbour",
+    "recruitment support UK",
+    "compliance hiring enquiry",
+    "Edge Harbour London",
+  ],
   openGraph: {
     title: "Contact Edge Harbour",
     description:
@@ -82,6 +121,10 @@ const contactDetails = [
 export default function ContactPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
       <GsapAnimations />
       <Navbar />
 

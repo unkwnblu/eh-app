@@ -19,11 +19,32 @@ const steps = [
         />
       </svg>
     ),
-    title: "Register & Verify",
-    body: "Enter your CRN. We auto-fill your company details via Companies House API and verify your business in seconds.",
+    title: "Apply to Join",
+    body: "Complete a short application with your company details, the industries you hire in, and your compliance agreements. Takes about 5 minutes.",
   },
   {
     number: "02",
+    icon: (
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+        />
+      </svg>
+    ),
+    title: "Get Approved",
+    body: "Our team reviews your application and verifies your business within 1–2 business days. You'll receive a confirmation email when your account is active.",
+  },
+  {
+    number: "03",
     icon: (
       <svg
         width="22"
@@ -40,11 +61,11 @@ const steps = [
         />
       </svg>
     ),
-    title: "Post Your Vacancy",
-    body: "Describe the role and set sector-specific requirements. Our system handles RTW and credential pre-screening automatically.",
+    title: "Post a Vacancy",
+    body: "Once live, post roles with sector-specific requirements — DBS level, RTW, certifications, and experience. Jobs go live after a quick moderation check.",
   },
   {
-    number: "03",
+    number: "04",
     icon: (
       <svg
         width="22"
@@ -62,7 +83,7 @@ const steps = [
       </svg>
     ),
     title: "Review & Hire",
-    body: "Shortlist from a compliance-gated candidate pool. Every profile in your pipeline is pre-verified before you see it.",
+    body: "Shortlist from a compliance-gated candidate pool. Every profile in your pipeline has already cleared RTW, DBS, and credential checks.",
   },
 ];
 
@@ -73,7 +94,7 @@ export default function HowItWorks() {
         {/* Section header */}
         <SectionHeader
           label="The Process"
-          heading="Up and running in minutes."
+          heading="From application to first hire."
           className="text-center max-w-2xl mx-auto mb-16"
           data-gsap="fade-up"
         />
@@ -83,10 +104,10 @@ export default function HowItWorks() {
           {/* Connecting line — desktop only */}
           <div
             aria-hidden="true"
-            className="hidden lg:block absolute top-12 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gray-border dark:bg-white/10"
+            className="hidden lg:block absolute top-12 left-[calc(12.5%+2rem)] right-[calc(12.5%+2rem)] h-px bg-gray-border dark:bg-white/10"
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 lg:gap-8">
             {steps.map((step) => (
               <div
                 key={step.number}
@@ -112,7 +133,7 @@ export default function HowItWorks() {
                 </div>
 
                 {/* Mobile arrow connector */}
-                {step.number !== "03" && (
+                {step.number !== "04" && (
                   <div
                     aria-hidden="true"
                     className="lg:hidden mt-8 flex items-center justify-center w-full"
@@ -157,7 +178,7 @@ export default function HowItWorks() {
                 d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
               />
             </svg>
-            Most employers post their first vacancy within 10 minutes of signing up
+            Most employers receive account approval and post their first vacancy within 2 business days
           </div>
         </div>
       </div>

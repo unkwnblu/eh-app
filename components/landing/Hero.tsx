@@ -96,7 +96,7 @@ export default function Hero() {
           {/* CTAs */}
           <div data-hero="ctas" className="flex flex-col sm:flex-row items-center gap-3">
             <Button
-              href="/candidates/register"
+              href="/auth/candidate/register"
               variant="primary"
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -107,7 +107,7 @@ export default function Hero() {
               Looking for work?
             </Button>
             <Button
-              href="/employers/register"
+              href="/auth/employer"
               variant="secondary"
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -38,7 +38,7 @@ export default function EmployerCta() {
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <Link
-              href="/employers/register"
+              href="/auth/employer"
               className="inline-flex items-center gap-2 bg-white text-brand-blue font-semibold text-sm rounded-full px-8 py-3.5 hover:bg-white/90 transition-colors"
             >
               <svg
@@ -58,7 +58,7 @@ export default function EmployerCta() {
               Create Free Account
             </Link>
             <Link
-              href="/employers/contact"
+              href="/contact"
               className="inline-flex items-center gap-2 border border-white/40 text-white font-semibold text-sm rounded-full px-8 py-3.5 hover:bg-white/10 transition-colors"
             >
               <svg

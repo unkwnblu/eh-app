@@ -114,7 +114,7 @@ export default function EmployersHero() {
           {/* CTAs */}
           <div data-hero="ctas" className="flex flex-col sm:flex-row items-center gap-3">
             <Button
-              href="/employers/register"
+              href="/auth/employer"
               variant="primary"
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

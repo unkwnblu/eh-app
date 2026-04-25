@@ -214,7 +214,7 @@ export default function CredentialsSection() {
               guard in the middle of a placement.
             </p>
             <Link
-              href="/candidates/register"
+              href="/auth/candidate/register"
               className="inline-flex items-center gap-1.5 text-brand-blue font-semibold text-sm hover:gap-2.5 transition-all"
             >
               Start your verification

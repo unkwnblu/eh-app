@@ -4,10 +4,48 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://edgeharbour.com";
+
+const privacyPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Privacy Policy – Edge Harbour",
+  url: `${siteUrl}/legal/privacy`,
   description:
-    "Learn how Edge Harbour collects, uses, and protects your personal data. ICO-registered and fully GDPR compliant.",
+    "How Edge Harbour collects, uses, and protects your personal data. ICO-registered and fully compliant with UK GDPR.",
+  publisher: { "@id": `${siteUrl}/#organization` },
+  breadcrumb: {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Legal", item: `${siteUrl}/legal` },
+      { "@type": "ListItem", position: 3, name: "Privacy Policy", item: `${siteUrl}/legal/privacy` },
+    ],
+  },
+};
+
+export const metadata: Metadata = {
+  title: "Privacy Policy – How We Handle Your Data",
+  description:
+    "Learn how Edge Harbour collects, uses, and protects your personal data. ICO-registered and fully compliant with UK GDPR.",
+  keywords: [
+    "Edge Harbour privacy policy",
+    "GDPR recruitment UK",
+    "ICO registered recruitment",
+    "data protection UK",
+    "personal data recruitment platform",
+  ],
+  openGraph: {
+    title: "Privacy Policy – Edge Harbour",
+    description:
+      "How Edge Harbour collects, uses, and protects your personal data in line with UK GDPR.",
+    url: "/legal/privacy",
+    type: "website",
+  },
+  twitter: {
+    title: "Privacy Policy – Edge Harbour",
+    description: "How Edge Harbour collects, uses, and protects your personal data. ICO-registered.",
+  },
   alternates: { canonical: "/legal/privacy" },
   robots: { index: true, follow: false },
 };
@@ -32,6 +70,10 @@ const tocSections = [
 export default function PrivacyPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(privacyPageJsonLd) }}
+      />
       <Navbar />
       <main id="main-content" className="flex flex-col flex-1">
         {/* Page header */}

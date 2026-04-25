@@ -4,10 +4,47 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://edgeharbour.com";
+
+const termsPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Terms of Service – Edge Harbour",
+  url: `${siteUrl}/legal/terms`,
   description:
-    "Read Edge Harbour's Terms of Service. Understand your rights and obligations when using our compliance-first recruitment platform.",
+    "Edge Harbour's Terms of Service governing use of the platform by employers and candidates.",
+  publisher: { "@id": `${siteUrl}/#organization` },
+  breadcrumb: {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Legal", item: `${siteUrl}/legal` },
+      { "@type": "ListItem", position: 3, name: "Terms of Service", item: `${siteUrl}/legal/terms` },
+    ],
+  },
+};
+
+export const metadata: Metadata = {
+  title: "Terms of Service – Platform Agreement",
+  description:
+    "Read Edge Harbour's Terms of Service. Understand your rights and obligations as an employer or candidate on our compliance-first recruitment platform.",
+  keywords: [
+    "Edge Harbour terms of service",
+    "recruitment platform agreement UK",
+    "employer candidate terms UK",
+    "platform usage terms",
+  ],
+  openGraph: {
+    title: "Terms of Service – Edge Harbour",
+    description:
+      "Your rights and obligations when using Edge Harbour's compliance-first recruitment platform.",
+    url: "/legal/terms",
+    type: "website",
+  },
+  twitter: {
+    title: "Terms of Service – Edge Harbour",
+    description: "Your rights and obligations when using Edge Harbour's recruitment platform.",
+  },
   alternates: { canonical: "/legal/terms" },
   robots: { index: true, follow: false },
 };
@@ -31,6 +68,10 @@ const tocSections = [
 export default function TermsPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(termsPageJsonLd) }}
+      />
       <Navbar />
       <main id="main-content" className="flex flex-col flex-1">
         {/* Page header */}

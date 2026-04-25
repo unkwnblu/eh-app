@@ -4,10 +4,52 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
-export const metadata: Metadata = {
-  title: "Legal",
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://edgeharbour.com";
+
+const collectionPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Legal Documents – Edge Harbour",
+  url: `${siteUrl}/legal`,
   description:
-    "Review Edge Harbour's legal documents including our Terms of Service, Privacy Policy, and compliance framework.",
+    "Edge Harbour's legal documents including Terms of Service, Privacy Policy, and Compliance Framework.",
+  publisher: { "@id": `${siteUrl}/#organization` },
+  breadcrumb: {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Legal", item: `${siteUrl}/legal` },
+    ],
+  },
+  hasPart: [
+    { "@type": "WebPage", name: "Terms of Service", url: `${siteUrl}/legal/terms` },
+    { "@type": "WebPage", name: "Privacy Policy", url: `${siteUrl}/legal/privacy` },
+    { "@type": "WebPage", name: "Compliance Framework", url: `${siteUrl}/compliance` },
+  ],
+};
+
+export const metadata: Metadata = {
+  title: "Legal – Terms, Privacy Policy & Compliance",
+  description:
+    "Review Edge Harbour's legal documents: Terms of Service, Privacy Policy, and our Compliance Framework — all aligned with UK law and GDPR.",
+  keywords: [
+    "Edge Harbour terms of service",
+    "Edge Harbour privacy policy",
+    "GDPR recruitment platform",
+    "ICO registered UK",
+    "recruitment legal documents",
+  ],
+  openGraph: {
+    title: "Legal Documents – Edge Harbour",
+    description:
+      "Terms of Service, Privacy Policy, and Compliance Framework — all aligned with UK law and GDPR.",
+    url: "/legal",
+    type: "website",
+  },
+  twitter: {
+    title: "Legal Documents – Edge Harbour",
+    description: "Terms of Service, Privacy Policy, and Compliance Framework — aligned with UK law.",
+  },
   alternates: { canonical: "/legal" },
   robots: { index: true, follow: false },
 };
@@ -87,6 +129,10 @@ const legalCards = [
 export default function LegalHubPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+      />
       <Navbar />
       <main id="main-content" className="flex flex-col flex-1">
         {/* Hero */}

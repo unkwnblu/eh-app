@@ -10,14 +10,15 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: [
           "/",
+          "/about",
           "/candidates",
           "/employers",
           "/sectors",
+          "/compliance",
           "/contact",
           "/legal",
           "/legal/privacy",
           "/legal/terms",
-          "/compliance",
           "/jobs/",
         ],
         disallow: [

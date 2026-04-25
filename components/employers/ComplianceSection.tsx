@@ -106,7 +106,7 @@ const complianceChecks = [
 const comparisonRows = [
   {
     feature: "RTW Verification",
-    edgeHarbour: "Automated, instant",
+    edgeHarbour: "Done for you, pre-hire",
     traditional: "Manual, often skipped",
     positive: true,
   },
