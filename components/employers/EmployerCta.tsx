@@ -31,8 +31,9 @@ export default function EmployerCta() {
 
           {/* Subtitle */}
           <p className="text-white/70 text-lg leading-relaxed mb-10 max-w-lg">
-            Join 200+ UK employers who&apos;ve cut their time-to-hire by 65% with
-            Edge Harbour.
+            Join 200+ UK employers who let Edge Harbour handle sourcing,
+            verification, and interviews — so they only meet candidates who are
+            ready to start.
           </p>
 
           {/* CTAs */}

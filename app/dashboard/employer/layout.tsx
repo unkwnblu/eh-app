@@ -5,6 +5,7 @@ import Link from "next/link";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
 import { createClient } from "@/lib/supabase/client";
 import SessionGuard from "@/components/session/SessionGuard";
+import EmployerSearchBar from "@/components/employer/EmployerSearchBar";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────────
 
@@ -191,7 +192,7 @@ export default function EmployerDashboardLayout({ children }: { children: React.
       <DashboardLayout
         navItems={NAV_ITEMS}
         basePath="/dashboard/employer"
-        searchPlaceholder="Search candidates, jobs, or shifts..."
+        searchSlot={<EmployerSearchBar />}
         profileHref="/dashboard/employer/profile"
         profileName={profileName}
         profileSub={profileSub}

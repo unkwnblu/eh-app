@@ -83,7 +83,7 @@ const steps = [
       </svg>
     ),
     title: "Start Getting Matched",
-    body: "Employers browse verified candidates directly. You'll receive interview requests and real-time updates.",
+    body: "Once verified, Edge Harbour matches your profile to live roles. You'll be contacted with interview opportunities and kept updated throughout.",
   },
 ];
 

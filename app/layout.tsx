@@ -101,11 +101,13 @@ export const metadata: Metadata = {
   creator: "Edge Harbour",
   publisher: "Edge Harbour",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    other: [
-      { rel: "icon", type: "image/png", url: "/eh-logo.png" },
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32", type: "image/x-icon" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png" },
     ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
   },
   openGraph: {
     siteName: "Edge Harbour",

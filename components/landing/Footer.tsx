@@ -3,23 +3,29 @@ import Image from "next/image";
 import NewsletterForm from "./NewsletterForm";
 
 const employerLinks = [
-  { label: "Post a Job", href: "/employers/post" },
-  { label: "Credential Verification", href: "/employers/compliance" },
-  { label: "Candidate Portal", href: "/employers/candidates" },
+  { label: "For Employers",       href: "/employers" },
+  { label: "Create Employer Account", href: "/auth/employer" },
+  { label: "Compliance Framework", href: "/compliance" },
+  { label: "Contact Us",          href: "/contact" },
 ];
 
 const candidateLinks = [
-  { label: "Browse Roles", href: "/jobs" },
-  { label: "CV Helping", href: "/candidates/cv" },
-  { label: "Career Advice", href: "/candidates/advice" },
-  { label: "Candidate Support", href: "/candidates/support" },
+  { label: "For Candidates",      href: "/candidates" },
+  { label: "Browse Live Roles",   href: "/jobs" },
+  { label: "Register Free",       href: "/auth/candidate/register" },
+  { label: "Sectors We Cover",    href: "/sectors" },
+];
+
+const companyLinks = [
+  { label: "About Us",            href: "/about" },
+  { label: "Compliance",          href: "/compliance" },
+  { label: "Contact",             href: "/contact" },
 ];
 
 const legalLinks = [
-  { label: "Legal", href: "/legal" },
-  { label: "Terms of Service", href: "/legal/terms" },
-  { label: "Privacy Policy", href: "/legal/privacy" },
-  { label: "Cookie Policy", href: "/cookies" },
+  { label: "Legal",               href: "/legal" },
+  { label: "Terms of Service",    href: "/legal/terms" },
+  { label: "Privacy Policy",      href: "/legal/privacy" },
 ];
 
 export default function Footer() {
@@ -27,9 +33,10 @@ export default function Footer() {
     <footer className="w-full bg-navy text-white">
       {/* Main footer */}
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
+
           {/* Brand column */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2.5 mb-5">
               <Image
                 src="/eh-logo.svg"
@@ -41,23 +48,30 @@ export default function Footer() {
                 Edge<span className="text-brand-blue">Harbour</span>
               </span>
             </Link>
-            <address className="not-italic text-slate-400 text-xs leading-relaxed">
+
+            <p className="text-sm text-slate-400 leading-relaxed mb-5 max-w-xs">
+              The UK&apos;s compliance-first recruitment platform — connecting
+              verified candidates with approved employers across Healthcare,
+              Hospitality, Customer Service, and Tech.
+            </p>
+
+            <address className="not-italic text-xs text-slate-500 leading-relaxed mb-6">
               Edge Harbour Recruitment Company Ltd.
               <br />
-              1 Bradford Square, London
+              1 Harbour Place, London, EC2A 1AB
               <br />
-              England, E1 2RS
+              England &amp; Wales
             </address>
 
             {/* Social icons */}
-            <div className="flex items-center gap-3 mt-6">
+            <div className="flex items-center gap-3">
               {[
                 {
                   label: "LinkedIn",
                   path: "M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z",
                 },
                 {
-                  label: "Twitter/X",
+                  label: "Twitter / X",
                   path: "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z",
                 },
                 {
@@ -79,7 +93,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Employer links */}
+          {/* Employers */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-5">
               Employers
@@ -98,7 +112,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Candidate links */}
+          {/* Candidates */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-5">
               Candidates
@@ -120,10 +134,10 @@ export default function Footer() {
           {/* Newsletter */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-5">
-              Get Updates
+              Stay Updated
             </h4>
             <p className="text-sm text-slate-400 leading-relaxed mb-5">
-              Hiring insights, compliance updates, and sector news — straight to
+              Hiring insights, compliance updates, and new roles — straight to
               your inbox.
             </p>
             <NewsletterForm />
@@ -137,7 +151,7 @@ export default function Footer() {
           <p className="text-xs text-slate-500">
             &copy; {new Date().getFullYear()} Edge Harbour Recruitment Company Ltd. All rights reserved.
           </p>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 flex-wrap justify-center">
             {legalLinks.map((link) => (
               <Link
                 key={link.label}

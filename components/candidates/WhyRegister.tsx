@@ -19,8 +19,8 @@ const benefits = [
         />
       </svg>
     ),
-    title: "Direct Employer Access",
-    body: "Your verified profile is shown directly to hiring managers — no middleman, no lost CVs.",
+    title: "Matched to Real Roles",
+    body: "Your verified profile is matched to live vacancies — no cold applications, no lost CVs, no waiting in the dark.",
   },
   {
     icon: (

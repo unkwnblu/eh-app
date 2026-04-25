@@ -93,8 +93,8 @@ export default function CandidatesHero() {
             data-hero="subtitle"
             className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-xl mb-10"
           >
-            Register once, upload your credentials, and get matched directly
-            with UK employers — no agencies, no black holes, no ghosting.
+            Register once, upload your credentials, and get matched with
+            top UK employers — fully verified, no black holes, no ghosting.
           </p>
 
           {/* CTAs */}

@@ -66,33 +66,33 @@ const serviceJsonLd = {
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export const metadata: Metadata = {
-  title: "Hire Compliant, Pre-Vetted Candidates in the UK",
+  title: "Hire Pre-Vetted, Interview-Ready Candidates in the UK",
   description:
-    "Post vacancies, get matched with RTW-verified candidates, and manage your entire hiring pipeline — all in one compliance-first ATS. Built for UK employers in Healthcare, Hospitality, and Tech.",
+    "Post a vacancy and Edge Harbour does the rest. We source, verify, and interview candidates on your behalf — delivering a shortlist of RTW-verified, DBS-checked, interview-ready professionals. Built for UK employers.",
   keywords: [
     "hire candidates UK",
-    "UK recruitment platform",
+    "managed recruitment UK",
     "compliance hiring UK",
     "right to work verification employer",
-    "ATS UK small business",
-    "healthcare employer recruitment",
-    "hospitality staff recruitment UK",
-    "employer recruitment software UK",
     "pre-vetted candidates UK",
     "DBS checked staff UK",
     "RTW verified candidates",
+    "healthcare employer recruitment",
+    "hospitality staff recruitment UK",
+    "interview-ready candidates UK",
+    "staffing agency UK compliance",
   ],
   openGraph: {
-    title: "Hire Compliant, Pre-Vetted Candidates – Edge Harbour",
+    title: "Hire Pre-Vetted, Interview-Ready Candidates – Edge Harbour",
     description:
-      "Post vacancies, get matched with RTW-verified candidates, and manage your entire hiring pipeline — all in one compliance-first ATS.",
+      "Post a vacancy and Edge Harbour does the rest — sourcing, verifying, and interviewing candidates on your behalf.",
     url: "/employers",
     type: "website",
   },
   twitter: {
-    title: "Hire Compliant, Pre-Vetted Candidates – Edge Harbour",
+    title: "Hire Pre-Vetted, Interview-Ready Candidates – Edge Harbour",
     description:
-      "Post vacancies, get matched with RTW-verified candidates, and manage your entire hiring pipeline — all in one compliance-first ATS.",
+      "Post a vacancy and Edge Harbour does the rest — sourcing, verifying, and interviewing candidates on your behalf.",
   },
   alternates: { canonical: "/employers" },
 };

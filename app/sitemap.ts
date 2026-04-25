@@ -28,6 +28,12 @@ const staticRoutes: MetadataRoute.Sitemap = [
     priority: 0.7,
   },
   {
+    url: `${siteUrl}/jobs`,
+    lastModified: new Date(),
+    changeFrequency: "daily",
+    priority: 0.95,
+  },
+  {
     url: `${siteUrl}/candidates`,
     lastModified: new Date(),
     changeFrequency: "weekly",

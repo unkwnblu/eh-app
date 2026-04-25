@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
+import ContactForm from "@/components/contact/ContactForm";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://edgeharbour.com";
 
@@ -17,13 +18,13 @@ const localBusinessJsonLd = {
     "The UK's compliance-first recruitment platform connecting employers with pre-vetted, Right-to-Work verified candidates.",
   address: {
     "@type": "PostalAddress",
-    streetAddress: "124 City Road",
+    streetAddress: "1 Harbour Place",
     addressLocality: "London",
-    postalCode: "EC1V 2NX",
+    postalCode: "EC2A 1AB",
     addressCountry: "GB",
   },
-  telephone: "+44-800-123-4567",
-  email: "support@edgeharbour.co.uk",
+  telephone: "+44-20-7946-0800",
+  email: "hello@edgeharbour.co.uk",
   openingHoursSpecification: [
     {
       "@type": "OpeningHoursSpecification",
@@ -33,11 +34,10 @@ const localBusinessJsonLd = {
     },
   ],
   areaServed: { "@type": "Country", name: "United Kingdom" },
-  priceRange: "££",
 };
 
 export const metadata: Metadata = {
-  title: "Contact Us",
+  title: "Contact Us – Edge Harbour",
   description:
     "Get in touch with the Edge Harbour team. Questions about recruitment, compliance, or your account — we're here to help.",
   keywords: [
@@ -51,6 +51,7 @@ export const metadata: Metadata = {
     description:
       "Get in touch with the Edge Harbour team. Questions about recruitment, compliance, or your account — we're here to help.",
     url: "/contact",
+    type: "website",
   },
   alternates: { canonical: "/contact" },
   robots: { index: true, follow: false },
@@ -59,7 +60,7 @@ export const metadata: Metadata = {
 const contactDetails = [
   {
     label: "Registered Address",
-    value: "Edge Harbour Ltd\n124 City Road\nLondon, EC1V 2NX\nUnited Kingdom",
+    value: "Edge Harbour Recruitment Company Ltd\n1 Harbour Place\nLondon, EC2A 1AB\nEngland & Wales",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -108,8 +109,9 @@ const contactDetails = [
     ),
   },
   {
-    label: "Company Registration",
-    value: "Registered in England & Wales\nCompany No. 15XXXXXX",
+    label: "Legal",
+    value: "legal@edgeharbour.co.uk",
+    href: "mailto:legal@edgeharbour.co.uk",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -125,7 +127,6 @@ export default function ContactPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
       />
-      <GsapAnimations />
       <Navbar />
 
       <main id="main-content" className="w-full bg-white dark:bg-[#111827]">
@@ -154,7 +155,7 @@ export default function ContactPage() {
             <div className="grid lg:grid-cols-2 gap-16">
 
               {/* Left — contact details */}
-              <div data-gsap="fade-up">
+              <div data-gsap="slide-left">
                 <h2 className="text-brand dark:text-white font-black text-2xl tracking-tight mb-8">
                   Company Information
                 </h2>
@@ -187,10 +188,10 @@ export default function ContactPage() {
 
                 {/* Office hours */}
                 <div className="mt-10 p-6 rounded-2xl bg-gray-soft dark:bg-[#0B1222] border border-gray-border dark:border-white/10">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
                     Office Hours
                   </p>
-                  <div className="space-y-1.5 text-sm">
+                  <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-500 dark:text-slate-400">Monday – Friday</span>
                       <span className="text-brand dark:text-white font-medium">09:00 – 18:00 GMT</span>
@@ -204,83 +205,21 @@ export default function ContactPage() {
                       <span className="text-slate-400 dark:text-slate-500">Closed</span>
                     </div>
                   </div>
+                  <div className="mt-4 pt-4 border-t border-gray-border dark:border-white/10 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      We typically respond within one business day.
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Right — enquiry form */}
-              <div data-gsap="fade-up">
+              <div data-gsap="slide-right">
                 <h2 className="text-brand dark:text-white font-black text-2xl tracking-tight mb-8">
                   Send an Enquiry
                 </h2>
-                <form className="space-y-5">
-                  <div className="grid sm:grid-cols-2 gap-5">
-                    <div>
-                      <label htmlFor="firstName" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
-                        First Name
-                      </label>
-                      <input
-                        id="firstName"
-                        type="text"
-                        placeholder="Jane"
-                        className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="lastName" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
-                        Last Name
-                      </label>
-                      <input
-                        id="lastName"
-                        type="text"
-                        placeholder="Smith"
-                        className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
-                      Email Address
-                    </label>
-                    <input
-                      id="email"
-                      type="email"
-                      placeholder="jane@company.co.uk"
-                      className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="role" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
-                      I am a
-                    </label>
-                    <select id="role" defaultValue="" className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white appearance-none">
-                      <option value="" disabled>Select one…</option>
-                      <option value="employer">Employer / Hiring Manager</option>
-                      <option value="candidate">Candidate / Job Seeker</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="message" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
-                      Message
-                    </label>
-                    <textarea
-                      id="message"
-                      rows={5}
-                      placeholder="Tell us how we can help…"
-                      className="w-full border border-gray-border dark:border-white/10 rounded-xl px-4 py-3 text-sm text-brand placeholder-slate-300 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-colors bg-white dark:bg-white/5 dark:text-white dark:placeholder-slate-500 resize-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-brand text-white text-sm font-semibold rounded-full py-3.5 hover:bg-brand-blue transition-colors"
-                  >
-                    Send Message
-                  </button>
-                </form>
+                <ContactForm />
               </div>
 
             </div>
@@ -289,6 +228,7 @@ export default function ContactPage() {
       </main>
 
       <Footer />
+      <GsapAnimations />
     </>
   );
 }

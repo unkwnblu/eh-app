@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -29,6 +29,8 @@ export type NotifItem = {
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   navItems: NavItem[];
   basePath: string;
   logoSub?: string;
@@ -40,6 +42,7 @@ interface SidebarProps {
 interface TopbarProps {
   onMenuToggle: () => void;
   searchPlaceholder: string;
+  searchSlot?: React.ReactNode;
   profileHref: string;
   profileName: string;
   profileSub: string;
@@ -62,6 +65,8 @@ export interface DashboardLayoutProps {
   basePath: string;
   // Topbar / profile
   searchPlaceholder?: string;
+  /** Replaces the default search input with a custom component (e.g. EmployerSearchBar) */
+  searchSlot?: React.ReactNode;
   profileHref: string;
   profileName: string;
   profileSub: string;
@@ -170,9 +175,37 @@ function SupportIcon({ active }: { active: boolean }) {
   );
 }
 
+/** Chevron used for the collapse/expand toggle */
+function CollapseIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      className={`transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    </svg>
+  );
+}
+
 // ─── Sidebar ─────────────────────────────────────────────────────────────────────
 
-function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, sidebarBottom, logoutHref }: SidebarProps) {
+function Sidebar({
+  open,
+  onClose,
+  collapsed,
+  onToggleCollapsed,
+  navItems,
+  basePath,
+  logoSub,
+  supportHref,
+  sidebarBottom,
+  logoutHref,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -186,83 +219,161 @@ function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, side
 
   return (
     <aside
-      className={`fixed left-0 top-0 w-[260px] h-screen flex flex-col bg-white dark:bg-[#111827] border-r border-gray-100 dark:border-[#1e293b] z-40 transition-transform duration-300 ${
-        open ? "translate-x-0" : "-translate-x-full"
-      } md:translate-x-0`}
+      className={`fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-[#111827] border-r border-gray-100 dark:border-[#1e293b] z-40 transition-all duration-300 ease-in-out ${
+        collapsed ? "w-[68px]" : "w-[260px]"
+      } ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
     >
       {/* Logo */}
-      <div className="h-[72px] flex items-center px-6 border-b border-gray-100 dark:border-[#1e293b]">
-        <Link href="/" className="flex items-center gap-2.5">
-          <img src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} />
-          <div>
-            <span className="text-brand font-bold text-base tracking-tight leading-none">
-              Edge<span className="text-brand-blue">Harbour</span>
-            </span>
-            {logoSub && (
-              <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400 mt-0.5">{logoSub}</p>
-            )}
-          </div>
+      <div className="h-[72px] flex items-center px-3 border-b border-gray-100 dark:border-[#1e293b] shrink-0">
+        <Link
+          href="/"
+          className={`flex items-center gap-2.5 min-w-0 ${collapsed ? "mx-auto" : "flex-1"}`}
+        >
+          <img src="/eh-logo.svg" alt="Edge Harbour" width={28} height={28} className="shrink-0" />
+          {!collapsed && (
+            <div className="min-w-0">
+              <span className="text-brand font-bold text-base tracking-tight leading-none">
+                Edge<span className="text-brand-blue">Harbour</span>
+              </span>
+              {logoSub && (
+                <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400 mt-0.5">{logoSub}</p>
+              )}
+            </div>
+          )}
         </Link>
+
+        {/* Mobile close — always present so the sidebar can be dismissed regardless of collapsed state */}
         <button
           onClick={onClose}
           aria-label="Close sidebar"
-          className="ml-auto md:hidden p-2 text-slate-400 hover:text-brand transition-colors"
+          className="md:hidden p-2 text-slate-400 hover:text-brand transition-colors shrink-0"
         >
           <CloseIcon />
         </button>
+
+        {/* Desktop collapse toggle — shown when expanded; expand button lives at the bottom when collapsed */}
+        {!collapsed && (
+          <button
+            onClick={onToggleCollapsed}
+            aria-label="Collapse sidebar"
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-brand hover:bg-gray-100 dark:hover:bg-white/5 transition-colors shrink-0"
+          >
+            <CollapseIcon collapsed={false} />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
+      <nav className={`flex-1 py-5 space-y-0.5 overflow-y-auto overflow-x-hidden ${collapsed ? "px-2" : "px-3"}`}>
         {navItems.map((item) => {
           const active = isActive(item.href);
           return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                active
-                  ? "bg-brand-blue text-white shadow-sm"
-                  : "text-slate-500 hover:bg-gray-50 hover:text-brand"
-              }`}
-            >
-              <span className={active ? "text-white" : "text-slate-400"}>{item.icon}</span>
-              {item.label}
-            </Link>
+            <div key={item.label} className="relative group/navitem">
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  collapsed ? "justify-center px-2" : "px-3"
+                } ${
+                  active
+                    ? "bg-brand-blue text-white shadow-sm"
+                    : "text-slate-500 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-brand"
+                }`}
+              >
+                <span className={`shrink-0 ${active ? "text-white" : "text-slate-400"}`}>
+                  {item.icon}
+                </span>
+                {!collapsed && item.label}
+              </Link>
+
+              {/* Tooltip — shown only when collapsed, on desktop */}
+              {collapsed && (
+                <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 hidden md:block opacity-0 group-hover/navitem:opacity-100 transition-opacity duration-150">
+                  <div className="relative">
+                    {/* Arrow */}
+                    <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-4 border-y-transparent border-r-4 border-r-[#1e293b]" />
+                    <span className="block px-3 py-1.5 bg-[#1e293b] text-white text-xs font-medium rounded-lg whitespace-nowrap shadow-lg">
+                      {item.label}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
 
       {/* Bottom section */}
-      <div className="px-3 pb-5 space-y-0.5 border-t border-gray-100 dark:border-[#1e293b] pt-4">
-        {sidebarBottom}
+      <div className={`pb-5 space-y-0.5 border-t border-gray-100 dark:border-[#1e293b] pt-4 ${collapsed ? "px-2" : "px-3"}`}>
+        {/* User card — hide when collapsed */}
+        {!collapsed && sidebarBottom}
+
+        {/* Support link */}
         {supportHref && (
-          <Link
-            href={supportHref}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              isSupportActive
-                ? "bg-brand-blue text-white shadow-sm"
-                : "text-slate-500 hover:bg-gray-50 hover:text-brand"
+          <div className="relative group/support">
+            <Link
+              href={supportHref}
+              className={`flex items-center gap-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                collapsed ? "justify-center px-2" : "px-3"
+              } ${
+                isSupportActive
+                  ? "bg-brand-blue text-white shadow-sm"
+                  : "text-slate-500 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-brand"
+              }`}
+            >
+              <SupportIcon active={isSupportActive} />
+              {!collapsed && "Support"}
+            </Link>
+            {collapsed && (
+              <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 hidden md:block opacity-0 group-hover/support:opacity-100 transition-opacity duration-150">
+                <div className="relative">
+                  <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-4 border-y-transparent border-r-4 border-r-[#1e293b]" />
+                  <span className="block px-3 py-1.5 bg-[#1e293b] text-white text-xs font-medium rounded-lg whitespace-nowrap shadow-lg">
+                    Support
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Logout */}
+        <div className="relative group/logout">
+          <button
+            onClick={async () => {
+              try { localStorage.setItem("eh_logout", "intentional"); } catch {}
+              const supabase = createClient();
+              await supabase.auth.signOut();
+              router.push(logoutHref ?? "/");
+            }}
+            className={`w-full flex items-center gap-3 py-2.5 rounded-xl text-sm font-medium text-red-400 bg-red-50 hover:bg-red-100 transition-all ${
+              collapsed ? "justify-center px-2" : "px-3"
             }`}
           >
-            <SupportIcon active={isSupportActive} />
-            Support
-          </Link>
+            <LogoutIcon />
+            {!collapsed && "Log Out"}
+          </button>
+          {collapsed && (
+            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 hidden md:block opacity-0 group-hover/logout:opacity-100 transition-opacity duration-150">
+              <div className="relative">
+                <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-4 border-y-transparent border-r-4 border-r-[#1e293b]" />
+                <span className="block px-3 py-1.5 bg-[#1e293b] text-white text-xs font-medium rounded-lg whitespace-nowrap shadow-lg">
+                  Log Out
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Expand button — shown only when collapsed, desktop only */}
+        {collapsed && (
+          <button
+            onClick={onToggleCollapsed}
+            aria-label="Expand sidebar"
+            className="w-full hidden md:flex items-center justify-center py-2.5 px-2 rounded-xl text-slate-400 hover:text-brand hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+          >
+            <CollapseIcon collapsed={true} />
+          </button>
         )}
-        <button
-          onClick={async () => {
-            // Mark as intentional so SessionGuard's onAuthStateChange listener
-            // does not fire a duplicate "session expired" redirect.
-            try { localStorage.setItem("eh_logout", "intentional"); } catch {}
-            const supabase = createClient();
-            await supabase.auth.signOut();
-            router.push(logoutHref ?? "/");
-          }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-400 bg-red-50 hover:bg-red-100 transition-all"
-        >
-          <LogoutIcon />
-          Log Out
-        </button>
       </div>
     </aside>
   );
@@ -273,6 +384,7 @@ function Sidebar({ open, onClose, navItems, basePath, logoSub, supportHref, side
 function Topbar({
   onMenuToggle,
   searchPlaceholder,
+  searchSlot,
   profileHref,
   profileName,
   profileSub,
@@ -315,17 +427,21 @@ function Topbar({
         </button>
 
         {/* Search — desktop only */}
-        <div className="hidden md:flex flex-1 items-center gap-3 bg-gray-50 dark:bg-[#1a2332] rounded-xl px-4 py-2.5 border border-gray-100 dark:border-[#1e293b]">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            className="bg-transparent text-sm text-slate-600 placeholder:text-slate-400 outline-none w-full"
-            onKeyDown={(e) => { if (e.key === "Enter") toast("Search coming soon", "info"); }}
-          />
-        </div>
+        {searchSlot ? (
+          searchSlot
+        ) : (
+          <div className="hidden md:flex flex-1 items-center gap-3 bg-gray-50 dark:bg-[#1a2332] rounded-xl px-4 py-2.5 border border-gray-100 dark:border-[#1e293b]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              className="bg-transparent text-sm text-slate-600 dark:text-slate-300 placeholder:text-slate-400 outline-none w-full"
+              onKeyDown={(e) => { if (e.key === "Enter") toast("Search coming soon", "info"); }}
+            />
+          </div>
+        )}
 
         {/* Bell */}
         <button
@@ -347,7 +463,7 @@ function Topbar({
           className="flex items-center gap-3 pl-2 border-l border-gray-100 dark:border-[#1e293b] hover:opacity-80 transition-opacity"
         >
           <div className="hidden md:block text-right">
-            <p className="text-sm font-semibold text-brand leading-none">{profileName}</p>
+            <p className="text-sm font-semibold text-brand dark:text-white leading-none">{profileName}</p>
             <p className="text-xs text-slate-400 mt-0.5">{profileSub}</p>
           </div>
           <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-blue flex items-center justify-center shrink-0">
@@ -382,7 +498,7 @@ function Topbar({
         {/* Header */}
         <div className="flex items-center justify-between px-5 h-[72px] border-b border-gray-100 dark:border-[#1e293b] shrink-0">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-brand">Notifications</h3>
+            <h3 className="text-sm font-bold text-brand dark:text-white">Notifications</h3>
             {unreadCount > 0 && (
               <span className="px-2 py-0.5 bg-brand-blue text-white text-[10px] font-bold rounded-full">
                 {unreadCount}
@@ -398,7 +514,7 @@ function Topbar({
             <button
               onClick={() => setOpen(false)}
               aria-label="Close notifications"
-              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-brand hover:bg-gray-100 rounded-lg transition-colors"
+              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-brand hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -408,7 +524,7 @@ function Topbar({
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+        <div className="flex-1 overflow-y-auto divide-y divide-gray-50 dark:divide-white/5">
           {notifs.map((n) => (
             <div
               key={n.id}
@@ -422,7 +538,7 @@ function Topbar({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <p className={`text-sm leading-snug ${!n.read ? "font-bold text-brand" : "font-semibold text-slate-600"}`}>
+                  <p className={`text-sm leading-snug ${!n.read ? "font-bold text-brand dark:text-white" : "font-semibold text-slate-600 dark:text-slate-300"}`}>
                     {n.title}
                   </p>
                   {!n.read && <span className="w-2 h-2 bg-brand-blue rounded-full shrink-0 mt-1.5" />}
@@ -447,11 +563,14 @@ function Topbar({
 
 // ─── DashboardLayout ──────────────────────────────────────────────────────────────
 
+const STORAGE_KEY = "eh_sidebar_collapsed";
+
 export default function DashboardLayout({
   children,
   navItems,
   basePath,
   searchPlaceholder = "Search...",
+  searchSlot,
   profileHref,
   profileName,
   profileSub,
@@ -470,6 +589,28 @@ export default function DashboardLayout({
   logoutHref,
 }: DashboardLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  // Avoid hydration mismatch — read localStorage only after mount
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === "true") setCollapsed(true);
+    } catch {}
+    setMounted(true);
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch {}
+      return next;
+    });
+  }
+
+  // Use the resolved collapsed value only after mount to avoid SSR flash
+  const sidebarCollapsed = mounted ? collapsed : false;
 
   return (
     <div className="flex min-h-screen bg-[#F7F8FA] dark:bg-[#0B1222]">
@@ -479,6 +620,8 @@ export default function DashboardLayout({
       <Sidebar
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleCollapsed}
         navItems={navItems}
         basePath={basePath}
         logoSub={logoSub}
@@ -495,10 +638,15 @@ export default function DashboardLayout({
         onClick={() => setMenuOpen(false)}
       />
 
-      <div className="md:ml-[260px] flex flex-col min-h-screen flex-1 min-w-0">
+      <div
+        className={`flex flex-col min-h-screen flex-1 min-w-0 transition-[margin] duration-300 ease-in-out ${
+          sidebarCollapsed ? "md:ml-[68px]" : "md:ml-[260px]"
+        }`}
+      >
         <Topbar
           onMenuToggle={() => setMenuOpen((v) => !v)}
           searchPlaceholder={searchPlaceholder}
+          searchSlot={searchSlot}
           profileHref={profileHref}
           profileName={profileName}
           profileSub={profileSub}

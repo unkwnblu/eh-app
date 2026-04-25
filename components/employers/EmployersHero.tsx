@@ -107,8 +107,9 @@ export default function EmployersHero() {
             data-hero="subtitle"
             className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-xl mb-10"
           >
-            Post a vacancy, get matched with pre-vetted candidates — RTW verified,
-            sector-credentialed, and interview-ready.
+            Post a vacancy and we handle everything — sourcing, verifying, and
+            interviewing candidates on your behalf. You receive a shortlist of
+            people who are ready to start.
           </p>
 
           {/* CTAs */}

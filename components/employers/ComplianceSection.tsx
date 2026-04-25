@@ -154,9 +154,9 @@ export default function ComplianceSection() {
               heading={<>Zero risk hiring,{" "}<span className="text-brand-blue">guaranteed.</span></>}
               description={
                 <span className="max-w-md inline-block">
-                  Every candidate in your pipeline has been pre-screened against UK
-                  legal requirements. You never interview someone whose documents
-                  haven&apos;t cleared.
+                  Every candidate we send you has been fully screened against UK
+                  legal requirements by our compliance team. You only meet people
+                  whose documents, credentials, and right to work have already cleared.
                 </span>
               }
             />
