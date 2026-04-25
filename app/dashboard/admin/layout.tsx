@@ -5,6 +5,7 @@ import Link from "next/link";
 import DashboardLayout, { NavItem, NotifItem } from "@/components/dashboard/DashboardLayout";
 import { createClient } from "@/lib/supabase/client";
 import SessionGuard from "@/components/session/SessionGuard";
+import AdminSearchBar from "@/components/admin/AdminSearchBar";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────────
 
@@ -265,7 +266,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     <DashboardLayout
       navItems={visibleNavItems}
       basePath="/dashboard/admin"
-      searchPlaceholder="Global system search..."
+      searchSlot={<AdminSearchBar />}
       profileHref="/dashboard/admin/profile"
       profileName={profileName}
       profileSub={profileSub}
