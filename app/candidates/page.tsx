@@ -11,9 +11,33 @@ import CandidateTestimonials from "@/components/candidates/CandidateTestimonials
 import CandidateCta from "@/components/candidates/CandidateCta";
 
 export const metadata: Metadata = {
-  title: "For Candidates – Edge Harbour",
+  title: "Find Jobs in the UK – Healthcare, Hospitality, Tech & More",
   description:
-    "Register once, upload your credentials, and get matched directly with UK employers. Edge Harbour is the compliance-first platform for UK job seekers in Healthcare, Hospitality, Customer Service, and Tech.",
+    "Register once, upload your credentials, and get matched directly with UK employers. Edge Harbour is the compliance-first job platform for Healthcare, Hospitality, Customer Service, and Tech candidates.",
+  keywords: [
+    "UK jobs",
+    "healthcare jobs UK",
+    "hospitality jobs UK",
+    "tech jobs UK",
+    "customer service jobs",
+    "compliance recruitment",
+    "right to work UK",
+    "job seekers UK",
+    "pre-vetted jobs",
+    "Edge Harbour candidates",
+  ],
+  openGraph: {
+    title: "Find Your Next UK Job – Edge Harbour",
+    description:
+      "Register once, upload your credentials, and get matched with verified UK employers. Healthcare, Hospitality, Customer Service, and Tech roles available.",
+    url: "/candidates",
+  },
+  twitter: {
+    title: "Find Your Next UK Job – Edge Harbour",
+    description:
+      "Register once, upload your credentials, and get matched with verified UK employers. Healthcare, Hospitality, Customer Service, and Tech roles available.",
+  },
+  alternates: { canonical: "/candidates" },
 };
 
 export default function CandidatesPage() {

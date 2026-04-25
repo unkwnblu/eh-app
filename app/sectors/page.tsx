@@ -11,9 +11,30 @@ import TechSection from "@/components/sectors/TechSection";
 import SectorsCta from "@/components/sectors/SectorsCta";
 
 export const metadata: Metadata = {
-  title: "Sectors – Edge Harbour",
+  title: "Sectors We Cover – Healthcare, Hospitality, Tech & Customer Service",
   description:
-    "Explore the sectors Edge Harbour serves: Healthcare, Hospitality, Customer Service, and Technology. Pre-vetted, compliance-verified talent for every industry.",
+    "Edge Harbour serves Healthcare, Hospitality, Customer Service, and Technology sectors across the UK. Find pre-vetted, compliance-verified talent for your industry.",
+  keywords: [
+    "healthcare recruitment UK",
+    "hospitality recruitment UK",
+    "customer service recruitment",
+    "tech recruitment UK",
+    "sector recruitment",
+    "compliance verified candidates",
+    "UK staffing sectors",
+  ],
+  openGraph: {
+    title: "Sectors We Cover – Edge Harbour",
+    description:
+      "Edge Harbour serves Healthcare, Hospitality, Customer Service, and Technology sectors across the UK with pre-vetted, compliance-verified talent.",
+    url: "/sectors",
+  },
+  twitter: {
+    title: "Sectors We Cover – Edge Harbour",
+    description:
+      "Edge Harbour serves Healthcare, Hospitality, Customer Service, and Technology sectors across the UK with pre-vetted, compliance-verified talent.",
+  },
+  alternates: { canonical: "/sectors" },
 };
 
 export default function SectorsPage() {

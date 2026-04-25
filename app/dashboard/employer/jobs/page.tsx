@@ -9,6 +9,56 @@ import { EmployerJobCardSkeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 
+// ─── Share button ──────────────────────────────────────────────────────────────
+
+function toJobSlug(title: string, id: string): string {
+  const titlePart = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return `${titlePart}-${id}`;
+}
+
+function ShareButton({ jobId, jobTitle }: { jobId: string; jobTitle: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleShare() {
+    const url = `${window.location.origin}/jobs/${toJobSlug(jobTitle, jobId)}`;
+    if (navigator.share) {
+      navigator.share({ title: document.title, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      aria-label="Share job"
+      title={copied ? "Copied!" : "Share job link"}
+      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+        copied
+          ? "bg-green-50 text-green-500"
+          : "text-slate-300 hover:bg-gray-100 hover:text-brand-blue"
+      }`}
+    >
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type JobStatus = "draft" | "review" | "live" | "closed";
@@ -169,6 +219,7 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
 
       {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">
+        {job.status === "live" && <ShareButton jobId={job.id} jobTitle={job.title} />}
         <Link
           href={`/dashboard/employer/jobs/${job.id}/edit`}
           aria-label="Edit job"

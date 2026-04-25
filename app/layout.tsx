@@ -10,10 +10,31 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://edgeharbour.com";
+
 export const metadata: Metadata = {
-  title: "Edge Harbour – Compliance-First Recruitment",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Edge Harbour – Compliance-First Recruitment",
+    template: "%s | Edge Harbour",
+  },
   description:
     "The UK's trusted recruitment platform for Healthcare, Hospitality, Customer Service, and Tech. Hire pre-vetted, role-ready candidates faster.",
+  openGraph: {
+    siteName: "Edge Harbour",
+    type: "website",
+    locale: "en_GB",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Edge Harbour – Compliance-First Recruitment" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@EdgeHarbour",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

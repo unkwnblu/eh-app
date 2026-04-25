@@ -4,9 +4,17 @@ import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
-  title: "Contact Us – Edge Harbour",
+  title: "Contact Us",
   description:
     "Get in touch with the Edge Harbour team. Questions about recruitment, compliance, or your account — we're here to help.",
+  openGraph: {
+    title: "Contact Edge Harbour",
+    description:
+      "Get in touch with the Edge Harbour team. Questions about recruitment, compliance, or your account — we're here to help.",
+    url: "/contact",
+  },
+  alternates: { canonical: "/contact" },
+  robots: { index: true, follow: false },
 };
 
 const contactDetails = [

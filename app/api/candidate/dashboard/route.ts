@@ -37,7 +37,7 @@ export async function GET() {
     service.from("profiles").select("full_name, status").eq("id", user.id).single(),
     service
       .from("candidates")
-      .select("sector, cv_file_path, dbs_file_path, document_type, share_code")
+      .select("sector, cv_file_path, dbs_file_path, document_type, share_code, share_code_expiry")
       .eq("id", user.id)
       .single(),
     service
@@ -47,7 +47,7 @@ export async function GET() {
       .order("applied_at", { ascending: false }),
     service
       .from("candidate_legal_documents")
-      .select("id")
+      .select("id, doc_type, label, expiry_date")
       .eq("candidate_id", user.id),
     service
       .from("shift_assignments")
@@ -222,6 +222,44 @@ export async function GET() {
   const completedChecks = checks.filter((c) => c.done).length;
   const completeness = Math.round((completedChecks / checks.length) * 100);
 
+  // ── Document verification ───────────────────────────────────────────────────
+  // Sources: candidate_legal_documents (uploaded docs with expiry_date)
+  //          + share code from the candidates table (has its own expiry)
+
+  function computeDocStatus(expiresAt: string | null): "valid" | "expiring_soon" | "expired" {
+    if (!expiresAt) return "valid";
+    const days = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000);
+    if (days < 0)   return "expired";
+    if (days <= 30) return "expiring_soon";
+    return "valid";
+  }
+
+  // Legal documents (only include ones that have an expiry date)
+  const legalDocItems = legalDocs
+    .filter((d) => d.expiry_date)
+    .map((d) => ({
+      id:        d.id as string,
+      title:     (d.label as string | null) || (d.doc_type as string),
+      expiresAt: d.expiry_date as string,
+      status:    computeDocStatus(d.expiry_date as string),
+    }));
+
+  // Share code (only if one exists and has an expiry)
+  const shareCodeItem = candidate?.share_code && candidate?.share_code_expiry
+    ? [{
+        id:        "share-code",
+        title:     "Right to Work Share Code",
+        expiresAt: candidate.share_code_expiry as string,
+        status:    computeDocStatus(candidate.share_code_expiry as string),
+      }]
+    : [];
+
+  const sortOrder: Record<string, number> = { expired: 0, expiring_soon: 1, valid: 2 };
+
+  const documents = [...legalDocItems, ...shareCodeItem].sort(
+    (a, b) => (sortOrder[a.status] ?? 2) - (sortOrder[b.status] ?? 2),
+  );
+
   return NextResponse.json({
     firstName,
     candidateStatus,
@@ -244,5 +282,6 @@ export async function GET() {
       completeness,
       checks,
     },
+    documents,
   });
 }

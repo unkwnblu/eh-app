@@ -5,9 +5,11 @@ import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
-  title: "Terms of Service – Edge Harbour",
+  title: "Terms of Service",
   description:
     "Read Edge Harbour's Terms of Service. Understand your rights and obligations when using our compliance-first recruitment platform.",
+  alternates: { canonical: "/legal/terms" },
+  robots: { index: true, follow: false },
 };
 
 const tocSections = [

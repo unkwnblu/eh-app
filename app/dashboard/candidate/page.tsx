@@ -42,6 +42,15 @@ interface NextShift {
   recurrenceType: string | null;
 }
 
+type DocStatus = "valid" | "expiring_soon" | "expired" | "missing";
+
+interface ComplianceDoc {
+  id:        string;
+  title:     string;
+  expiresAt: string | null;
+  status:    DocStatus;
+}
+
 interface DashboardData {
   firstName:        string;
   candidateStatus:  string;
@@ -51,6 +60,7 @@ interface DashboardData {
   latestApplication: LatestApp | null;
   recommendedJobs:  RecommendedJob[];
   profile:          { completeness: number; checks: ProfileCheck[] };
+  documents:        ComplianceDoc[];
 }
 
 // ─── Timeline steps ───────────────────────────────────────────────────────────
@@ -163,6 +173,132 @@ function SectorIcon({ sector }: { sector: string }) {
   );
 }
 
+// ─── Document Verification Card ──────────────────────────────────────────────
+
+function docStatusConfig(status: DocStatus) {
+  switch (status) {
+    case "expired":
+      return { label: "Expired",       bg: "bg-red-50",    text: "text-red-500",   dot: "bg-red-500",   border: "border-red-100"   };
+    case "expiring_soon":
+      return { label: "Expiring Soon", bg: "bg-amber-50",  text: "text-amber-600", dot: "bg-amber-400", border: "border-amber-100" };
+    case "missing":
+      return { label: "Missing",       bg: "bg-gray-100",  text: "text-slate-400", dot: "bg-slate-300", border: "border-gray-200"  };
+    default:
+      return { label: "Valid",         bg: "bg-green-50",  text: "text-green-600", dot: "bg-green-500", border: "border-green-100" };
+  }
+}
+
+function fmtExpiry(iso: string | null): string {
+  if (!iso) return "No expiry";
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+}
+
+function DocumentVerificationCard({ documents }: { documents: ComplianceDoc[] }) {
+  const expired      = documents.filter((d) => d.status === "expired").length;
+  const expiringSoon = documents.filter((d) => d.status === "expiring_soon").length;
+  const hasAlert     = expired > 0 || expiringSoon > 0;
+
+  return (
+    <div className={`bg-white border rounded-2xl p-5 ${hasAlert ? "border-amber-200" : "border-gray-100"}`} data-gsap="fade-up">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-bold text-brand">Document Verification</h2>
+          {hasAlert && (
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-bold text-amber-600">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              Action needed
+            </span>
+          )}
+        </div>
+        <Link href="/dashboard/candidate/legal" className="text-xs font-semibold text-brand-blue hover:underline">
+          Manage
+        </Link>
+      </div>
+
+      {documents.length === 0 ? (
+        /* Empty state */
+        <div className="flex flex-col items-center py-5 text-center gap-2">
+          <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-slate-400">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          </div>
+          <p className="text-xs font-semibold text-slate-500">No compliance documents yet</p>
+          <Link
+            href="/dashboard/candidate/legal"
+            className="text-xs font-semibold text-brand-blue hover:underline"
+          >
+            Add documents →
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {documents.map((doc) => {
+            const cfg   = docStatusConfig(doc.status);
+            const days  = daysUntil(doc.expiresAt);
+            const urgent = doc.status === "expired" || doc.status === "expiring_soon";
+
+            return (
+              <div
+                key={doc.id}
+                className={`flex items-center gap-3 p-3 rounded-xl border ${urgent ? cfg.bg + " " + cfg.border : "bg-gray-50 border-transparent"}`}
+              >
+                {/* Doc icon */}
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${urgent ? "bg-white/60" : "bg-white border border-gray-100"}`}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={urgent ? cfg.text : "text-slate-400"}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                </div>
+
+                {/* Title + expiry */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-brand truncate">{doc.title}</p>
+                  <p className={`text-[11px] mt-0.5 ${urgent ? cfg.text : "text-slate-400"}`}>
+                    {doc.expiresAt
+                      ? doc.status === "expired"
+                        ? `Expired ${fmtExpiry(doc.expiresAt)}`
+                        : days !== null && days <= 30
+                          ? `Expires in ${days} day${days !== 1 ? "s" : ""} · ${fmtExpiry(doc.expiresAt)}`
+                          : `Expires ${fmtExpiry(doc.expiresAt)}`
+                      : "No expiry date"
+                    }
+                  </p>
+                </div>
+
+                {/* Status badge */}
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                  {cfg.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Summary footer */}
+      {documents.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+            <span><span className="font-bold text-green-600">{documents.filter(d => d.status === "valid").length}</span> valid</span>
+            {expiringSoon > 0 && <span><span className="font-bold text-amber-600">{expiringSoon}</span> expiring</span>}
+            {expired      > 0 && <span><span className="font-bold text-red-500">{expired}</span> expired</span>}
+          </div>
+          <span className="text-[11px] text-slate-400">{documents.length} total</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CandidateDashboardPage() {
@@ -225,7 +361,7 @@ export default function CandidateDashboardPage() {
     );
   }
 
-  const { firstName, candidateStatus, stats, shifts, latestApplication, recommendedJobs, profile: profileData } = data;
+  const { firstName, candidateStatus, stats, shifts, latestApplication, recommendedJobs, profile: profileData, documents } = data;
 
   return (
     <>
@@ -520,6 +656,9 @@ export default function CandidateDashboardPage() {
                 <p className="text-xs text-slate-400 text-center py-2">No upcoming shifts scheduled.</p>
               )}
             </div>
+
+            {/* Document Verification */}
+            <DocumentVerificationCard documents={documents ?? []} />
 
             {/* Profile Completeness */}
             <div className="bg-brand-blue rounded-2xl p-6 flex flex-col gap-4" data-gsap="fade-up">

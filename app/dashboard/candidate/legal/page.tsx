@@ -61,8 +61,9 @@ export default function CandidateLegalPage() {
   const [uploadingLegal, setUploadingLegal] = useState(false);
   const [uploadingCert,  setUploadingCert]  = useState(false);
 
-  const [pendingDocType, setPendingDocType] = useState<string>("ukvi_visa");
-  const [pendingCertName, setPendingCertName] = useState("");
+  const [pendingDocType,   setPendingDocType]   = useState<string>("ukvi_visa");
+  const [pendingDocExpiry, setPendingDocExpiry] = useState<string>("");
+  const [pendingCertName,  setPendingCertName]  = useState("");
 
   const [shareCode,       setShareCode]       = useState("");
   const [shareCodeExpiry, setShareCodeExpiry] = useState("");
@@ -225,10 +226,11 @@ export default function CandidateLegalPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        docType:  pendingDocType,
-        label:    labelForDocType(pendingDocType),
-        fileName: file.name,
-        filePath: result.filePath,
+        docType:    pendingDocType,
+        label:      labelForDocType(pendingDocType),
+        fileName:   file.name,
+        filePath:   result.filePath,
+        expiryDate: pendingDocExpiry || null,
       }),
     });
     const data = await res.json();
@@ -238,6 +240,7 @@ export default function CandidateLegalPage() {
       return;
     }
     setLegalDocs((prev) => [data.document, ...prev]);
+    setPendingDocExpiry("");
     toast("Document uploaded", "success");
   }
 
@@ -562,6 +565,21 @@ export default function CandidateLegalPage() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                Expiry Date <span className="normal-case font-normal text-slate-300">(optional)</span>
+              </label>
+              <input
+                type="date"
+                value={pendingDocExpiry}
+                onChange={(e) => setPendingDocExpiry(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-[#F7F8FA] border border-gray-100 rounded-xl text-sm text-brand outline-none focus:border-brand-blue transition-colors"
+              />
+              <p className="text-[10px] text-slate-400 mt-1.5">
+                Add an expiry date so you get notified before this document expires.
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={() => legalInputRef.current?.click()}
@@ -649,7 +667,17 @@ export default function CandidateLegalPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-brand truncate">{labelForDocType(doc.docType)}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{doc.fileName} · Uploaded {formatDate(doc.uploadedAt)}</p>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {doc.fileName} · Uploaded {formatDate(doc.uploadedAt)}
+                    {doc.expiryDate && (
+                      <> · <span className={
+                        (() => {
+                          const days = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / 86_400_000);
+                          return days < 0 ? "text-red-500 font-semibold" : days <= 30 ? "text-amber-600 font-semibold" : "";
+                        })()
+                      }>Expires {formatDate(doc.expiryDate)}</span></>
+                    )}
+                  </p>
                 </div>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-brand-blue shrink-0">Legal</span>
                 <div className="flex items-center gap-1 shrink-0">

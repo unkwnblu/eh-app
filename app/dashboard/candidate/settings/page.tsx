@@ -642,6 +642,15 @@ export default function CandidateSettingsPage() {
       .catch(() => toast("Failed to load profile", "error"))
       .finally(() => setProfileLoading(false));
 
+    // Load account settings (toggles)
+    fetch("/api/candidate/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        setEmailNotifs(data.emailNotifications ?? true);
+        setAccountPrivacy(data.accountPrivacy ?? true);
+      })
+      .catch(() => { /* silently keep defaults */ });
+
     fetch("/api/candidate/references")
       .then((r) => r.json())
       .then((data) => setReferences(data.references ?? []))
@@ -1332,14 +1341,22 @@ export default function CandidateSettingsPage() {
                       <p className="text-sm font-semibold text-brand">Email Notifications</p>
                       <p className="text-xs text-slate-400 mt-0.5">Daily job alerts &amp; updates</p>
                     </div>
-                    <Toggle on={emailNotifs} onChange={() => setEmailNotifs((v) => !v)} />
+                    <Toggle on={emailNotifs} onChange={() => {
+                      const next = !emailNotifs;
+                      setEmailNotifs(next);
+                      fetch("/api/candidate/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emailNotifications: next }) });
+                    }} />
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-brand">Account Privacy</p>
                       <p className="text-xs text-slate-400 mt-0.5">Visible to verified recruiters</p>
                     </div>
-                    <Toggle on={accountPrivacy} onChange={() => setAccountPrivacy((v) => !v)} />
+                    <Toggle on={accountPrivacy} onChange={() => {
+                      const next = !accountPrivacy;
+                      setAccountPrivacy(next);
+                      fetch("/api/candidate/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountPrivacy: next }) });
+                    }} />
                   </div>
                   <div className="border-t border-gray-100 pt-3 space-y-1">
                     <button
@@ -1589,7 +1606,11 @@ export default function CandidateSettingsPage() {
                     <p className="text-sm font-bold text-brand">Profile Visibility</p>
                     <p className="text-xs text-slate-400 mt-0.5">Control who can see your profile and activity.</p>
                   </div>
-                  <Toggle on={accountPrivacy} onChange={() => setAccountPrivacy((v) => !v)} />
+                  <Toggle on={accountPrivacy} onChange={() => {
+                    const next = !accountPrivacy;
+                    setAccountPrivacy(next);
+                    fetch("/api/candidate/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountPrivacy: next }) });
+                  }} />
                 </div>
 
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
@@ -1622,7 +1643,11 @@ export default function CandidateSettingsPage() {
                     <p className="text-sm font-bold text-brand">Email Alerts</p>
                     <p className="text-xs text-slate-400 mt-1 leading-relaxed">Get updates on application status via email.</p>
                     <div className="mt-3">
-                      <Toggle on={emailNotifs} onChange={() => setEmailNotifs((v) => !v)} />
+                      <Toggle on={emailNotifs} onChange={() => {
+                        const next = !emailNotifs;
+                        setEmailNotifs(next);
+                        fetch("/api/candidate/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emailNotifications: next }) });
+                      }} />
                     </div>
                   </div>
 

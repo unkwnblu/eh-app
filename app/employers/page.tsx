@@ -10,9 +10,32 @@ import EmployerStats from "@/components/employers/EmployerStats";
 import EmployerCta from "@/components/employers/EmployerCta";
 
 export const metadata: Metadata = {
-  title: "For Employers – Edge Harbour",
+  title: "Hire Compliant, Pre-Vetted Candidates in the UK",
   description:
-    "Post vacancies, get matched with pre-vetted, RTW-verified candidates, and manage your entire hiring pipeline with Edge Harbour's compliance-first ATS.",
+    "Post vacancies, get matched with RTW-verified candidates, and manage your entire hiring pipeline — all in one compliance-first ATS. Built for UK employers in Healthcare, Hospitality, and Tech.",
+  keywords: [
+    "hire candidates UK",
+    "UK recruitment platform",
+    "compliance hiring",
+    "right to work verification",
+    "ATS UK",
+    "healthcare recruitment",
+    "hospitality recruitment",
+    "employer recruitment software",
+    "pre-vetted candidates",
+  ],
+  openGraph: {
+    title: "Hire Compliant, Pre-Vetted Candidates – Edge Harbour",
+    description:
+      "Post vacancies, get matched with RTW-verified candidates, and manage your entire hiring pipeline — all in one compliance-first ATS.",
+    url: "/employers",
+  },
+  twitter: {
+    title: "Hire Compliant, Pre-Vetted Candidates – Edge Harbour",
+    description:
+      "Post vacancies, get matched with RTW-verified candidates, and manage your entire hiring pipeline — all in one compliance-first ATS.",
+  },
+  alternates: { canonical: "/employers" },
 };
 
 export default function EmployersPage() {

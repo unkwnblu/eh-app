@@ -5,6 +5,54 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
+// ─── Share button ──────────────────────────────────────────────────────────────
+
+function toJobSlug(title: string, id: string): string {
+  const titlePart = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return `${titlePart}-${id}`;
+}
+
+function ShareButton({ jobId, jobTitle }: { jobId: string; jobTitle: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleShare() {
+    const url = `${window.location.origin}/jobs/${toJobSlug(jobTitle, jobId)}`;
+    if (navigator.share) {
+      navigator.share({ title: document.title, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      title="Share this job"
+      className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-slate-500 text-sm font-semibold rounded-xl hover:border-brand-blue hover:text-brand-blue transition-colors"
+    >
+      {copied ? (
+        <>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-500">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-green-600">Copied!</span>
+        </>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type JobDetail = {
@@ -227,43 +275,52 @@ export default function JobDetailPage() {
                   </div>
                 </div>
                 {candidateStatus === "resubmission" ? (
-                  <div className="shrink-0 text-right">
-                    <span className="block px-6 py-2.5 bg-gray-100 text-slate-400 text-sm font-bold rounded-xl cursor-not-allowed select-none">
-                      Apply Now
-                    </span>
-                    <p className="text-[10px] text-amber-600 font-semibold mt-1">Docs under review</p>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <ShareButton jobId={job.id} jobTitle={job.title} />
+                    <div className="text-right">
+                      <span className="block px-6 py-2.5 bg-gray-100 text-slate-400 text-sm font-bold rounded-xl cursor-not-allowed select-none">
+                        Apply Now
+                      </span>
+                      <p className="text-[10px] text-amber-600 font-semibold mt-1">Docs under review</p>
+                    </div>
                   </div>
                 ) : hasApplied ? (
-                  <div className="shrink-0 text-right">
-                    <span className="flex items-center gap-2 px-6 py-2.5 bg-green-50 border border-green-200 text-green-700 text-sm font-bold rounded-xl select-none">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Applied
-                    </span>
-                    {applySuccess && (
-                      <p className="text-[10px] text-green-600 font-semibold mt-1">Application submitted!</p>
-                    )}
+                  <div className="shrink-0 flex items-center gap-2">
+                    <ShareButton jobId={job.id} jobTitle={job.title} />
+                    <div className="text-right">
+                      <span className="flex items-center gap-2 px-6 py-2.5 bg-green-50 border border-green-200 text-green-700 text-sm font-bold rounded-xl select-none">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Applied
+                      </span>
+                      {applySuccess && (
+                        <p className="text-[10px] text-green-600 font-semibold mt-1">Application submitted!</p>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div className="shrink-0 text-right">
-                    <button
-                      onClick={handleApply}
-                      disabled={applying}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity shadow-sm"
-                    >
-                      {applying ? (
-                        <>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                          </svg>
-                          Applying…
-                        </>
-                      ) : "Apply Now"}
-                    </button>
-                    {applyError && (
-                      <p className="text-[10px] text-red-500 font-semibold mt-1 max-w-[180px] text-right">{applyError}</p>
-                    )}
+                  <div className="shrink-0 flex items-center gap-2">
+                    <ShareButton jobId={job.id} jobTitle={job.title} />
+                    <div className="text-right">
+                      <button
+                        onClick={handleApply}
+                        disabled={applying}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity shadow-sm"
+                      >
+                        {applying ? (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                            Applying…
+                          </>
+                        ) : "Apply Now"}
+                      </button>
+                      {applyError && (
+                        <p className="text-[10px] text-red-500 font-semibold mt-1 max-w-[180px] text-right">{applyError}</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

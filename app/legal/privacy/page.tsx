@@ -5,9 +5,11 @@ import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy – Edge Harbour",
+  title: "Privacy Policy",
   description:
     "Learn how Edge Harbour collects, uses, and protects your personal data. ICO-registered and fully GDPR compliant.",
+  alternates: { canonical: "/legal/privacy" },
+  robots: { index: true, follow: false },
 };
 
 const tocSections = [

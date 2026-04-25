@@ -5,9 +5,11 @@ import Footer from "@/components/landing/Footer";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
 export const metadata: Metadata = {
-  title: "Legal – Edge Harbour",
+  title: "Legal",
   description:
     "Review Edge Harbour's legal documents including our Terms of Service, Privacy Policy, and compliance framework.",
+  alternates: { canonical: "/legal" },
+  robots: { index: true, follow: false },
 };
 
 const legalCards = [
