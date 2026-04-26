@@ -403,6 +403,9 @@ function EmptyDetailState({ pendingCount }: { pendingCount: number }) {
 
 export default function CandidateVerificationPage() {
   const { toast } = useToast();
+
+  useEffect(() => { document.title = "Candidate Verification | Edge Harbour Admin"; }, []);
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading]       = useState(true);
   const [reviewing, setReviewing]   = useState<string | null>(null);

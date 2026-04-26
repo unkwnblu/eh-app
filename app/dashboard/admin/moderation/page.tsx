@@ -575,6 +575,9 @@ function EmptyDetailState({ pendingCount }: { pendingCount: number }) {
 
 export default function JobModerationPage() {
   const { toast } = useToast();
+
+  useEffect(() => { document.title = "Job Moderation | Edge Harbour Admin"; }, []);
+
   const [jobs,           setJobs]           = useState<Job[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState<string | null>(null);

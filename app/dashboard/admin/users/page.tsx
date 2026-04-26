@@ -42,6 +42,8 @@ const ROLE_STYLES: Record<UserRole, string> = {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function UserManagementPage() {
+  useEffect(() => { document.title = "User Management | Edge Harbour Admin"; }, []);
+
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [tab, setTab] = useState<"all" | UserRole>("all");
   const [panel, setPanel] = useState<AdminUser | null>(null);

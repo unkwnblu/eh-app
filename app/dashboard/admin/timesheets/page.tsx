@@ -953,17 +953,50 @@ function InvoiceDetailModal({
   );
 }
 
+// ─── Stat / filter chip ───────────────────────────────────────────────────────
+
+function StatChip({
+  label, count, active, onClick, accent, icon,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+  accent: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all text-left ${
+        active ? `${accent} border-transparent shadow-sm` : "bg-white border-gray-100 hover:border-gray-200 text-brand"
+      }`}
+    >
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${active ? "bg-white/20" : accent}`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className={`text-[10px] font-bold uppercase tracking-widest ${active ? "text-white/80" : "text-slate-400"}`}>{label}</p>
+        <p className={`text-2xl font-black leading-none mt-0.5 ${active ? "text-white" : "text-brand"}`}>{count}</p>
+      </div>
+    </button>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TimesheetsPage() {
+  useEffect(() => { document.title = "Timesheets | Edge Harbour Admin"; }, []);
+
   const [activeTab, setActiveTab] = useState<"timesheets" | "invoices">("timesheets");
 
   // ── Timesheets state ───────────────────────────────────────────────────────
-  const [entries,   setEntries]   = useState<TimesheetEntry[]>([]);
-  const [counts,    setCounts]    = useState<Counts>({ pending: 0, approved: 0, rejected: 0 });
-  const [loading,   setLoading]   = useState(true);
-  const [filter,    setFilter]    = useState<Filter>("all");
-  const [actioning, setActioning] = useState<string | null>(null);
+  const [entries,    setEntries]    = useState<TimesheetEntry[]>([]);
+  const [counts,     setCounts]     = useState<Counts>({ pending: 0, approved: 0, rejected: 0 });
+  const [loading,    setLoading]    = useState(true);
+  const [filter,     setFilter]     = useState<Filter>("all");
+  const [actioning,  setActioning]  = useState<string | null>(null);
+  const [tsSearch,   setTsSearch]   = useState("");
 
   // ── Invoices state ─────────────────────────────────────────────────────────
   const [invoices,       setInvoices]       = useState<Invoice[]>([]);
@@ -972,6 +1005,8 @@ export default function TimesheetsPage() {
   const [showGenerate,   setShowGenerate]   = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
   const [updatingInv,    setUpdatingInv]    = useState<string | null>(null);
+  const [invFilter,      setInvFilter]      = useState<"all" | InvoiceStatus>("all");
+  const [invSearch,      setInvSearch]      = useState("");
 
   // ── Load timesheets ────────────────────────────────────────────────────────
 
@@ -1068,12 +1103,27 @@ export default function TimesheetsPage() {
     totalValue: invoices.reduce((s, i) => s + i.total_amount, 0),
   }), [invoices]);
 
-  const FILTERS: { key: Filter; label: string; count?: number }[] = [
-    { key: "all",      label: "All",     count: totalClocked },
-    { key: "pending",  label: "Pending", count: counts.pending },
-    { key: "approved", label: "Approved" },
-    { key: "rejected", label: "Rejected" },
-  ];
+  // Apply timesheet search (status filter is already applied server-side by `load`)
+  const filteredEntries = useMemo(() => {
+    const q = tsSearch.toLowerCase().trim();
+    if (!q) return entries;
+    return entries.filter((e) =>
+      e.candidateName.toLowerCase().includes(q) ||
+      e.jobTitle.toLowerCase().includes(q) ||
+      e.employer.toLowerCase().includes(q) ||
+      (e.department ?? "").toLowerCase().includes(q),
+    );
+  }, [entries, tsSearch]);
+
+  // Filter + search invoices
+  const filteredInvoices = useMemo(() => {
+    const q = invSearch.toLowerCase().trim();
+    return invoices.filter((inv) => {
+      if (invFilter !== "all" && inv.status !== invFilter) return false;
+      if (q && !inv.invoice_number.toLowerCase().includes(q) && !inv.employer_name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [invoices, invFilter, invSearch]);
 
   function handleRefresh() {
     if (activeTab === "timesheets") load(filter);
@@ -1083,19 +1133,21 @@ export default function TimesheetsPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 flex flex-col">
+    <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8 space-y-5">
       <GsapAnimations />
 
       {/* ── Page header ── */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6" data-gsap="fade-down">
+      <div className="flex items-start justify-between gap-4" data-gsap="fade-down">
         <div>
-          <h1 className="text-2xl font-black text-brand tracking-tight">Timesheets</h1>
-          <p className="text-sm text-slate-400 mt-1">Review completed shifts and generate employer invoices</p>
+          <h1 className="text-[28px] font-black text-brand tracking-tight">Timesheets</h1>
+          <p className="text-sm text-slate-400 mt-1">Review completed shifts and generate employer invoices.</p>
         </div>
         <button
           onClick={handleRefresh}
           disabled={loading || invLoading}
-          className="p-3 bg-white border border-gray-100 rounded-2xl text-slate-400 hover:text-brand-blue hover:border-brand-blue/30 transition-colors disabled:opacity-40 shrink-0 self-start"
+          className="p-3 bg-white border border-gray-100 rounded-2xl text-slate-400 hover:text-brand-blue hover:border-brand-blue/30 transition-colors disabled:opacity-40 shrink-0"
+          title="Refresh"
+          aria-label="Refresh"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
             className={(loading || invLoading) ? "animate-spin" : ""}>
@@ -1105,23 +1157,34 @@ export default function TimesheetsPage() {
       </div>
 
       {/* ── Tab switcher ── */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-6" data-gsap="fade-down">
+      <div className="flex items-center gap-1 p-1 bg-white border border-gray-100 rounded-xl w-fit" data-gsap="fade-down">
         <button
           onClick={() => setActiveTab("timesheets")}
-          className={`px-5 py-2 text-xs font-bold rounded-lg transition-all ${
-            activeTab === "timesheets" ? "bg-white text-brand shadow-sm" : "text-slate-400 hover:text-brand"
+          className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all ${
+            activeTab === "timesheets" ? "bg-brand-blue text-white shadow-sm" : "text-slate-500 hover:text-brand"
           }`}
         >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           Timesheets
+          {counts.pending > 0 && activeTab !== "timesheets" && (
+            <span className="px-1.5 py-0.5 text-[10px] font-black bg-amber-100 text-amber-600 rounded-full leading-none">
+              {counts.pending}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab("invoices")}
-          className={`flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-lg transition-all ${
-            activeTab === "invoices" ? "bg-white text-brand shadow-sm" : "text-slate-400 hover:text-brand"
+          className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all ${
+            activeTab === "invoices" ? "bg-brand-blue text-white shadow-sm" : "text-slate-500 hover:text-brand"
           }`}
         >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
           Invoices
-          {invoiceStats.draft > 0 && (
+          {invoiceStats.draft > 0 && activeTab !== "invoices" && (
             <span className="px-1.5 py-0.5 text-[10px] font-black bg-amber-100 text-amber-600 rounded-full leading-none">
               {invoiceStats.draft}
             </span>
@@ -1132,72 +1195,81 @@ export default function TimesheetsPage() {
       {/* ══════════════════════ TIMESHEETS TAB ══════════════════════ */}
       {activeTab === "timesheets" && (
         <>
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-gsap="fade-up">
-            <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Clocked</p>
-              <p className="text-3xl font-black text-brand leading-none">{totalClocked}</p>
-              <div className="mt-3 h-0.5 bg-brand-blue/20 rounded-full">
-                <div className="h-full bg-brand-blue rounded-full" style={{ width: "100%" }} />
-              </div>
-            </div>
-            <div className="flex items-center gap-3 px-5 py-3 bg-brand-blue text-white rounded-2xl">
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          {/* Status chips — replace separate stat cards + filter bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-gsap="fade-up">
+            <StatChip
+              label="Total" count={totalClocked} active={filter === "all"}
+              onClick={() => setFilter("all")} accent="bg-brand text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={filter === "all" ? "text-white" : "text-brand"}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                </svg>
+              }
+            />
+            <StatChip
+              label="Pending" count={counts.pending} active={filter === "pending"}
+              onClick={() => setFilter("pending")} accent="bg-amber-500 text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={filter === "pending" ? "text-white" : "text-amber-500"}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold opacity-70 uppercase tracking-wider">Pending</p>
-                <p className="text-2xl font-black leading-none">{counts.pending}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-100 rounded-2xl">
-              <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
+              }
+            />
+            <StatChip
+              label="Approved" count={counts.approved} active={filter === "approved"}
+              onClick={() => setFilter("approved")} accent="bg-green-500 text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={filter === "approved" ? "text-white" : "text-green-500"}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Approved</p>
-                <p className="text-2xl font-black text-brand leading-none">{counts.approved}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-100 rounded-2xl">
-              <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500">
+              }
+            />
+            <StatChip
+              label="Rejected" count={counts.rejected} active={filter === "rejected"}
+              onClick={() => setFilter("rejected")} accent="bg-red-500 text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={filter === "rejected" ? "text-white" : "text-red-500"}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rejected</p>
-                <p className="text-2xl font-black text-brand leading-none">{counts.rejected}</p>
-              </div>
+              }
+            />
+          </div>
+
+          {/* Toolbar */}
+          <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3" data-gsap="fade-up">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px] bg-gray-50 rounded-xl px-3 py-2 border border-transparent focus-within:border-brand-blue/40 focus-within:bg-white transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <input
+                value={tsSearch}
+                onChange={(e) => setTsSearch(e.target.value)}
+                placeholder="Search by candidate, job, employer or department…"
+                className="bg-transparent text-sm text-slate-600 placeholder:text-slate-400 outline-none w-full"
+              />
+              {tsSearch && (
+                <button onClick={() => setTsSearch("")} aria-label="Clear search" className="text-slate-300 hover:text-slate-500 shrink-0">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Filter bar */}
-          <div className="bg-white border border-gray-100 rounded-2xl px-5 py-3.5 flex items-center gap-2 mb-6" data-gsap="fade-down">
-            <span className="text-xs font-bold text-slate-400 mr-1">Filter:</span>
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                  filter === f.key ? "bg-brand-blue text-white" : "bg-gray-50 text-slate-500 hover:bg-gray-100"
-                }`}
-              >
-                {f.label}
-                {f.count !== undefined && (
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                    filter === f.key ? "bg-white/20 text-white" : "bg-gray-200 text-slate-500"
-                  }`}>
-                    {f.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          {/* Result count */}
+          {!loading && entries.length > 0 && (
+            <div className="px-1">
+              <p className="text-xs font-bold text-brand">
+                {filteredEntries.length}
+                <span className="text-slate-400 font-normal ml-1">
+                  timesheet{filteredEntries.length === 1 ? "" : "s"}
+                  {tsSearch ? ` matching "${tsSearch}"` : ""}
+                  {filter !== "all" ? ` · ${filter}` : ""}
+                </span>
+              </p>
+            </div>
+          )}
 
           {/* Content */}
           {loading ? (
@@ -1219,7 +1291,7 @@ export default function TimesheetsPage() {
               ))}
             </div>
           ) : entries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center" data-gsap="fade-up">
+            <div className="bg-white border border-gray-100 border-dashed rounded-2xl flex flex-col items-center justify-center py-20 text-center" data-gsap="fade-up">
               <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-blue mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
@@ -1239,9 +1311,19 @@ export default function TimesheetsPage() {
                 </button>
               )}
             </div>
+          ) : filteredEntries.length === 0 ? (
+            <div className="bg-white border border-gray-100 border-dashed rounded-2xl flex flex-col items-center justify-center py-16 text-center" data-gsap="fade-up">
+              <p className="text-sm font-bold text-brand mb-1">No matching timesheets</p>
+              <p className="text-xs text-slate-400">Try a different search.</p>
+              {tsSearch && (
+                <button onClick={() => setTsSearch("")} className="mt-3 text-xs font-semibold text-brand-blue hover:underline">
+                  Clear search
+                </button>
+              )}
+            </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4 flex-1" data-gsap="fade-up">
-              {entries.map((entry) => (
+            <div className="grid md:grid-cols-2 gap-4" data-gsap="fade-up">
+              {filteredEntries.map((entry) => (
                 <TimesheetCard
                   key={entry.id}
                   entry={entry}
@@ -1258,67 +1340,98 @@ export default function TimesheetsPage() {
       {/* ══════════════════════ INVOICES TAB ══════════════════════ */}
       {activeTab === "invoices" && (
         <>
-          {/* Stat cards + generate button */}
-          <div className="flex flex-col lg:flex-row lg:items-stretch gap-4 mb-6" data-gsap="fade-up">
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1">
-              <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Invoices</p>
-                <p className="text-3xl font-black text-brand leading-none">{invoiceStats.total}</p>
-                <p className="text-[10px] text-slate-400 mt-1.5">{fmtCurrency(invoiceStats.totalValue)} total</p>
-              </div>
-              <div className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-100 rounded-2xl">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Draft</p>
-                  <p className="text-2xl font-black text-brand leading-none">{invoiceStats.draft}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-100 rounded-2xl">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-blue">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sent</p>
-                  <p className="text-2xl font-black text-brand leading-none">{invoiceStats.sent}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-100 rounded-2xl">
-                <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paid</p>
-                  <p className="text-2xl font-black text-brand leading-none">{invoiceStats.paid}</p>
-                </div>
-              </div>
-            </div>
+          {/* Status chips */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-gsap="fade-up">
+            <StatChip
+              label="Total" count={invoiceStats.total} active={invFilter === "all"}
+              onClick={() => setInvFilter("all")} accent="bg-brand text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={invFilter === "all" ? "text-white" : "text-brand"}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              }
+            />
+            <StatChip
+              label="Draft" count={invoiceStats.draft} active={invFilter === "draft"}
+              onClick={() => setInvFilter("draft")} accent="bg-amber-500 text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={invFilter === "draft" ? "text-white" : "text-amber-500"}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              }
+            />
+            <StatChip
+              label="Sent" count={invoiceStats.sent} active={invFilter === "sent"}
+              onClick={() => setInvFilter("sent")} accent="bg-brand-blue text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={invFilter === "sent" ? "text-white" : "text-brand-blue"}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+              }
+            />
+            <StatChip
+              label="Paid" count={invoiceStats.paid} active={invFilter === "paid"}
+              onClick={() => setInvFilter("paid")} accent="bg-green-500 text-white"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={invFilter === "paid" ? "text-white" : "text-green-500"}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+            />
+          </div>
 
-            {/* Generate CTA */}
+          {/* Toolbar — search + total value summary + Generate button */}
+          <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3" data-gsap="fade-up">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px] bg-gray-50 rounded-xl px-3 py-2 border border-transparent focus-within:border-brand-blue/40 focus-within:bg-white transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <input
+                value={invSearch}
+                onChange={(e) => setInvSearch(e.target.value)}
+                placeholder="Search by invoice number or employer…"
+                className="bg-transparent text-sm text-slate-600 placeholder:text-slate-400 outline-none w-full"
+              />
+              {invSearch && (
+                <button onClick={() => setInvSearch("")} aria-label="Clear search" className="text-slate-300 hover:text-slate-500 shrink-0">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Value</span>
+              <span className="text-sm font-black text-brand">{fmtCurrency(invoiceStats.totalValue)}</span>
+            </div>
             <button
               onClick={() => setShowGenerate(true)}
-              className="flex items-center justify-center gap-2.5 px-6 py-4 bg-brand-blue text-white font-bold rounded-2xl hover:bg-brand-blue/90 transition-colors shrink-0 lg:flex-col lg:w-40"
+              className="flex items-center gap-2 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue/90 transition-colors shrink-0"
             >
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-              </div>
-              <span className="text-sm">Generate Invoice</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Generate Invoice
             </button>
           </div>
 
+          {/* Result count */}
+          {!invLoading && invoices.length > 0 && (
+            <div className="px-1">
+              <p className="text-xs font-bold text-brand">
+                {filteredInvoices.length}
+                <span className="text-slate-400 font-normal ml-1">
+                  invoice{filteredInvoices.length === 1 ? "" : "s"}
+                  {invSearch ? ` matching "${invSearch}"` : ""}
+                  {invFilter !== "all" ? ` · ${invFilter}` : ""}
+                </span>
+              </p>
+            </div>
+          )}
+
           {/* Invoice grid */}
           {invLoading ? (
-            <div className="grid md:grid-cols-2 gap-4" data-gsap="fade-up">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4" data-gsap="fade-up">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="bg-white border border-gray-100 rounded-2xl p-5 animate-pulse space-y-4">
                   <div className="space-y-2">
@@ -1335,7 +1448,7 @@ export default function TimesheetsPage() {
               ))}
             </div>
           ) : invoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center col-span-2" data-gsap="fade-up">
+            <div className="bg-white border border-gray-100 border-dashed rounded-2xl flex flex-col items-center justify-center py-20 text-center" data-gsap="fade-up">
               <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -1347,17 +1460,27 @@ export default function TimesheetsPage() {
               </p>
               <button
                 onClick={() => setShowGenerate(true)}
-                className="mt-4 flex items-center gap-1.5 px-4 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue/90 transition-colors"
+                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue/90 transition-colors"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
                 Generate Invoice
               </button>
             </div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="bg-white border border-gray-100 border-dashed rounded-2xl flex flex-col items-center justify-center py-16 text-center" data-gsap="fade-up">
+              <p className="text-sm font-bold text-brand mb-1">No matching invoices</p>
+              <p className="text-xs text-slate-400">Try a different search or filter.</p>
+              {(invSearch || invFilter !== "all") && (
+                <button onClick={() => { setInvSearch(""); setInvFilter("all"); }} className="mt-3 text-xs font-semibold text-brand-blue hover:underline">
+                  Clear filters
+                </button>
+              )}
+            </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4 flex-1" data-gsap="fade-up">
-              {invoices.map((inv) => (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4" data-gsap="fade-up">
+              {filteredInvoices.map((inv) => (
                 <InvoiceCard
                   key={inv.id}
                   invoice={inv}

@@ -2235,6 +2235,8 @@ function AssignShiftModal({ shift, jobId: _jobId, candidates, onClose, onAssigne
 export default function AdminJobPipelineDetailPage() {
   const { id } = useParams<{ id: string }>();
 
+  useEffect(() => { document.title = "Job Details | Edge Harbour Admin"; }, []);
+
   const [job,        setJob]        = useState<JobDetail | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -2359,6 +2361,7 @@ export default function AdminJobPipelineDetailPage() {
         }>;
       };
       setJob(data.job);
+      document.title = `${data.job.title} | Edge Harbour Admin`;
       setCandidates(
         data.pipeline.map((p) => ({
           id:            p.id,

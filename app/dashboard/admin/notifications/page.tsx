@@ -81,6 +81,8 @@ const STATUS_CONFIG: Record<NotifStatus, { label: string; dot: string; text: str
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
+  useEffect(() => { document.title = "Notifications | Edge Harbour Admin"; }, []);
+
   // ── Data state ──────────────────────────────────────────────────────────────
   const [notifs,         setNotifs]         = useState<Notif[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);

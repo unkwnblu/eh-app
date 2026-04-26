@@ -230,6 +230,8 @@ function RowSkeleton() {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminJobPipelinePage() {
+  useEffect(() => { document.title = "Job Pipeline | Edge Harbour Admin"; }, []);
+
   const [jobs,    setJobs]    = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);

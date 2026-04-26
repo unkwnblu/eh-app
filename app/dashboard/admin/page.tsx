@@ -92,6 +92,8 @@ function StatCard({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
+  useEffect(() => { document.title = "Dashboard | Edge Harbour Admin"; }, []);
+
   const [data,    setData]    = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);

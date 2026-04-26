@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 import { useToast } from "@/components/ui/Toast";
 
@@ -8,13 +8,20 @@ type TabKey = "account" | "business";
 
 const INDUSTRIES = ["Healthcare", "Hospitality", "Customer Care", "Tech & Data"];
 
+const DBS_LEVELS = [
+  "Basic",
+  "Standard",
+  "Enhanced",
+  "Enhanced with Barred Lists",
+];
+
 // ─── Field ─────────────────────────────────────────────────────────────────────
 
 function Field({
-  label, value, onChange, type = "text", placeholder, disabled = false, hint,
+  label, value, onChange, type = "text", placeholder, disabled = false, hint, error,
 }: {
   label: string; value: string; onChange?: (v: string) => void;
-  type?: string; placeholder?: string; disabled?: boolean; hint?: string;
+  type?: string; placeholder?: string; disabled?: boolean; hint?: string; error?: string;
 }) {
   return (
     <div>
@@ -28,12 +35,45 @@ function Field({
         placeholder={placeholder}
         disabled={disabled}
         className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-colors ${
-          disabled
+          error
+            ? "border-red-300 bg-red-50 text-brand focus:border-red-400"
+            : disabled
             ? "bg-[#F7F8FA] border-gray-100 text-slate-400 cursor-not-allowed"
             : "border-gray-200 text-brand focus:border-brand-blue bg-white"
         }`}
       />
-      {hint && <p className="text-[11px] text-slate-400 mt-1">{hint}</p>}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {!error && hint && <p className="text-[11px] text-slate-400 mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+// ─── Select ────────────────────────────────────────────────────────────────────
+
+function Select({
+  label, value, onChange, options, placeholder, error,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  options: string[]; placeholder?: string; error?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-colors appearance-none bg-white ${
+          error
+            ? "border-red-300 bg-red-50 text-brand focus:border-red-400"
+            : "border-gray-200 text-brand focus:border-brand-blue"
+        }`}
+      >
+        <option value="">{placeholder ?? "Select…"}</option>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 }
@@ -41,10 +81,10 @@ function Field({
 // ─── Section card ──────────────────────────────────────────────────────────────
 
 function Section({
-  icon, title, description, children, onSave, saving,
+  icon, title, description, children, onSave, saving, saveDisabled,
 }: {
   icon: React.ReactNode; title: string; description: string;
-  children: React.ReactNode; onSave: () => void; saving: boolean;
+  children: React.ReactNode; onSave: () => void; saving: boolean; saveDisabled?: boolean;
 }) {
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-6">
@@ -60,7 +100,7 @@ function Section({
         </div>
         <button
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || saveDisabled}
           className="px-5 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           {saving ? "Saving…" : "Save Changes"}
@@ -97,6 +137,16 @@ export default function SettingsPage() {
   const [vatNumber,         setVatNumber]         = useState("");
   const [industries,        setIndustries]        = useState<string[]>([]);
 
+  // Compliance fields
+  const [cqcProviderId,              setCqcProviderId]              = useState("");
+  const [dbsLevel,                   setDbsLevel]                   = useState("");
+  const [modernSlaveryAct,           setModernSlaveryAct]           = useState(false);
+  const [employerLiabilityInsurance, setEmployerLiabilityInsurance] = useState(false);
+  const [healthcareComplianceStatus, setHealthcareComplianceStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
+
+  // Inline validation errors for compliance
+  const [compErrors, setCompErrors] = useState<Record<string, string>>({});
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -115,6 +165,11 @@ export default function SettingsPage() {
       setRegisteredAddress(e.registered_address ?? "");
       setVatNumber(e.vat_number  ?? "");
       setIndustries(e.industries ?? []);
+      setCqcProviderId(e.cqc_provider_id ?? "");
+      setDbsLevel(e.dbs_level ?? "");
+      setModernSlaveryAct(e.modern_slavery_act ?? false);
+      setEmployerLiabilityInsurance(e.employer_liability_insurance ?? false);
+      setHealthcareComplianceStatus(e.healthcare_compliance_status ?? "not_submitted");
     } catch {
       toast("Failed to load settings", "error");
     } finally {
@@ -123,6 +178,37 @@ export default function SettingsPage() {
   }, [toast]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ── Compliance validation ──────────────────────────────────────────────────
+  const needsHealthcare   = industries.includes("Healthcare");
+  const needsHospitality  = industries.includes("Hospitality");
+
+  const complianceValid = useMemo(() => {
+    if (needsHealthcare  && (!cqcProviderId.trim() || !dbsLevel)) return false;
+    if (needsHospitality && (!modernSlaveryAct || !employerLiabilityInsurance)) return false;
+    return true;
+  }, [needsHealthcare, needsHospitality, cqcProviderId, dbsLevel, modernSlaveryAct, employerLiabilityInsurance]);
+
+  function validateCompliance(): boolean {
+    const errs: Record<string, string> = {};
+    if (needsHealthcare) {
+      if (!cqcProviderId.trim()) errs.cqcProviderId = "CQC Provider ID is required for Healthcare.";
+      if (!dbsLevel)             errs.dbsLevel      = "Minimum DBS level is required for Healthcare.";
+    }
+    if (needsHospitality) {
+      if (!modernSlaveryAct)           errs.modernSlaveryAct           = "You must confirm Modern Slavery Act compliance.";
+      if (!employerLiabilityInsurance) errs.employerLiabilityInsurance = "You must confirm Employer Liability Insurance.";
+    }
+    setCompErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  function toggleIndustry(ind: string) {
+    setCompErrors({});
+    setIndustries((prev) =>
+      prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind]
+    );
+  }
 
   async function saveAccount() {
     setSavingAccount(true);
@@ -142,26 +228,38 @@ export default function SettingsPage() {
   }
 
   async function saveBusiness() {
+    if (!validateCompliance()) {
+      toast("Please complete the required compliance fields.", "error");
+      return;
+    }
     setSavingBusiness(true);
     try {
       const res = await fetch("/api/employer/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section: "business", companyName, companyPhone, companyWebsite, registeredAddress, vatNumber, industries }),
+        body: JSON.stringify({
+          section: "business",
+          companyName, companyPhone, companyWebsite, registeredAddress, vatNumber,
+          industries,
+          cqcProviderId,
+          dbsLevel,
+          modernSlaveryAct,
+          employerLiabilityInsurance,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
+      // If healthcare fields were submitted, move to pending locally
+      if (industries.includes("Healthcare")) {
+        setHealthcareComplianceStatus((prev) => prev === "verified" ? "verified" : "pending");
+      } else {
+        setHealthcareComplianceStatus("not_submitted");
+      }
       toast("Business details saved", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Failed to save", "error");
     } finally {
       setSavingBusiness(false);
     }
-  }
-
-  function toggleIndustry(ind: string) {
-    setIndustries((prev) =>
-      prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind]
-    );
   }
 
   return (
@@ -295,6 +393,7 @@ export default function SettingsPage() {
             </div>
           </Section>
 
+          {/* ── Industries + compliance gates ── */}
           <Section
             icon={
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
@@ -306,27 +405,171 @@ export default function SettingsPage() {
             description="The sectors your company operates in — used to match you with relevant candidates."
             onSave={saveBusiness}
             saving={savingBusiness}
+            saveDisabled={!complianceValid || industries.length === 0}
           >
+            {/* Sector pills */}
             <div className="flex flex-wrap gap-2.5">
               {INDUSTRIES.map((ind) => {
                 const active = industries.includes(ind);
+                const hasGate = ind === "Healthcare" || ind === "Hospitality";
                 return (
                   <button
                     key={ind}
                     onClick={() => toggleIndustry(ind)}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
                       active
                         ? "bg-brand-blue text-white border-brand-blue"
                         : "bg-white text-slate-500 border-gray-200 hover:border-brand-blue hover:text-brand-blue"
                     }`}
                   >
                     {ind}
+                    {hasGate && (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={active ? "text-white/70" : "text-slate-400"}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                      </svg>
+                    )}
                   </button>
                 );
               })}
             </div>
             {industries.length === 0 && (
               <p className="text-xs text-amber-600 mt-3">Select at least one industry.</p>
+            )}
+
+            {/* ── Healthcare compliance gate ── */}
+            {needsHealthcare && (
+              <div className="mt-5 p-4 rounded-2xl border border-blue-100 bg-blue-50/60 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-blue flex items-center gap-1.5">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                    Healthcare Compliance
+                  </p>
+                  {/* Verification status badge */}
+                  {healthcareComplianceStatus === "verified" && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold border border-green-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Verified
+                    </span>
+                  )}
+                  {healthcareComplianceStatus === "pending" && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Pending Verification
+                    </span>
+                  )}
+                  {healthcareComplianceStatus === "rejected" && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />Rejected — Update Required
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field
+                    label="CQC Provider ID *"
+                    value={cqcProviderId}
+                    onChange={(v) => { setCqcProviderId(v); setCompErrors((p) => ({ ...p, cqcProviderId: "" })); }}
+                    placeholder="e.g. 1-123456789"
+                    error={compErrors.cqcProviderId}
+                  />
+                  <Select
+                    label="Minimum DBS Level Required *"
+                    value={dbsLevel}
+                    onChange={(v) => { setDbsLevel(v); setCompErrors((p) => ({ ...p, dbsLevel: "" })); }}
+                    options={DBS_LEVELS}
+                    placeholder="Select DBS level"
+                    error={compErrors.dbsLevel}
+                  />
+                </div>
+                {healthcareComplianceStatus === "pending" ? (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      Your healthcare compliance details have been submitted and are <strong>awaiting verification</strong> by the Edge Harbour team. You&apos;ll be notified once reviewed. This is also visible on your <a href="/dashboard/employer/legal" className="font-bold underline">Legal &amp; Compliance</a> page.
+                    </p>
+                  </div>
+                ) : healthcareComplianceStatus === "rejected" ? (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500 mt-0.5 shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                    <p className="text-[11px] text-red-700 leading-relaxed">
+                      Your submission was not accepted. Please update your CQC Provider ID or DBS level and save again. Contact <a href="mailto:support@edgeharbour.co.uk" className="font-bold underline">support@edgeharbour.co.uk</a> if you need help.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-brand-blue/70 leading-relaxed">
+                    Required by the Care Quality Commission. Your CQC Provider ID is used to verify your registration and match you with appropriately checked candidates.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* ── Hospitality compliance gate ── */}
+            {needsHospitality && (
+              <div className="mt-5 p-4 rounded-2xl border border-amber-100 bg-amber-50 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                  Hospitality Compliance
+                </p>
+
+                {/* Modern Slavery Act */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modernSlaveryAct}
+                    onChange={(e) => {
+                      setModernSlaveryAct(e.target.checked);
+                      setCompErrors((p) => ({ ...p, modernSlaveryAct: "" }));
+                    }}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-brand-blue shrink-0"
+                  />
+                  <span className="text-xs text-brand leading-relaxed">
+                    <span className="font-semibold">UK Modern Slavery Act compliance <span className="text-brand-blue">*</span></span>
+                    <span className="text-slate-400 block mt-0.5">
+                      I confirm this organisation complies with the Modern Slavery Act 2015, including publishing an annual transparency statement where required.
+                    </span>
+                  </span>
+                </label>
+                {compErrors.modernSlaveryAct && (
+                  <p className="text-xs text-red-500 -mt-1 pl-7">{compErrors.modernSlaveryAct}</p>
+                )}
+
+                {/* Employer Liability Insurance */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={employerLiabilityInsurance}
+                    onChange={(e) => {
+                      setEmployerLiabilityInsurance(e.target.checked);
+                      setCompErrors((p) => ({ ...p, employerLiabilityInsurance: "" }));
+                    }}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-brand-blue shrink-0"
+                  />
+                  <span className="text-xs text-brand leading-relaxed">
+                    <span className="font-semibold">Employer&apos;s Liability Insurance <span className="text-brand-blue">*</span></span>
+                    <span className="text-slate-400 block mt-0.5">
+                      I confirm this organisation holds valid Employer&apos;s Liability Insurance as required by UK law.
+                    </span>
+                  </span>
+                </label>
+                {compErrors.employerLiabilityInsurance && (
+                  <p className="text-xs text-red-500 -mt-1 pl-7">{compErrors.employerLiabilityInsurance}</p>
+                )}
+              </div>
+            )}
+
+            {/* Incomplete compliance hint */}
+            {(needsHealthcare || needsHospitality) && !complianceValid && (
+              <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                Complete the required compliance fields above before saving.
+              </p>
             )}
           </Section>
         </div>

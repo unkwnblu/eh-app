@@ -370,6 +370,8 @@ function EmptyDetailState({ pendingCount }: { pendingCount: number }) {
 export default function EmployerVerificationPage() {
   const { toast } = useToast();
 
+  useEffect(() => { document.title = "Employer Verification | Edge Harbour Admin"; }, []);
+
   const [employers,        setEmployers]        = useState<Employer[]>([]);
   const [itemStates,       setItemStates]       = useState<Record<string, Item[]>>({});
   const [loading,          setLoading]          = useState(true);

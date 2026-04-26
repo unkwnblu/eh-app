@@ -27,23 +27,36 @@ export async function GET() {
     .from("employers")
     .select(
       "crn, vat_number, cqc_provider_id, dbs_level, " +
-      "modern_slavery_act, employer_liability_insurance, industries"
+      "modern_slavery_act, employer_liability_insurance, industries, " +
+      "healthcare_compliance_status"
     )
     .eq("id", user.id)
     .single();
 
   const employer = employerRaw as {
-    crn?: string; vat_number?: string; cqc_provider_id?: string;
-    dbs_level?: string; modern_slavery_act?: boolean;
-    employer_liability_insurance?: boolean; industries?: string[];
+    crn?: string;
+    vat_number?: string;
+    cqc_provider_id?: string;
+    dbs_level?: string;
+    modern_slavery_act?: boolean;
+    employer_liability_insurance?: boolean;
+    industries?: string[];
+    healthcare_compliance_status?: "not_submitted" | "pending" | "verified" | "rejected";
   } | null;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const healthcareStatus = employer?.healthcare_compliance_status ?? "not_submitted";
+
   // Build compliance items — same logic as admin verification
-  const items: { key: string; label: string; value: string }[] = [];
+  const items: {
+    key: string;
+    label: string;
+    value: string;
+    verificationStatus?: "not_submitted" | "pending" | "verified" | "rejected";
+  }[] = [];
 
   if (employer?.crn) {
     items.push({ key: "crn", label: "Company Registration Number", value: employer.crn });
@@ -52,10 +65,20 @@ export async function GET() {
     items.push({ key: "vat", label: "VAT Number", value: employer.vat_number });
   }
   if ((employer?.industries ?? []).includes("Healthcare") && employer?.cqc_provider_id) {
-    items.push({ key: "cqc", label: "CQC Provider ID", value: employer.cqc_provider_id });
+    items.push({
+      key: "cqc",
+      label: "CQC Provider ID",
+      value: employer.cqc_provider_id,
+      verificationStatus: healthcareStatus,
+    });
   }
   if ((employer?.industries ?? []).includes("Healthcare") && employer?.dbs_level) {
-    items.push({ key: "dbs", label: "Min. DBS Level Required", value: employer.dbs_level });
+    items.push({
+      key: "dbs",
+      label: "Min. DBS Level Required",
+      value: employer.dbs_level,
+      verificationStatus: healthcareStatus,
+    });
   }
   if ((employer?.industries ?? []).includes("Hospitality")) {
     items.push({
@@ -71,8 +94,9 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    status: profile?.status ?? "pending",
-    resubmissionNote: profile?.resubmission_note ?? null,
+    status:                   profile?.status ?? "pending",
+    resubmissionNote:         profile?.resubmission_note ?? null,
+    healthcareStatus,
     items,
   });
 }

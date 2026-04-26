@@ -9,7 +9,13 @@ import { useToast } from "@/components/ui/Toast";
 type AccountStatus = "pending" | "active" | "resubmission" | "suspended";
 type DocTab = "compliance" | "contracts" | "policies";
 
-type ComplianceItem = { key: string; label: string; value: string };
+type HealthcareComplianceStatus = "not_submitted" | "pending" | "verified" | "rejected";
+type ComplianceItem = {
+  key: string;
+  label: string;
+  value: string;
+  verificationStatus?: HealthcareComplianceStatus;
+};
 
 // ─── Static document data ──────────────────────────────────────────────────────
 
@@ -106,6 +112,7 @@ export default function LegalPage() {
   const [status, setStatus] = useState<AccountStatus>("active");
   const [resubmissionNote, setResubmissionNote] = useState<string | null>(null);
   const [items, setItems] = useState<ComplianceItem[]>([]);
+  const [healthcareStatus, setHealthcareStatus] = useState<HealthcareComplianceStatus>("not_submitted");
 
   const load = useCallback(async () => {
     try {
@@ -115,6 +122,7 @@ export default function LegalPage() {
       setStatus(data.status);
       setResubmissionNote(data.resubmissionNote);
       setItems(data.items);
+      setHealthcareStatus(data.healthcareStatus ?? "not_submitted");
     } catch {
       toast("Failed to load compliance data", "error");
     } finally {
@@ -192,6 +200,34 @@ export default function LegalPage() {
           )}
         </div>
 
+        {/* Healthcare verification banner — shown only when relevant */}
+        {!loading && healthcareStatus === "pending" && (
+          <div className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500 mt-0.5 shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-xs font-bold text-amber-800">Healthcare compliance pending verification</p>
+              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                Your CQC Provider ID and DBS level have been submitted and are under review by the Edge Harbour team. You&apos;ll be notified once approved.
+              </p>
+            </div>
+          </div>
+        )}
+        {!loading && healthcareStatus === "rejected" && (
+          <div className="mb-4 flex items-start gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500 mt-0.5 shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div>
+              <p className="text-xs font-bold text-red-700">Healthcare compliance rejected</p>
+              <p className="text-xs text-red-600 mt-0.5 leading-relaxed">
+                Your submission was not accepted. Please go to <a href="/dashboard/employer/settings" className="font-bold underline">Settings → Industries</a> to update your CQC Provider ID or DBS level.
+              </p>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-5 border-t border-gray-100">
             {[1, 2, 3].map((i) => (
@@ -204,12 +240,37 @@ export default function LegalPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-5 border-t border-gray-100">
-            {items.map((item) => (
-              <div key={item.key} className="bg-[#F7F8FA] border border-gray-100 rounded-xl p-3.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">{item.label}</p>
-                <p className="text-sm font-bold text-brand font-mono">{item.value}</p>
-              </div>
-            ))}
+            {items.map((item) => {
+              const vs = item.verificationStatus;
+              return (
+                <div key={item.key} className={`border rounded-xl p-3.5 ${
+                  vs === "verified"  ? "bg-green-50 border-green-100" :
+                  vs === "pending"   ? "bg-amber-50 border-amber-100" :
+                  vs === "rejected"  ? "bg-red-50 border-red-100"     :
+                  "bg-[#F7F8FA] border-gray-100"
+                }`}>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{item.label}</p>
+                    {vs === "verified" && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">
+                        <span className="w-1 h-1 rounded-full bg-green-500" />Verified
+                      </span>
+                    )}
+                    {vs === "pending" && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">
+                        <span className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />Pending
+                      </span>
+                    )}
+                    {vs === "rejected" && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">
+                        <span className="w-1 h-1 rounded-full bg-red-500" />Rejected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-brand font-mono">{item.value}</p>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -161,6 +161,8 @@ const QUICK_LINKS = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminProfilePage() {
+  useEffect(() => { document.title = "My Profile | Edge Harbour Admin"; }, []);
+
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
