@@ -1510,6 +1510,237 @@ function RemoveConfirmModal({
 
 // ─── Recurring Group Card ─────────────────────────────────────────────────────
 
+// ─── Shift status helpers (shared by tile + group card + chips) ──────────────
+
+type ShiftEffectiveStatus = "open" | "partial" | "filled" | "cancelled";
+
+function getShiftEffectiveStatus(shift: AdminShift): ShiftEffectiveStatus {
+  if (shift.status === "cancelled") return "cancelled";
+  const confirmed = shift.assignments.filter((a) => a.status === "confirmed").length;
+  const needed = shift.staffNeeded || 1;
+  if (confirmed >= needed) return "filled";
+  if (confirmed > 0)       return "partial";
+  return "open";
+}
+
+const SHIFT_STATUS_META: Record<ShiftEffectiveStatus, {
+  label: string; chipBg: string; chipText: string; dot: string; accentBar: string; soft: string;
+}> = {
+  open:      { label: "Open",      chipBg: "bg-blue-50",   chipText: "text-brand-blue", dot: "bg-brand-blue", accentBar: "bg-brand-blue", soft: "bg-blue-50/40" },
+  partial:   { label: "Partial",   chipBg: "bg-amber-50",  chipText: "text-amber-700",  dot: "bg-amber-400",  accentBar: "bg-amber-400",  soft: "bg-amber-50/40" },
+  filled:    { label: "Filled",    chipBg: "bg-green-50",  chipText: "text-green-700",  dot: "bg-green-500",  accentBar: "bg-green-500",  soft: "bg-green-50/40" },
+  cancelled: { label: "Cancelled", chipBg: "bg-gray-100",  chipText: "text-slate-500",  dot: "bg-slate-400",  accentBar: "bg-slate-300",  soft: "bg-gray-50/60" },
+};
+
+// ─── Shift stat chip (top of shift management view) ──────────────────────────
+
+function ShiftStatChip({
+  label, count, active, onClick, accent,
+}: {
+  label: string; count: number; active: boolean; onClick: () => void; accent: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border transition-all text-left ${
+        active ? `${accent} border-transparent shadow-sm` : "bg-white border-gray-100 hover:border-gray-200"
+      }`}
+    >
+      <span className={`text-[10px] font-bold uppercase tracking-widest ${active ? "text-white/80" : "text-slate-400"}`}>
+        {label}
+      </span>
+      <span className={`text-base font-black leading-none ${active ? "text-white" : "text-brand"}`}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+// ─── Assignment pill (compact, used in shift cards + group cards) ───────────
+
+function AssignmentPill({
+  assignment, shiftId, rescinding, onRescind, onRemoveConfirmed, compact = false,
+}: {
+  assignment: AdminShift["assignments"][number];
+  shiftId: string;
+  rescinding: string | null;
+  onRescind: (shiftId: string, assignmentId: string) => void;
+  onRemoveConfirmed: (shiftId: string, assignmentId: string, candidateName: string) => void;
+  compact?: boolean;
+}) {
+  const a = assignment;
+  const sizeClasses = compact ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs";
+  const dotSize     = compact ? "w-1 h-1" : "w-1.5 h-1.5";
+  const iconSize    = compact ? 9 : 10;
+
+  return (
+    <div className={`flex items-center gap-1.5 rounded-lg font-semibold ${sizeClasses} ${
+      a.status === "confirmed" ? "bg-green-50 text-green-700 border border-green-100" :
+      a.status === "pending"   ? "bg-amber-50 text-amber-700 border border-amber-100" :
+      "bg-gray-50 text-slate-400 border border-gray-100 line-through"
+    }`}>
+      <span className={`rounded-full ${dotSize} ${
+        a.status === "confirmed" ? "bg-green-500" :
+        a.status === "pending"   ? "bg-amber-400" : "bg-gray-300"
+      }`} />
+      {a.candidateName}
+      {a.status === "pending" && (
+        <button
+          title="Rescind shift offer"
+          disabled={rescinding === a.id}
+          onClick={() => onRescind(shiftId, a.id)}
+          className="ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-colors disabled:opacity-40"
+        >
+          {rescinding === a.id ? (
+            <svg className="animate-spin" width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
+          ) : (
+            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          )}
+        </button>
+      )}
+      {a.status === "confirmed" && (
+        <button
+          title="Remove from shift"
+          onClick={() => onRemoveConfirmed(shiftId, a.id, a.candidateName)}
+          className="ml-0.5 p-0.5 rounded hover:bg-red-100 text-green-700 hover:text-red-600 transition-colors"
+        >
+          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Single shift card (replaces inline JSX in the shifts tab) ──────────────
+
+function SingleShiftCard({
+  shift, onAssign, rescinding, onRescind, onRemoveConfirmed,
+}: {
+  shift: AdminShift;
+  onAssign: (shift: AdminShift) => void;
+  rescinding: string | null;
+  onRescind: (shiftId: string, assignmentId: string) => void;
+  onRemoveConfirmed: (shiftId: string, assignmentId: string, candidateName: string) => void;
+}) {
+  const status = getShiftEffectiveStatus(shift);
+  const meta   = SHIFT_STATUS_META[status];
+  const confirmedCount = shift.assignments.filter((a) => a.status === "confirmed").length;
+  const pendingCount   = shift.assignments.filter((a) => a.status === "pending").length;
+  const canAssign      = status !== "cancelled" && confirmedCount < shift.staffNeeded;
+
+  const dateObj = new Date(shift.date + "T00:00:00");
+  const weekday = dateObj.toLocaleDateString("en-GB", { weekday: "short" });
+  const dayMon  = dateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+  const paidHours = (() => {
+    const [sh, sm] = shift.startTime.split(":").map(Number);
+    const [eh, em] = shift.endTime.split(":").map(Number);
+    return Math.max(0, ((eh * 60 + em) - (sh * 60 + sm) - (shift.breakMinutes ?? 0)) / 60);
+  })();
+
+  return (
+    <div className="flex bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-sm transition-shadow">
+      {/* Status accent bar */}
+      <div className={`w-1 shrink-0 ${meta.accentBar}`} />
+
+      <div className="flex-1 min-w-0 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            {/* Top meta row */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${meta.chipBg} ${meta.chipText}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+                {meta.label}
+              </span>
+              {shift.department && (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  {shift.department}
+                </span>
+              )}
+            </div>
+
+            {/* Date — prominent */}
+            <h4 className="text-base font-black text-brand">
+              {weekday}, {dayMon}
+            </h4>
+
+            {/* Time + duration */}
+            <p className="text-xs text-slate-500 mt-1 flex items-center flex-wrap gap-x-2">
+              <span className="flex items-center gap-1">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {shift.startTime.slice(0,5)} – {shift.endTime.slice(0,5)}
+              </span>
+              <span className="text-slate-300">·</span>
+              <span>{paidHours.toFixed(paidHours % 1 === 0 ? 0 : 1)} paid hrs</span>
+              {shift.breakMinutes > 0 && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span>{shift.breakMinutes}m break</span>
+                </>
+              )}
+            </p>
+
+            {shift.location && (
+              <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+                {shift.location}
+              </p>
+            )}
+
+            {/* Assignment pills */}
+            {shift.assignments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {shift.assignments.map((a) => (
+                  <AssignmentPill
+                    key={a.id}
+                    assignment={a}
+                    shiftId={shift.id}
+                    rescinding={rescinding}
+                    onRescind={onRescind}
+                    onRemoveConfirmed={onRemoveConfirmed}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right: progress + assign */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="text-right">
+              <p className="text-2xl font-black leading-none text-brand">
+                {confirmedCount}
+                <span className="text-base font-bold text-slate-300">/{shift.staffNeeded}</span>
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">confirmed</p>
+              {pendingCount > 0 && (
+                <p className="text-[10px] text-amber-500 font-semibold mt-0.5">
+                  {pendingCount} pending
+                </p>
+              )}
+            </div>
+            {canAssign && (
+              <button
+                onClick={() => onAssign(shift)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-blue text-white text-xs font-bold rounded-lg hover:bg-brand-blue-dark transition-colors"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Assign
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RecurringGroupCard({
   groupShifts,
   onAssign,
@@ -1546,45 +1777,108 @@ function RecurringGroupCard({
     return Math.max(0, ((eh * 60 + em) - (sh * 60 + sm) - (first.breakMinutes ?? 0)) / 60);
   })();
 
+  const totalNeeded    = groupShifts.reduce((n, s) => n + s.staffNeeded, 0);
   const totalConfirmed = groupShifts.reduce((n, s) => n + s.assignments.filter((a) => a.status === "confirmed").length, 0);
   const totalPending   = groupShifts.reduce((n, s) => n + s.assignments.filter((a) => a.status === "pending").length, 0);
   const openShifts     = groupShifts.filter((s) => s.status !== "cancelled" && s.assignments.filter((a) => a.status === "confirmed").length < s.staffNeeded).length;
 
+  const fillPct = totalNeeded === 0 ? 0 : Math.round((totalConfirmed / totalNeeded) * 100);
+
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-      {/* Group header */}
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              {/* Recurring badge */}
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full text-[10px] font-bold uppercase tracking-wide">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                </svg>
-                Recurring · {count} shifts
-              </span>
-              <span className="text-[10px] font-semibold text-slate-400">{first.department ?? "General"}</span>
+    <div className="flex bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-sm transition-shadow">
+      {/* Purple accent bar — distinguishes recurring groups from one-time shifts */}
+      <div className="w-1 shrink-0 bg-purple-500" />
+
+      <div className="flex-1 min-w-0">
+        {/* Group header */}
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  Recurring · {count} shifts
+                </span>
+                {first.department && (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    {first.department}
+                  </span>
+                )}
+              </div>
+
+              <h4 className="text-base font-black text-brand">
+                {fmtDate(first.date)} <span className="text-slate-300 mx-1">→</span> {fmtDate(last.date)}
+              </h4>
+              <p className="text-xs text-slate-500 mt-1 flex items-center flex-wrap gap-x-2">
+                <span className="font-semibold text-slate-600">{dayNames}</span>
+                <span className="text-slate-300">·</span>
+                <span className="flex items-center gap-1">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {first.startTime.slice(0,5)}–{first.endTime.slice(0,5)}
+                </span>
+                <span className="text-slate-300">·</span>
+                <span>{paidHours.toFixed(paidHours % 1 === 0 ? 0 : 1)} paid hrs</span>
+                {first.breakMinutes > 0 && (
+                  <>
+                    <span className="text-slate-300">·</span>
+                    <span>{first.breakMinutes}m break</span>
+                  </>
+                )}
+              </p>
+              {first.location && (
+                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                  </svg>
+                  {first.location}
+                </p>
+              )}
             </div>
 
-            <p className="text-sm font-bold text-brand">
-              {fmtDate(first.date)} → {fmtDate(last.date)}
-            </p>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {dayNames} · {first.startTime.slice(0,5)}–{first.endTime.slice(0,5)} · {paidHours.toFixed(1)} paid hrs
-              {first.breakMinutes > 0 && ` · ${first.breakMinutes}m break`}
-              {first.location && ` · ${first.location}`}
-            </p>
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <div className="text-right">
+                <p className="text-2xl font-black leading-none text-brand">
+                  {totalConfirmed}
+                  <span className="text-base font-bold text-slate-300">/{totalNeeded}</span>
+                </p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">confirmed</p>
+                {totalPending > 0 && (
+                  <p className="text-[10px] text-amber-500 font-semibold mt-0.5">
+                    {totalPending} pending
+                  </p>
+                )}
+                {openShifts > 0 && (
+                  <p className="text-[10px] text-brand-blue font-semibold mt-0.5">
+                    {openShifts} open slot{openShifts !== 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="text-right mr-1">
-              <p className="text-xs font-bold text-brand">{totalConfirmed} confirmed</p>
-              {totalPending > 0 && <p className="text-[10px] text-amber-500">{totalPending} pending</p>}
-              <p className="text-[10px] text-slate-400">{openShifts} open slot{openShifts !== 1 ? "s" : ""}</p>
+          {/* Fill progress bar */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Fill progress</p>
+              <p className="text-[11px] font-bold text-brand">{fillPct}%</p>
             </div>
+            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className={`h-full transition-all duration-500 ${
+                  fillPct >= 100 ? "bg-green-500" : fillPct > 0 ? "bg-amber-400" : "bg-gray-200"
+                }`}
+                style={{ width: `${fillPct}%` }}
+              />
+            </div>
+          </div>
 
-            {/* Assign all open shifts to one candidate */}
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 mt-4">
             {openShifts > 0 && (
               <button
                 onClick={() => {
@@ -1594,7 +1888,7 @@ function RecurringGroupCard({
                   );
                   onAssignAll(open);
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -1602,12 +1896,11 @@ function RecurringGroupCard({
                 Assign All
               </button>
             )}
-
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 border border-gray-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-50 border border-gray-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition-colors"
             >
-              {expanded ? "Collapse" : "Expand"}
+              {expanded ? "Hide individual shifts" : "Show individual shifts"}
               <svg
                 width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                 className={`transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -1617,83 +1910,65 @@ function RecurringGroupCard({
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Expanded individual shifts */}
-      {expanded && (
-        <div className="border-t border-gray-100 divide-y divide-gray-50">
-          {sorted.map((shift) => {
-            const confirmedCount = shift.assignments.filter((a) => a.status === "confirmed").length;
-            const pendingCount   = shift.assignments.filter((a) => a.status === "pending").length;
-            const dateStr = new Date(shift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-            return (
-              <div key={shift.id} className="px-5 py-3 flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-bold text-brand">{dateStr}</p>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                      shift.status === "open"   ? "bg-blue-50 text-blue-600" :
-                      shift.status === "filled" ? "bg-green-50 text-green-600" :
-                      "bg-gray-100 text-slate-400"
-                    }`}>{shift.status}</span>
-                  </div>
-                  {shift.assignments.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {shift.assignments.map((a) => (
-                        <div key={a.id} className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold ${
-                          a.status === "confirmed" ? "bg-green-50 text-green-700 border border-green-100" :
-                          a.status === "pending"   ? "bg-amber-50 text-amber-700 border border-amber-100" :
-                          "bg-gray-50 text-slate-400 border border-gray-100 line-through"
-                        }`}>
-                          <span className={`w-1 h-1 rounded-full ${a.status === "confirmed" ? "bg-green-500" : a.status === "pending" ? "bg-amber-400" : "bg-gray-300"}`} />
-                          {a.candidateName}
-                          {a.status === "pending" && (
-                            <button
-                              title="Rescind"
-                              disabled={rescinding === a.id}
-                              onClick={() => onRescind(shift.id, a.id)}
-                              className="ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-colors disabled:opacity-40"
-                            >
-                              {rescinding === a.id
-                                ? <svg className="animate-spin" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
-                                : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                              }
-                            </button>
-                          )}
-                          {a.status === "confirmed" && (
-                            <button
-                              title="Remove from shift"
-                              onClick={() => onRemoveConfirmed(shift.id, a.id, a.candidateName)}
-                              className="ml-0.5 p-0.5 rounded hover:bg-red-100 text-green-700 hover:text-red-600 transition-colors"
-                            >
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                          )}
-                        </div>
-                      ))}
+        {/* Expanded individual shifts */}
+        {expanded && (
+          <div className="border-t border-gray-100 divide-y divide-gray-50 bg-gray-50/30">
+            {sorted.map((shift) => {
+              const status   = getShiftEffectiveStatus(shift);
+              const meta     = SHIFT_STATUS_META[status];
+              const confirmedCount = shift.assignments.filter((a) => a.status === "confirmed").length;
+              const pendingCount   = shift.assignments.filter((a) => a.status === "pending").length;
+              const dateStr = new Date(shift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+              return (
+                <div key={shift.id} className="px-5 py-3 flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-bold text-brand">{dateStr}</p>
+                      <span className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.chipBg} ${meta.chipText}`}>
+                        <span className={`w-1 h-1 rounded-full ${meta.dot}`} />
+                        {meta.label}
+                      </span>
                     </div>
-                  )}
+                    {shift.assignments.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {shift.assignments.map((a) => (
+                          <AssignmentPill
+                            key={a.id}
+                            assignment={a}
+                            shiftId={shift.id}
+                            rescinding={rescinding}
+                            onRescind={onRescind}
+                            onRemoveConfirmed={onRemoveConfirmed}
+                            compact
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <p className="text-[11px] font-bold text-brand">
+                      {confirmedCount}<span className="text-slate-300">/{shift.staffNeeded}</span>
+                    </p>
+                    {pendingCount > 0 && <p className="text-[10px] text-amber-500 font-semibold">{pendingCount}p</p>}
+                    {shift.status !== "cancelled" && confirmedCount < shift.staffNeeded && (
+                      <button
+                        onClick={() => onAssign(shift)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-brand-blue text-white text-[11px] font-bold rounded-lg hover:bg-brand-blue-dark transition-colors"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Assign
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <p className="text-[10px] font-bold text-brand">{confirmedCount}/{shift.staffNeeded}</p>
-                  {pendingCount > 0 && <p className="text-[10px] text-amber-500">{pendingCount}p</p>}
-                  {shift.status !== "cancelled" && confirmedCount < shift.staffNeeded && (
-                    <button
-                      onClick={() => onAssign(shift)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-brand-blue text-white text-[11px] font-bold rounded-lg hover:bg-brand-blue-dark transition-colors"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                      </svg>
-                      Assign
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1991,6 +2266,10 @@ export default function AdminJobPipelineDetailPage() {
   } | null>(null);
   const [removing, setRemoving] = useState(false);
 
+  // Shift management filter
+  type ShiftFilter = "all" | ShiftEffectiveStatus;
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilter>("all");
+
   // Group recurring shifts so each group renders as one tile
   type GroupedItem =
     | { type: "single"; shift: AdminShift }
@@ -2016,6 +2295,22 @@ export default function AdminJobPipelineDetailPage() {
 
   // Tile count (groups count as 1)
   const shiftTileCount = groupedShiftItems.length;
+
+  // Shift stat counts (per individual shift, not tile)
+  const shiftStats = useMemo(() => {
+    const counts: Record<ShiftEffectiveStatus, number> = { open: 0, partial: 0, filled: 0, cancelled: 0 };
+    for (const s of shifts) counts[getShiftEffectiveStatus(s)]++;
+    return { all: shifts.length, ...counts };
+  }, [shifts]);
+
+  // Filter the grouped items: keep singles that match, keep groups that have ≥1 matching shift
+  const filteredShiftItems = useMemo(() => {
+    if (shiftFilter === "all") return groupedShiftItems;
+    return groupedShiftItems.filter((item) => {
+      if (item.type === "single") return getShiftEffectiveStatus(item.shift) === shiftFilter;
+      return item.shifts.some((s) => getShiftEffectiveStatus(s) === shiftFilter);
+    });
+  }, [groupedShiftItems, shiftFilter]);
 
   // Schedule interview modal
   const [scheduleFor, setScheduleFor] = useState<{
@@ -2505,41 +2800,117 @@ export default function AdminJobPipelineDetailPage() {
         )}
 
         {pageView === "shifts" && (
-          <div data-gsap="fade-up">
-            {/* Shifts header with Add button */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                {shiftTileCount} {shiftTileCount !== 1 ? "shifts" : "shift"}{shifts.length !== shiftTileCount ? ` (${shifts.length} occurrences)` : ""}
-              </p>
+          <div data-gsap="fade-up" className="space-y-5">
+
+            {/* Stat chips + Add Shift */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 flex-1">
+                <ShiftStatChip
+                  label="Total"     count={shiftStats.all}       active={shiftFilter === "all"}
+                  onClick={() => setShiftFilter("all")}     accent="bg-brand text-white"
+                />
+                <ShiftStatChip
+                  label="Open"      count={shiftStats.open}      active={shiftFilter === "open"}
+                  onClick={() => setShiftFilter("open")}    accent="bg-brand-blue text-white"
+                />
+                <ShiftStatChip
+                  label="Partial"   count={shiftStats.partial}   active={shiftFilter === "partial"}
+                  onClick={() => setShiftFilter("partial")} accent="bg-amber-500 text-white"
+                />
+                <ShiftStatChip
+                  label="Filled"    count={shiftStats.filled}    active={shiftFilter === "filled"}
+                  onClick={() => setShiftFilter("filled")}  accent="bg-green-500 text-white"
+                />
+                <ShiftStatChip
+                  label="Cancelled" count={shiftStats.cancelled} active={shiftFilter === "cancelled"}
+                  onClick={() => setShiftFilter("cancelled")} accent="bg-slate-500 text-white"
+                />
+              </div>
               <button
                 onClick={() => setAddingShift(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors shrink-0"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
                 Add Shift
               </button>
             </div>
 
+            {/* Summary line */}
+            {!loadingShifts && shifts.length > 0 && (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs font-bold text-brand">
+                  {filteredShiftItems.length} {filteredShiftItems.length === 1 ? "shift tile" : "shift tiles"}
+                  <span className="text-slate-400 font-normal ml-1">
+                    {shiftFilter === "all"
+                      ? `· ${shifts.length} total occurrence${shifts.length !== 1 ? "s" : ""}`
+                      : `matching "${SHIFT_STATUS_META[shiftFilter as ShiftEffectiveStatus].label}"`}
+                  </span>
+                </p>
+                {shiftFilter !== "all" && (
+                  <button
+                    onClick={() => setShiftFilter("all")}
+                    className="text-xs font-semibold text-brand-blue hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Shift list */}
             {loadingShifts ? (
               <div className="space-y-3">
-                {[1,2,3].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex bg-white border border-gray-100 rounded-2xl overflow-hidden animate-pulse h-24">
+                    <div className="w-1 bg-gray-200" />
+                    <div className="flex-1 p-5 space-y-2">
+                      <div className="h-3 w-20 bg-gray-100 rounded" />
+                      <div className="h-4 w-1/3 bg-gray-100 rounded" />
+                      <div className="h-2.5 w-1/2 bg-gray-100 rounded" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : shifts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-blue">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <div className="bg-white border border-gray-100 border-dashed rounded-2xl flex flex-col items-center justify-center py-20 gap-3 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-blue">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                   </svg>
                 </div>
                 <p className="text-sm font-bold text-brand">No shifts posted yet</p>
-                <p className="text-xs text-slate-400">The employer hasn&apos;t created any shifts for this job.</p>
+                <p className="text-xs text-slate-400 max-w-xs">The employer hasn&apos;t created any shifts for this job. Add one to start scheduling.</p>
+                <button
+                  onClick={() => setAddingShift(true)}
+                  className="mt-2 flex items-center gap-1.5 px-5 py-2.5 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Add First Shift
+                </button>
+              </div>
+            ) : filteredShiftItems.length === 0 ? (
+              <div className="bg-white border border-gray-100 border-dashed rounded-2xl flex flex-col items-center justify-center py-16 gap-3 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-slate-400">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-bold text-brand">No matching shifts</p>
+                <p className="text-xs text-slate-400">No shifts in this status — try another filter.</p>
+                <button
+                  onClick={() => setShiftFilter("all")}
+                  className="text-xs font-semibold text-brand-blue underline"
+                >
+                  Show all shifts
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
-                {groupedShiftItems.map((item) => {
-                  // ── Recurring group tile ──────────────────────────────────
+                {filteredShiftItems.map((item) => {
                   if (item.type === "group") {
                     return (
                       <RecurringGroupCard
@@ -2555,97 +2926,17 @@ export default function AdminJobPipelineDetailPage() {
                       />
                     );
                   }
-
-                  // ── One-time shift tile ───────────────────────────────────
-                  const shift = item.shift;
-                  const confirmedCount = shift.assignments.filter((a) => a.status === "confirmed").length;
-                  const pendingCount   = shift.assignments.filter((a) => a.status === "pending").length;
-                  const date = new Date(shift.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-                  const paidHours = Math.max(0, (() => {
-                    const [sh, sm] = shift.startTime.split(":").map(Number);
-                    const [eh, em] = shift.endTime.split(":").map(Number);
-                    return ((eh * 60 + em) - (sh * 60 + sm) - (shift.breakMinutes ?? 0)) / 60;
-                  })());
                   return (
-                    <div key={shift.id} className="bg-white border border-gray-100 rounded-2xl p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <p className="text-sm font-bold text-brand">{date} · {shift.department ?? "General"}</p>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              shift.status === "open"   ? "bg-blue-50 text-blue-600" :
-                              shift.status === "filled" ? "bg-green-50 text-green-600" :
-                              "bg-gray-100 text-slate-400"
-                            }`}>{shift.status}</span>
-                          </div>
-                          <p className="text-xs text-slate-400">
-                            {shift.startTime.slice(0,5)} – {shift.endTime.slice(0,5)} · {paidHours.toFixed(1)} paid hrs
-                            {shift.breakMinutes > 0 && ` · ${shift.breakMinutes}m break`}
-                            {shift.location && ` · ${shift.location}`}
-                          </p>
-                          {/* Assignments */}
-                          {shift.assignments.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {shift.assignments.map((a) => (
-                                <div key={a.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                                  a.status === "confirmed" ? "bg-green-50 text-green-700 border border-green-100" :
-                                  a.status === "pending"   ? "bg-amber-50 text-amber-700 border border-amber-100" :
-                                  "bg-gray-50 text-slate-400 border border-gray-100 line-through"
-                                }`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${
-                                    a.status === "confirmed" ? "bg-green-500" :
-                                    a.status === "pending"   ? "bg-amber-400" : "bg-gray-300"
-                                  }`} />
-                                  {a.candidateName}
-                                  <span className="text-[9px] opacity-70 uppercase tracking-wide">{a.status}</span>
-                                  {a.status === "pending" && (
-                                    <button
-                                      title="Rescind shift offer"
-                                      disabled={rescinding === a.id}
-                                      onClick={() => rescindAssignment(shift.id, a.id)}
-                                      className="ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-colors disabled:opacity-40"
-                                    >
-                                      {rescinding === a.id ? (
-                                        <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
-                                      ) : (
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                      )}
-                                    </button>
-                                  )}
-                                  {a.status === "confirmed" && (
-                                    <button
-                                      title="Remove from shift"
-                                      onClick={() => setConfirmRemove({ assignmentId: a.id, shiftId: shift.id, candidateName: a.candidateName })}
-                                      className="ml-0.5 p-0.5 rounded hover:bg-red-100 text-green-700 hover:text-red-600 transition-colors"
-                                    >
-                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
-                            <p className="text-xs font-bold text-brand">{confirmedCount}/{shift.staffNeeded}</p>
-                            <p className="text-[10px] text-slate-400">confirmed</p>
-                            {pendingCount > 0 && <p className="text-[10px] text-amber-500">{pendingCount} pending</p>}
-                          </div>
-                          {shift.status !== "cancelled" && confirmedCount < shift.staffNeeded && (
-                            <button
-                              onClick={() => setAssigningTo(shift)}
-                              className="flex items-center gap-1.5 px-3 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                              </svg>
-                              Assign
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <SingleShiftCard
+                      key={item.shift.id}
+                      shift={item.shift}
+                      onAssign={(s) => setAssigningTo(s)}
+                      rescinding={rescinding}
+                      onRescind={rescindAssignment}
+                      onRemoveConfirmed={(shiftId, assignmentId, candidateName) =>
+                        setConfirmRemove({ shiftId, assignmentId, candidateName })
+                      }
+                    />
                   );
                 })}
               </div>
