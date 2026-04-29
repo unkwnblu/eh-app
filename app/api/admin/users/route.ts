@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   // ── Primary query: profiles table ───────────────────────────────────────────
   let query = service
     .from("profiles")
-    .select("id, email, full_name, role, status, permissions, created_at")
+    .select("id, email, full_name, role, status, permissions, created_at, eh_id")
     .order("created_at", { ascending: false });
 
   if (roleFilter)   query = query.eq("role", roleFilter.toLowerCase());
@@ -111,6 +111,7 @@ export async function GET(request: NextRequest) {
         ? formatTime(authUser.last_sign_in_at)
         : "",
       permissions: p.permissions ?? [],
+      ehId: (p as { eh_id?: string }).eh_id ?? null,
     };
   });
 

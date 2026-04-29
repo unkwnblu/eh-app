@@ -14,6 +14,7 @@ type Assignment = {
   id: string;
   candidateId: string;
   candidateName: string;
+  avatarUrl: string | null;
   status: "pending" | "confirmed" | "cancelled";
   assignedAt: string;
 };
@@ -570,9 +571,13 @@ export default function ManageShiftsPage() {
                               <div
                                 key={a.id}
                                 title={a.candidateName}
-                                className="w-7 h-7 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue text-[10px] font-bold border-2 border-white"
+                                className="w-7 h-7 rounded-full overflow-hidden bg-brand-blue/10 flex items-center justify-center text-brand-blue text-[10px] font-bold border-2 border-white shrink-0"
                               >
-                                {a.candidateName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                                {a.avatarUrl ? (
+                                  <img src={a.avatarUrl} alt={a.candidateName} className="w-full h-full object-cover" />
+                                ) : (
+                                  a.candidateName.split(" ").map((n) => n[0]).join("").slice(0, 2)
+                                )}
                               </div>
                             ))}
                           </div>

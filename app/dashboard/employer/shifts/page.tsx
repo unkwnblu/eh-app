@@ -89,6 +89,8 @@ function RoleCard({ role }: { role: ShiftRole }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ShiftManagementPage() {
+  useEffect(() => { document.title = "Manage Shifts | Edge Harbour"; }, []);
+
   const [roles, setRoles] = useState<ShiftRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

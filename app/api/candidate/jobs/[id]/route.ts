@@ -59,12 +59,22 @@ export async function GET(
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  // ── Fetch employer details ─────────────────────────────────────────────────
+  // ── Fetch employer details + logo ─────────────────────────────────────────
   const { data: employer } = await service
     .from("employers")
-    .select("company_name, company_website, industries")
+    .select("company_name, company_website, industries, logo_path")
     .eq("id", job.employer_id)
     .single();
+
+  // Generate signed logo URL if the employer has one
+  let companyLogoUrl: string | null = null;
+  const logoPath = (employer as { logo_path?: string } | null)?.logo_path;
+  if (logoPath) {
+    const { data: signed } = await service.storage
+      .from("employer-documents")
+      .createSignedUrl(logoPath, 60 * 60);
+    companyLogoUrl = signed?.signedUrl ?? null;
+  }
 
   // ── Check if candidate has already applied ────────────────────────────────
   const { data: existingApplication } = await service
@@ -115,9 +125,11 @@ export async function GET(
     job: {
       id:                     job.id,
       title:                  job.title,
+      employerId:             job.employer_id,
       company:                employer?.company_name ?? "Unknown Employer",
       companyWebsite:         employer?.company_website ?? null,
       companyIndustries:      employer?.industries ?? [],
+      companyLogoUrl:         companyLogoUrl,
       sector:                 job.sector,
       location:               job.location,
       remote:                 job.remote,

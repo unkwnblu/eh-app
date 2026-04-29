@@ -98,6 +98,8 @@ function statusColor(status: JobDetail["status"]): { dot: string; text: string }
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function EditJobPage() {
+  useEffect(() => { document.title = "Edit Job | Edge Harbour"; }, []);
+
   const { id }   = useParams<{ id: string }>();
   const router   = useRouter();
   const { toast } = useToast();

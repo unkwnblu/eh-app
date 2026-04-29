@@ -37,6 +37,7 @@ interface AdminProfile {
   avatar_url: string | null;
   created_at: string;
   last_sign_in_at: string | null;
+  eh_id: string | null;
 }
 
 interface PlatformStats {
@@ -280,6 +281,13 @@ export default function AdminProfilePage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
+        // Fetch eh_id from profiles in parallel with stats
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("eh_id")
+          .eq("id", user.id)
+          .single();
+
         setProfile({
           id: user.id,
           email: user.email ?? "",
@@ -289,6 +297,7 @@ export default function AdminProfilePage() {
           avatar_url: user.user_metadata?.avatar_url ?? null,
           created_at: user.created_at,
           last_sign_in_at: user.last_sign_in_at ?? null,
+          eh_id: (profileRow as { eh_id?: string } | null)?.eh_id ?? null,
         });
       }
 
@@ -415,9 +424,20 @@ export default function AdminProfilePage() {
                 </span>
               </div>
 
-              <p className="text-sm font-semibold text-slate-500 mb-3">
+              <p className="text-sm font-semibold text-slate-500 mb-1">
                 {profile?.job_title ?? (profile?.role === "moderator" ? "Content Moderator" : "Super Administrator")}
               </p>
+              {/* EH-ID */}
+              {profile?.eh_id && (
+                <div className="flex items-center gap-1.5 mb-3">
+                  <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-slate-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5l-3.9 19.5m-2.1-19.5l-3.9 19.5" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-bold text-slate-500 tracking-wider font-mono">{profile.eh_id}</span>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
                 <span className="flex items-center gap-1">

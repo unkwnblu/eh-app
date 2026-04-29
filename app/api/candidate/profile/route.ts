@@ -21,10 +21,10 @@ export async function GET() {
     .eq("id", user.id)
     .single();
 
-  // Fetch profile status
+  // Fetch profile status + eh_id
   const { data: profile } = await service
     .from("profiles")
-    .select("status, full_name")
+    .select("status, full_name, eh_id")
     .eq("id", user.id)
     .single();
 
@@ -47,6 +47,7 @@ export async function GET() {
     dbsFileName:    candidate?.dbs_file_name ?? "",
     dbsLevel:       candidate?.dbs_level ?? "",
     status:         profile?.status ?? "pending",
+    ehId:           profile?.eh_id ?? null,
   });
 }
 

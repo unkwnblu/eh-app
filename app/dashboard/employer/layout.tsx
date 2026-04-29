@@ -112,9 +112,10 @@ export default function EmployerDashboardLayout({ children }: { children: React.
   const [profileName,     setProfileName]     = useState("Employer");
   const [profileSub,      setProfileSub]      = useState("Company");
   const [profileInitials, setProfileInitials] = useState("E");
+  const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [notifData,       setNotifData]       = useState<NotifItem[]>([]);
 
-  // Fetch real employer profile
+  // Fetch real employer profile + company logo
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -122,22 +123,20 @@ export default function EmployerDashboardLayout({ children }: { children: React.
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Get full name from profiles or user_metadata
         const fullName =
           user.user_metadata?.full_name?.trim() ||
           `${user.user_metadata?.first_name ?? ""} ${user.user_metadata?.last_name ?? ""}`.trim() ||
           user.email?.split("@")[0] ||
           "Employer";
 
-        // Get company name from employers table
         const { data: employer } = await supabase
           .from("employers")
           .select("company_name")
           .eq("id", user.id)
           .single();
 
-        const company   = employer?.company_name ?? user.email ?? "Company";
-        const initials  = fullName
+        const company  = employer?.company_name ?? user.email ?? "Company";
+        const initials = fullName
           .split(" ")
           .map((n: string) => n[0])
           .join("")
@@ -147,6 +146,13 @@ export default function EmployerDashboardLayout({ children }: { children: React.
         setProfileName(fullName);
         setProfileSub(company);
         setProfileInitials(initials);
+
+        // Fetch company logo — show it in place of initials
+        const logoRes = await fetch("/api/employer/logo");
+        if (logoRes.ok) {
+          const logoData = await logoRes.json() as { url?: string };
+          if (logoData.url) setProfileImageUrl(logoData.url);
+        }
       } catch { /* best-effort */ }
     }
     loadProfile();
@@ -197,6 +203,7 @@ export default function EmployerDashboardLayout({ children }: { children: React.
         profileName={profileName}
         profileSub={profileSub}
         profileInitials={profileInitials}
+        profileImageUrl={profileImageUrl}
         supportHref="/dashboard/employer/support"
         notifData={notifData}
         notifIcon={notifIcon}

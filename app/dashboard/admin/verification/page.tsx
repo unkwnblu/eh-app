@@ -13,6 +13,8 @@ type Doc = { key: string; name: string; type: string; verified: boolean; url?: s
 type Candidate = {
   id: string;
   name: string;
+  avatarUrl: string | null;
+  ehId: string | null;
   sector: string;
   joined: string;
   status: CardStatus;
@@ -144,19 +146,25 @@ function ListRow({
       </div>
 
       {/* Avatar */}
-      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold shrink-0">
-        {candidate.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold shrink-0">
+        {candidate.avatarUrl
+          ? <img src={candidate.avatarUrl} alt={candidate.name} className="w-full h-full object-cover" />
+          : candidate.name.split(" ").map((n) => n[0]).join("").slice(0, 2)
+        }
       </div>
 
       {/* Body */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center justify-between gap-2 mb-0.5">
           <p className="text-sm font-bold text-brand truncate">{candidate.name}</p>
           <span className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide shrink-0 ${meta.chipText}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
             {meta.label}
           </span>
         </div>
+        {candidate.ehId && (
+          <p className="text-[10px] font-bold font-mono text-slate-300 tracking-wider mb-1">{candidate.ehId}</p>
+        )}
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${sectorClr}`}>
             {candidate.sector}
@@ -216,8 +224,11 @@ function DetailPanel({
         </button>
 
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-brand text-base font-black shrink-0 shadow-sm">
-            {candidate.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white border border-gray-100 flex items-center justify-center text-brand text-base font-black shrink-0 shadow-sm">
+            {candidate.avatarUrl
+              ? <img src={candidate.avatarUrl} alt={candidate.name} className="w-full h-full object-cover" />
+              : candidate.name.split(" ").map((n) => n[0]).join("").slice(0, 2)
+            }
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
@@ -230,6 +241,9 @@ function DetailPanel({
               </span>
             </div>
             <h2 className="text-lg font-black text-brand tracking-tight truncate">{candidate.name}</h2>
+            {candidate.ehId && (
+              <p className="text-[10px] font-bold font-mono text-slate-400 tracking-wider mt-0.5">{candidate.ehId}</p>
+            )}
             <p className="text-xs text-slate-500 mt-0.5">
               Submitted {candidate.submissionDate} · Joined {candidate.joined}
             </p>

@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
     id: string;
     candidateId: string;
     candidateName: string;
+    avatarUrl: string | null;
     status: string;
     assignedAt: string;
   }[]> = {};
@@ -109,14 +110,29 @@ export async function GET(request: NextRequest) {
     if (assignments && assignments.length > 0) {
       const candidateIds = [...new Set(assignments.map((a) => a.candidate_id as string))];
 
-      const { data: profiles } = await service
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", candidateIds);
+      // Fetch name (profiles) + avatar path (candidates) in parallel
+      const [{ data: profiles }, { data: candidateRows }] = await Promise.all([
+        service.from("profiles").select("id, full_name").in("id", candidateIds),
+        service.from("candidates").select("id, avatar_path").in("id", candidateIds),
+      ]);
 
       const nameMap: Record<string, string> = {};
       for (const p of profiles ?? []) {
         nameMap[p.id as string] = (p.full_name as string) || "Unknown";
+      }
+
+      // Build signed URLs for avatars (1-hour TTL, silent fail if missing)
+      const avatarMap: Record<string, string | null> = {};
+      for (const c of candidateRows ?? []) {
+        const path = (c as { id: string; avatar_path?: string | null }).avatar_path;
+        if (path) {
+          const { data: signed } = await service.storage
+            .from("candidate-documents")
+            .createSignedUrl(path, 60 * 60);
+          avatarMap[c.id as string] = signed?.signedUrl ?? null;
+        } else {
+          avatarMap[c.id as string] = null;
+        }
       }
 
       for (const a of assignments) {
@@ -126,6 +142,7 @@ export async function GET(request: NextRequest) {
           id:            a.id as string,
           candidateId:   a.candidate_id as string,
           candidateName: nameMap[a.candidate_id as string] ?? "Unknown",
+          avatarUrl:     avatarMap[a.candidate_id as string] ?? null,
           status:        a.status as string,
           assignedAt:    a.assigned_at as string,
         });

@@ -105,6 +105,8 @@ function ComplianceBadges({ compliance }: { compliance: RecentApp["compliance"] 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function EmployerDashboardPage() {
+  useEffect(() => { document.title = "Dashboard | Edge Harbour"; }, []);
+
   const [data,    setData]    = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 

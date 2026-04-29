@@ -22,13 +22,12 @@ export async function GET() {
     .eq("id", user.id)
     .single();
 
-  // Employer: compliance fields
+  // Employer: core compliance fields
   const { data: employerRaw, error } = await service
     .from("employers")
     .select(
       "crn, vat_number, cqc_provider_id, dbs_level, " +
-      "modern_slavery_act, employer_liability_insurance, industries, " +
-      "healthcare_compliance_status"
+      "modern_slavery_act, employer_liability_insurance, industries"
     )
     .eq("id", user.id)
     .single();
@@ -41,14 +40,23 @@ export async function GET() {
     modern_slavery_act?: boolean;
     employer_liability_insurance?: boolean;
     industries?: string[];
-    healthcare_compliance_status?: "not_submitted" | "pending" | "verified" | "rejected";
   } | null;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const healthcareStatus = employer?.healthcare_compliance_status ?? "not_submitted";
+  // healthcare_compliance_status — graceful fallback if migration not yet run
+  const { data: complianceRow } = await service
+    .from("employers")
+    .select("healthcare_compliance_status")
+    .eq("id", user.id)
+    .single();
+
+  const healthcareStatus: "not_submitted" | "pending" | "verified" | "rejected" =
+    (complianceRow as { healthcare_compliance_status?: string } | null)
+      ?.healthcare_compliance_status as "not_submitted" | "pending" | "verified" | "rejected"
+    ?? "not_submitted";
 
   // Build compliance items — same logic as admin verification
   const items: {

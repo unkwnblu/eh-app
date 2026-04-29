@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   // Fetch all candidate profiles joined with their candidates record
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, full_name, status, created_at")
+    .select("id, full_name, status, created_at, eh_id")
     .eq("role", "candidate")
     .order("created_at", { ascending: false });
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
   const { data: candidateRows, error: candidatesError } = await supabase
     .from("candidates")
-    .select("id, sector, document_type, document_number, document_expiry, share_code, share_code_expiry, cv_file_name, cv_file_path, dbs_file_name, dbs_file_path, dbs_level, created_at, verified_docs")
+    .select("id, sector, document_type, document_number, document_expiry, share_code, share_code_expiry, cv_file_name, cv_file_path, dbs_file_name, dbs_file_path, dbs_level, created_at, verified_docs, avatar_path")
     .in("id", ids);
 
   if (candidatesError) {
@@ -166,10 +166,14 @@ export async function GET(request: NextRequest) {
     }
 
     const createdAt = c?.created_at ?? p.created_at;
+    const avatarPath = (c as { avatar_path?: string | null } | null | undefined)?.avatar_path;
+    const avatarUrl = avatarPath ? await signUrl(avatarPath) : undefined;
 
     return {
       id:               p.id,
       name:             p.full_name ?? "Unknown",
+      avatarUrl:        avatarUrl ?? null,
+      ehId:             (p as { eh_id?: string }).eh_id ?? null,
       sector:           c?.sector   ?? "—",
       joined:           relativeTime(p.created_at),
       status:           mapStatus(p.status),

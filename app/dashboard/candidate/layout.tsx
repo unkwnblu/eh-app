@@ -113,6 +113,7 @@ export default function CandidateDashboardLayout({ children }: { children: React
   const [profileName,     setProfileName]     = useState("Candidate");
   const [profileInitials, setProfileInitials] = useState("C");
   const [profileEmail,    setProfileEmail]    = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [profileStatus,   setProfileStatus]   = useState<string | null>(null);
   const [resubmissionNote, setResubmissionNote] = useState<string>("");
 
@@ -171,17 +172,19 @@ export default function CandidateDashboardLayout({ children }: { children: React
       setProfileInitials(initials);
       setProfileEmail(email);
 
-      // Fetch profile status to enforce resubmission lock
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("status, resubmission_note")
-        .eq("id", user.id)
-        .single();
+      // Fetch profile status + avatar in parallel
+      const [{ data: profile }, avatarRes] = await Promise.all([
+        supabase.from("profiles").select("status, resubmission_note").eq("id", user.id).single(),
+        fetch("/api/candidate/avatar").then((r) => r.ok ? r.json() : { url: null }),
+      ]);
 
       if (profile) {
         setProfileStatus(profile.status);
         setResubmissionNote(profile.resubmission_note ?? "");
       }
+
+      const avatarUrl = (avatarRes as { url?: string | null }).url;
+      if (avatarUrl) setProfileImageUrl(avatarUrl);
     });
 
     // Load notifications on mount
@@ -318,6 +321,7 @@ export default function CandidateDashboardLayout({ children }: { children: React
       profileName={profileName}
       profileSub={profileEmail}
       profileInitials={profileInitials}
+      profileImageUrl={profileImageUrl}
       supportHref="/dashboard/candidate/support"
       notifData={notifData}
       notifIcon={notifIcon}

@@ -73,6 +73,8 @@ const DAYS = [
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PostNewShiftPage() {
+  useEffect(() => { document.title = "New Shift | Edge Harbour"; }, []);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();

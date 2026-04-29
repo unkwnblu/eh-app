@@ -23,6 +23,7 @@ type AdminUser = {
   lastLogin: string;
   lastLoginTime: string;
   permissions: string[];
+  ehId: string | null;
 };
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -477,6 +478,9 @@ export default function UserManagementPage() {
                     <div>
                       <p className="text-sm font-bold text-brand-blue leading-snug">{user.name}</p>
                       <p className="text-xs text-slate-400">{user.email}</p>
+                      {user.ehId && (
+                        <p className="text-[10px] font-bold font-mono text-slate-300 mt-0.5 tracking-wider">{user.ehId}</p>
+                      )}
                     </div>
                   </div>
                 </td>

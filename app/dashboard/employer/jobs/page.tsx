@@ -246,6 +246,8 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function JobManagementPage() {
+  useEffect(() => { document.title = "My Jobs | Edge Harbour"; }, []);
+
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<TabKey>("live");
   const [jobs,      setJobs]      = useState<Job[]>([]);

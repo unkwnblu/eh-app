@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
@@ -98,6 +98,8 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SupportPage() {
+  useEffect(() => { document.title = "Support | Edge Harbour"; }, []);
+
   const [subject,    setSubject]    = useState("");
   const [message,    setMessage]    = useState("");
   const [submitting, setSubmitting] = useState(false);

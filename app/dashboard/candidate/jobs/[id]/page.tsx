@@ -58,9 +58,11 @@ function ShareButton({ jobId, jobTitle }: { jobId: string; jobTitle: string }) {
 type JobDetail = {
   id: string;
   title: string;
+  employerId: string;
   company: string;
   companyWebsite: string | null;
   companyIndustries: string[];
+  companyLogoUrl: string | null;
   sector: string;
   location: string;
   remote: boolean;
@@ -426,9 +428,15 @@ export default function JobDetailPage() {
 
             {/* Company card */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5" data-gsap="fade-up">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-11 h-11 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-black text-brand-blue">{companyInitials}</span>
+              <div className="flex items-center gap-3 mb-4">
+                {/* Logo or initials */}
+                <div className="w-11 h-11 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0 overflow-hidden border border-gray-100">
+                  {job.companyLogoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={job.companyLogoUrl} alt={`${job.company} logo`} className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-sm font-black text-brand-blue">{companyInitials}</span>
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-brand truncate">{job.company}</p>
@@ -437,19 +445,34 @@ export default function JobDetailPage() {
                   )}
                 </div>
               </div>
-              {job.companyWebsite && (
-                <a
-                  href={job.companyWebsite.startsWith("http") ? job.companyWebsite : `https://${job.companyWebsite}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full border border-brand-blue text-brand-blue text-sm font-semibold rounded-xl py-2 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 mt-3"
+
+              <div className="space-y-2">
+                {/* View Company Profile */}
+                <Link
+                  href={`/dashboard/candidate/companies/${job.employerId}`}
+                  className="w-full bg-brand-blue text-white text-sm font-semibold rounded-xl py-2 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
                 >
-                  Visit Website
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
                   </svg>
-                </a>
-              )}
+                  View Company Profile
+                </Link>
+
+                {/* Visit Website */}
+                {job.companyWebsite && (
+                  <a
+                    href={job.companyWebsite.startsWith("http") ? job.companyWebsite : `https://${job.companyWebsite}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full border border-gray-200 text-slate-500 text-sm font-semibold rounded-xl py-2 hover:border-brand-blue hover:text-brand-blue transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    Visit Website
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                    </svg>
+                  </a>
+                )}
+              </div>
             </div>
 
             {/* Required certifications checklist */}

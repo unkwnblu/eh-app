@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import GsapAnimations from "@/components/landing/GsapAnimations";
 import { useToast } from "@/components/ui/Toast";
 
@@ -14,6 +14,30 @@ const DBS_LEVELS = [
   "Enhanced",
   "Enhanced with Barred Lists",
 ];
+
+// ─── ReadOnlyField ─────────────────────────────────────────────────────────────
+
+function ReadOnlyField({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          {label}
+        </label>
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100 text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+          Locked
+        </span>
+      </div>
+      <div className="w-full border border-gray-100 rounded-xl px-4 py-2.5 text-sm bg-[#F7F8FA] text-slate-500 select-all">
+        {value || <span className="text-slate-300 italic">Not set</span>}
+      </div>
+      {hint && <p className="text-[11px] text-slate-400 mt-1">{hint}</p>}
+    </div>
+  );
+}
 
 // ─── Field ─────────────────────────────────────────────────────────────────────
 
@@ -81,10 +105,11 @@ function Select({
 // ─── Section card ──────────────────────────────────────────────────────────────
 
 function Section({
-  icon, title, description, children, onSave, saving, saveDisabled,
+  icon, title, description, children, onSave, saving, saveDisabled, noSaveButton,
 }: {
   icon: React.ReactNode; title: string; description: string;
-  children: React.ReactNode; onSave: () => void; saving: boolean; saveDisabled?: boolean;
+  children: React.ReactNode; onSave?: () => void; saving?: boolean;
+  saveDisabled?: boolean; noSaveButton?: boolean;
 }) {
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-6">
@@ -98,13 +123,15 @@ function Section({
             <p className="text-xs text-slate-400 mt-0.5">{description}</p>
           </div>
         </div>
-        <button
-          onClick={onSave}
-          disabled={saving || saveDisabled}
-          className="px-5 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-        >
-          {saving ? "Saving…" : "Save Changes"}
-        </button>
+        {!noSaveButton && onSave && (
+          <button
+            onClick={onSave}
+            disabled={saving || saveDisabled}
+            className="px-5 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        )}
       </div>
       <div className="pt-5 border-t border-gray-100">
         {children}
@@ -116,8 +143,10 @@ function Section({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  useEffect(() => { document.title = "Settings | Edge Harbour"; }, []);
+
   const { toast } = useToast();
-  const [tab, setTab]       = useState<TabKey>("account");
+  const [tab, setTab]         = useState<TabKey>("account");
   const [loading, setLoading] = useState(true);
   const [savingAccount, setSavingAccount]   = useState(false);
   const [savingBusiness, setSavingBusiness] = useState(false);
@@ -129,13 +158,16 @@ export default function SettingsPage() {
   const [jobTitle,   setJobTitle]   = useState("");
   const [phone,      setPhone]      = useState("");
 
-  // Business fields
+  // Locked business fields (display only)
   const [companyName,       setCompanyName]       = useState("");
-  const [companyPhone,      setCompanyPhone]      = useState("");
-  const [companyWebsite,    setCompanyWebsite]    = useState("");
-  const [registeredAddress, setRegisteredAddress] = useState("");
+  const [crn,               setCrn]               = useState("");
   const [vatNumber,         setVatNumber]         = useState("");
-  const [industries,        setIndustries]        = useState<string[]>([]);
+  const [registeredAddress, setRegisteredAddress] = useState("");
+
+  // Editable business fields
+  const [companyPhone,   setCompanyPhone]   = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [industries,     setIndustries]     = useState<string[]>([]);
 
   // Compliance fields
   const [cqcProviderId,              setCqcProviderId]              = useState("");
@@ -144,15 +176,25 @@ export default function SettingsPage() {
   const [employerLiabilityInsurance, setEmployerLiabilityInsurance] = useState(false);
   const [healthcareComplianceStatus, setHealthcareComplianceStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
 
-  // Inline validation errors for compliance
   const [compErrors, setCompErrors] = useState<Record<string, string>>({});
+
+  // Logo state
+  const [logoUrl,        setLogoUrl]        = useState<string | null>(null);
+  const [logoUploading,  setLogoUploading]  = useState(false);
+  const [logoProgress,   setLogoProgress]   = useState(0);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await fetch("/api/employer/settings");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const [settingsRes, logoRes] = await Promise.all([
+        fetch("/api/employer/settings"),
+        fetch("/api/employer/logo"),
+      ]);
+      const data    = await settingsRes.json();
+      const logoData = logoRes.ok ? await logoRes.json() : null;
+
+      if (!settingsRes.ok) throw new Error(data.error);
       const e = data.employer;
       setFirstName(e.first_name  ?? "");
       setLastName(e.last_name    ?? "");
@@ -160,6 +202,7 @@ export default function SettingsPage() {
       setJobTitle(e.job_title    ?? "");
       setPhone(e.phone           ?? "");
       setCompanyName(e.company_name        ?? "");
+      setCrn(e.crn                         ?? "");
       setCompanyPhone(e.company_phone      ?? "");
       setCompanyWebsite(e.company_website  ?? "");
       setRegisteredAddress(e.registered_address ?? "");
@@ -170,6 +213,8 @@ export default function SettingsPage() {
       setModernSlaveryAct(e.modern_slavery_act ?? false);
       setEmployerLiabilityInsurance(e.employer_liability_insurance ?? false);
       setHealthcareComplianceStatus(e.healthcare_compliance_status ?? "not_submitted");
+
+      if (logoData?.url) setLogoUrl(logoData.url);
     } catch {
       toast("Failed to load settings", "error");
     } finally {
@@ -179,9 +224,57 @@ export default function SettingsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ── Logo upload ────────────────────────────────────────────────────────────
+  async function handleLogoUpload(file: File) {
+    const MAX_MB = 5;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast(`Logo must be under ${MAX_MB} MB`, "error");
+      return;
+    }
+
+    setLogoUploading(true);
+    setLogoProgress(0);
+
+    // Fake progress ticking to 85 % while the request is in-flight
+    const interval = setInterval(() => {
+      setLogoProgress((p) => (p < 85 ? p + 5 : p));
+    }, 80);
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+
+      const res  = await fetch("/api/employer/logo", { method: "POST", body: form });
+      const data = await res.json() as { success?: boolean; url?: string; error?: string };
+
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+
+      clearInterval(interval);
+      setLogoProgress(100);
+      setLogoUrl(data.url ?? null);
+      toast("Logo updated successfully", "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Upload failed", "error");
+    } finally {
+      clearInterval(interval);
+      setTimeout(() => { setLogoUploading(false); setLogoProgress(0); }, 600);
+    }
+  }
+
+  async function removeLogo() {
+    try {
+      const res = await fetch("/api/employer/logo", { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setLogoUrl(null);
+      toast("Logo removed", "success");
+    } catch {
+      toast("Failed to remove logo", "error");
+    }
+  }
+
   // ── Compliance validation ──────────────────────────────────────────────────
-  const needsHealthcare   = industries.includes("Healthcare");
-  const needsHospitality  = industries.includes("Hospitality");
+  const needsHealthcare  = industries.includes("Healthcare");
+  const needsHospitality = industries.includes("Hospitality");
 
   const complianceValid = useMemo(() => {
     if (needsHealthcare  && (!cqcProviderId.trim() || !dbsLevel)) return false;
@@ -239,16 +332,12 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           section: "business",
-          companyName, companyPhone, companyWebsite, registeredAddress, vatNumber,
-          industries,
-          cqcProviderId,
-          dbsLevel,
-          modernSlaveryAct,
-          employerLiabilityInsurance,
+          companyPhone, companyWebsite,
+          industries, cqcProviderId, dbsLevel,
+          modernSlaveryAct, employerLiabilityInsurance,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      // If healthcare fields were submitted, move to pending locally
       if (industries.includes("Healthcare")) {
         setHealthcareComplianceStatus((prev) => prev === "verified" ? "verified" : "pending");
       } else {
@@ -260,6 +349,13 @@ export default function SettingsPage() {
     } finally {
       setSavingBusiness(false);
     }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function getInitials(name: string) {
+    const words = name.trim().split(/\s+/);
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
   }
 
   return (
@@ -371,6 +467,84 @@ export default function SettingsPage() {
       {/* ── Business Information ── */}
       {!loading && tab === "business" && (
         <div className="space-y-5" data-gsap="fade-up">
+
+          {/* ── Company Logo ── */}
+          <Section
+            icon={
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+            }
+            title="Company Logo"
+            description="Displayed on your profile and visible to candidates."
+            noSaveButton
+          >
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleLogoUpload(file);
+                e.target.value = "";
+              }}
+            />
+
+            <div className="flex items-center gap-6">
+              {/* Preview */}
+              <div className="w-20 h-20 rounded-2xl border border-gray-100 bg-[#F7F8FA] flex items-center justify-center shrink-0 overflow-hidden">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt="Company logo" className="w-full h-full object-contain" />
+                ) : (
+                  <span className="text-2xl font-black text-brand/40">
+                    {companyName ? getInitials(companyName) : "?"}
+                  </span>
+                )}
+              </div>
+
+              {/* Controls + progress */}
+              <div className="flex-1 min-w-0">
+                {logoUploading ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-slate-500">Uploading…</p>
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-brand-blue rounded-full transition-all duration-200"
+                        style={{ width: `${logoProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400">{logoProgress}%</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500 mb-3">
+                      JPG, PNG, WebP or SVG · Max 5 MB · Recommended 400 × 400 px
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => logoInputRef.current?.click()}
+                        className="px-4 py-2 bg-brand-blue text-white text-xs font-bold rounded-xl hover:bg-brand-blue-dark transition-colors"
+                      >
+                        {logoUrl ? "Replace Logo" : "Upload Logo"}
+                      </button>
+                      {logoUrl && (
+                        <button
+                          onClick={removeLogo}
+                          className="px-4 py-2 bg-white border border-gray-200 text-xs font-semibold text-slate-500 rounded-xl hover:border-red-200 hover:text-red-500 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </Section>
+
+          {/* ── Company Details (locked fields + editable phone/website) ── */}
           <Section
             icon={
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-brand-blue">
@@ -378,17 +552,42 @@ export default function SettingsPage() {
               </svg>
             }
             title="Company Details"
-            description="Your company name, phone, website, and registered address."
+            description="Phone and website can be updated. Registration details are locked."
             onSave={saveBusiness}
             saving={savingBusiness}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Field label="Company Name"        value={companyName}       onChange={setCompanyName}       placeholder="e.g. Acme Healthcare Ltd" />
-              <Field label="Company Phone"       value={companyPhone}      onChange={setCompanyPhone}      placeholder="+44 20 0000 0000" type="tel" />
-              <Field label="Website"             value={companyWebsite}    onChange={setCompanyWebsite}    placeholder="https://yourcompany.co.uk" type="url" />
-              <Field label="VAT Number"          value={vatNumber}         onChange={setVatNumber}         placeholder="e.g. GB123456789" />
-              <div className="md:col-span-2">
-                <Field label="Registered Address" value={registeredAddress} onChange={setRegisteredAddress} placeholder="123 Business Road, London, EC1A 1BB" />
+            <div className="space-y-5">
+              {/* Locked fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <ReadOnlyField
+                  label="Company Name"
+                  value={companyName}
+                  hint="Set at registration — contact support to change."
+                />
+                <ReadOnlyField
+                  label="Company Registration Number (CRN)"
+                  value={crn}
+                  hint="Verified by Companies House."
+                />
+                <ReadOnlyField
+                  label="VAT Number"
+                  value={vatNumber}
+                  hint="Contact support to update."
+                />
+                <ReadOnlyField
+                  label="Registered Address"
+                  value={registeredAddress}
+                  hint="Contact support to update."
+                />
+              </div>
+
+              {/* Editable fields */}
+              <div className="pt-4 border-t border-gray-50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">Editable Details</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <Field label="Company Phone" value={companyPhone} onChange={setCompanyPhone} placeholder="+44 20 0000 0000" type="tel" />
+                  <Field label="Website"       value={companyWebsite} onChange={setCompanyWebsite} placeholder="https://yourcompany.co.uk" type="url" />
+                </div>
               </div>
             </div>
           </Section>
@@ -410,7 +609,7 @@ export default function SettingsPage() {
             {/* Sector pills */}
             <div className="flex flex-wrap gap-2.5">
               {INDUSTRIES.map((ind) => {
-                const active = industries.includes(ind);
+                const active  = industries.includes(ind);
                 const hasGate = ind === "Healthcare" || ind === "Hospitality";
                 return (
                   <button
@@ -446,7 +645,6 @@ export default function SettingsPage() {
                     </svg>
                     Healthcare Compliance
                   </p>
-                  {/* Verification status badge */}
                   {healthcareComplianceStatus === "verified" && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold border border-green-200">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Verified
@@ -486,7 +684,7 @@ export default function SettingsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p className="text-[11px] text-amber-700 leading-relaxed">
-                      Your healthcare compliance details have been submitted and are <strong>awaiting verification</strong> by the Edge Harbour team. You&apos;ll be notified once reviewed. This is also visible on your <a href="/dashboard/employer/legal" className="font-bold underline">Legal &amp; Compliance</a> page.
+                      Your healthcare compliance details have been submitted and are <strong>awaiting verification</strong> by the Edge Harbour team. You&apos;ll be notified once reviewed.
                     </p>
                   </div>
                 ) : healthcareComplianceStatus === "rejected" ? (
@@ -515,54 +713,36 @@ export default function SettingsPage() {
                   </svg>
                   Hospitality Compliance
                 </p>
-
-                {/* Modern Slavery Act */}
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={modernSlaveryAct}
-                    onChange={(e) => {
-                      setModernSlaveryAct(e.target.checked);
-                      setCompErrors((p) => ({ ...p, modernSlaveryAct: "" }));
-                    }}
+                    onChange={(e) => { setModernSlaveryAct(e.target.checked); setCompErrors((p) => ({ ...p, modernSlaveryAct: "" })); }}
                     className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-brand-blue shrink-0"
                   />
                   <span className="text-xs text-brand leading-relaxed">
                     <span className="font-semibold">UK Modern Slavery Act compliance <span className="text-brand-blue">*</span></span>
-                    <span className="text-slate-400 block mt-0.5">
-                      I confirm this organisation complies with the Modern Slavery Act 2015, including publishing an annual transparency statement where required.
-                    </span>
+                    <span className="text-slate-400 block mt-0.5">I confirm this organisation complies with the Modern Slavery Act 2015.</span>
                   </span>
                 </label>
-                {compErrors.modernSlaveryAct && (
-                  <p className="text-xs text-red-500 -mt-1 pl-7">{compErrors.modernSlaveryAct}</p>
-                )}
+                {compErrors.modernSlaveryAct && <p className="text-xs text-red-500 -mt-1 pl-7">{compErrors.modernSlaveryAct}</p>}
 
-                {/* Employer Liability Insurance */}
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={employerLiabilityInsurance}
-                    onChange={(e) => {
-                      setEmployerLiabilityInsurance(e.target.checked);
-                      setCompErrors((p) => ({ ...p, employerLiabilityInsurance: "" }));
-                    }}
+                    onChange={(e) => { setEmployerLiabilityInsurance(e.target.checked); setCompErrors((p) => ({ ...p, employerLiabilityInsurance: "" })); }}
                     className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-brand-blue shrink-0"
                   />
                   <span className="text-xs text-brand leading-relaxed">
                     <span className="font-semibold">Employer&apos;s Liability Insurance <span className="text-brand-blue">*</span></span>
-                    <span className="text-slate-400 block mt-0.5">
-                      I confirm this organisation holds valid Employer&apos;s Liability Insurance as required by UK law.
-                    </span>
+                    <span className="text-slate-400 block mt-0.5">I confirm this organisation holds valid Employer&apos;s Liability Insurance as required by UK law.</span>
                   </span>
                 </label>
-                {compErrors.employerLiabilityInsurance && (
-                  <p className="text-xs text-red-500 -mt-1 pl-7">{compErrors.employerLiabilityInsurance}</p>
-                )}
+                {compErrors.employerLiabilityInsurance && <p className="text-xs text-red-500 -mt-1 pl-7">{compErrors.employerLiabilityInsurance}</p>}
               </div>
             )}
 
-            {/* Incomplete compliance hint */}
             {(needsHealthcare || needsHospitality) && !complianceValid && (
               <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

@@ -106,6 +106,8 @@ function DocCard({ doc }: { doc: typeof COMPLIANCE_DOCS[number] }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LegalPage() {
+  useEffect(() => { document.title = "Legal & Compliance | Edge Harbour"; }, []);
+
   const { toast } = useToast();
   const [tab, setTab] = useState<DocTab>("compliance");
   const [loading, setLoading] = useState(true);

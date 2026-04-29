@@ -30,20 +30,24 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Fetch accepted-offer counts per job in one query
+  // Fetch accepted counts + total applicant counts per job in parallel
   const jobIds = (jobs ?? []).map((j) => j.id as string);
   const hiredMap: Record<string, number> = {};
+  const applicantsMap: Record<string, number> = {};
 
   if (jobIds.length > 0) {
-    const { data: accepted } = await service
-      .from("job_applications")
-      .select("job_id")
-      .in("job_id", jobIds)
-      .eq("stage", "accepted");
+    const [{ data: accepted }, { data: allApps }] = await Promise.all([
+      service.from("job_applications").select("job_id").in("job_id", jobIds).eq("stage", "accepted"),
+      service.from("job_applications").select("job_id").in("job_id", jobIds),
+    ]);
 
     for (const row of accepted ?? []) {
       const jid = row.job_id as string;
       hiredMap[jid] = (hiredMap[jid] ?? 0) + 1;
+    }
+    for (const row of allApps ?? []) {
+      const jid = row.job_id as string;
+      applicantsMap[jid] = (applicantsMap[jid] ?? 0) + 1;
     }
   }
 
@@ -61,6 +65,7 @@ export async function GET() {
     closesAt:         j.closes_at ?? null,
     candidatesNeeded: (j.candidates_needed as number) ?? 1,
     hiredCount:       hiredMap[j.id as string] ?? 0,
+    applicantsCount:  applicantsMap[j.id as string] ?? 0,
   }));
 
   return NextResponse.json({ jobs: mapped });
@@ -92,6 +97,29 @@ export async function POST(request: NextRequest) {
   }
 
   const service = createServiceClient();
+
+  // ── Sector compliance gate ──────────────────────────────────────────────────
+  // Healthcare jobs require verified CQC/DBS compliance before posting.
+  if (sector === "Healthcare") {
+    const { data: emp } = await service
+      .from("employers")
+      .select("healthcare_compliance_status")
+      .eq("id", user.id)
+      .single();
+
+    const complianceStatus = (emp as { healthcare_compliance_status?: string } | null)
+      ?.healthcare_compliance_status ?? "not_submitted";
+
+    if (complianceStatus !== "verified") {
+      const msg =
+        complianceStatus === "pending"
+          ? "Your Healthcare compliance (CQC Provider ID & DBS level) is pending verification. You can post Healthcare jobs once approved."
+          : complianceStatus === "rejected"
+          ? "Your Healthcare compliance submission was rejected. Please update your details in Settings before posting Healthcare jobs."
+          : "Healthcare employers must submit and have their CQC Provider ID & DBS level verified before posting jobs. Go to Settings → Industries to complete this.";
+      return NextResponse.json({ error: msg }, { status: 403 });
+    }
+  }
 
   const { data: job, error } = await service
     .from("jobs")

@@ -43,12 +43,15 @@ function FieldError({ msg }: { msg?: string }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CreateJobPage() {
+  useEffect(() => { document.title = "Post a Job | Edge Harbour"; }, []);
+
   const router    = useRouter();
   const { toast } = useToast();
 
-  // Employer industries (fetched from profile)
-  const [industries,        setIndustries]        = useState<string[]>([]);
-  const [industriesLoading, setIndustriesLoading] = useState(true);
+  // Employer industries + compliance status (fetched from profile)
+  const [industries,                setIndustries]                = useState<string[]>([]);
+  const [industriesLoading,         setIndustriesLoading]         = useState(true);
+  const [healthcareComplianceStatus, setHealthcareComplianceStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
 
   // Form state
   const [jobTitle,         setJobTitle]         = useState("");
@@ -81,12 +84,16 @@ export default function CreateJobPage() {
     setErrors((p) => ({ ...p, pay: "" }));
   }, [isHourly]);
 
-  // Fetch employer's industries on mount
+  // Fetch employer's industries + compliance status on mount
   useEffect(() => {
     fetch("/api/employer/settings")
       .then((r) => r.json())
-      .then((data: { employer?: { industries?: string[] } }) => {
+      .then((data: { employer?: { industries?: string[]; healthcare_compliance_status?: string } }) => {
         setIndustries(data.employer?.industries ?? []);
+        setHealthcareComplianceStatus(
+          (data.employer?.healthcare_compliance_status ?? "not_submitted") as
+            "not_submitted" | "pending" | "verified" | "rejected"
+        );
       })
       .catch(() => setIndustries([]))
       .finally(() => setIndustriesLoading(false));
@@ -241,6 +248,42 @@ export default function CreateJobPage() {
                       </p>
                     )}
                     <FieldError msg={errors.sector} />
+
+                    {/* Healthcare compliance gate — shown when sector selected but not verified */}
+                    {sector === "Healthcare" && healthcareComplianceStatus !== "verified" && (
+                      <div className={`mt-2 rounded-xl border px-3 py-2.5 flex items-start gap-2 ${
+                        healthcareComplianceStatus === "pending"
+                          ? "bg-amber-50 border-amber-100"
+                          : healthcareComplianceStatus === "rejected"
+                          ? "bg-red-50 border-red-100"
+                          : "bg-amber-50 border-amber-100"
+                      }`}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`mt-0.5 shrink-0 ${healthcareComplianceStatus === "rejected" ? "text-red-500" : "text-amber-500"}`}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        <div>
+                          {healthcareComplianceStatus === "pending" && (
+                            <p className="text-[11px] text-amber-700 leading-relaxed">
+                              <span className="font-bold">Verification pending.</span> Your CQC & DBS details are under review. You can&apos;t post Healthcare jobs until approved.{" "}
+                              <a href="/dashboard/employer/legal" className="font-bold underline">Check status →</a>
+                            </p>
+                          )}
+                          {healthcareComplianceStatus === "rejected" && (
+                            <p className="text-[11px] text-red-700 leading-relaxed">
+                              <span className="font-bold">Submission rejected.</span> Update your CQC Provider ID and DBS level in{" "}
+                              <a href="/dashboard/employer/settings" className="font-bold underline">Settings</a> before posting Healthcare jobs.
+                            </p>
+                          )}
+                          {healthcareComplianceStatus === "not_submitted" && (
+                            <p className="text-[11px] text-amber-700 leading-relaxed">
+                              <span className="font-bold">Compliance required.</span> Healthcare employers must submit their CQC Provider ID & DBS level and have them verified.{" "}
+                              <a href="/dashboard/employer/settings" className="font-bold underline">Go to Settings →</a>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Employment Type</label>
@@ -500,25 +543,51 @@ export default function CreateJobPage() {
           </button>
 
           {/* Post Job Now */}
-          <button
-            onClick={() => submit("review")}
-            disabled={isPosting || isSavingDraft}
-            className="flex items-center gap-2 bg-brand text-white text-sm font-bold rounded-xl px-6 py-2.5 hover:bg-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isPosting ? (
-              <>
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                Posting…
-              </>
-            ) : (
-              <>
-                Post Job Now
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-              </>
-            )}
-          </button>
+          {(() => {
+            const healthcareBlocked =
+              sector === "Healthcare" && healthcareComplianceStatus !== "verified";
+            return (
+              <div className="relative group/post">
+                <button
+                  onClick={() => submit("review")}
+                  disabled={isPosting || isSavingDraft || healthcareBlocked}
+                  className="flex items-center gap-2 bg-brand text-white text-sm font-bold rounded-xl px-6 py-2.5 hover:bg-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isPosting ? (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                      Posting…
+                    </>
+                  ) : healthcareBlocked ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                      </svg>
+                      Posting Restricted
+                    </>
+                  ) : (
+                    <>
+                      Post Job Now
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+                {/* Tooltip shown on hover when blocked */}
+                {healthcareBlocked && (
+                  <div className="absolute bottom-full right-0 mb-2 w-64 bg-slate-800 text-white text-[11px] leading-relaxed rounded-xl px-3 py-2.5 shadow-lg opacity-0 group-hover/post:opacity-100 transition-opacity pointer-events-none z-20">
+                    {healthcareComplianceStatus === "pending"
+                      ? "Your CQC & DBS details are pending verification. Check your Legal & Compliance page for status."
+                      : healthcareComplianceStatus === "rejected"
+                      ? "Your compliance submission was rejected. Update your details in Settings."
+                      : "Submit your CQC Provider ID & DBS level in Settings to unlock Healthcare job posting."}
+                    <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800" />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </>
